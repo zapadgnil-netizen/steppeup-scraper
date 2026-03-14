@@ -1,0 +1,36 @@
+name: SteppeUp Daily Job Scraper
+
+on:
+  schedule:
+    # Runs daily at 00:00 UTC = 06:00 Almaty time (UTC+6)
+    - cron: '0 0 * * *'
+  workflow_dispatch: # allows manual trigger from GitHub UI
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: scraper/package-lock.json
+
+      - name: Install dependencies
+        run: cd scraper && npm install
+
+      - name: Run scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: cd scraper && node scrape-jobs.js
+
+      - name: Log result
+        if: always()
+        run: echo "Scraper finished at $(date -u)"
