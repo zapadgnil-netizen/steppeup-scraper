@@ -2,9 +2,8 @@ name: SteppeUp Daily Job Scraper
 
 on:
   schedule:
-    # Runs daily at 00:00 UTC = 06:00 Almaty time (UTC+6)
     - cron: '0 0 * * *'
-  workflow_dispatch: # allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   scrape:
@@ -19,8 +18,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: scraper/package-lock.json
 
       - name: Install dependencies
         run: cd scraper && npm install
