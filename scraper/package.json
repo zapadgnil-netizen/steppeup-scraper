@@ -1,0 +1,15 @@
+{
+  "name": "steppeup-scraper",
+  "version": "1.0.0",
+  "description": "Daily job scraper for SteppeUp",
+  "main": "scrape-jobs.js",
+  "scripts": {
+    "scrape": "node scrape-jobs.js",
+    "test": "node scrape-jobs.js --dry-run"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "cheerio": "^1.0.0-rc.12",
+    "node-fetch": "^2.7.0"
+  }
+}
