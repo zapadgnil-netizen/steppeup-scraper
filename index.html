@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SteppeUp — Найди свой путь</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+:root{--cream:#F4EFE6;--sand:#E5D9C0;--gold:#C9A84C;--gold-lt:#E4C97A;--gold-dk:#96702A;--ink:#18140F;--ink-80:rgba(24,20,15,.8);--ink-50:rgba(24,20,15,.5);--ink-20:rgba(24,20,15,.12);--ink-08:rgba(24,20,15,.06);--sage:#4F7155;--sage-lt:rgba(79,113,85,.12);--rust:#B05A28;--white:#FEFCF7}*{margin:0;padding:0;box-sizing:border-box}html,body{font-family:'DM Sans',sans-serif;color:var(--ink);background:var(--cream);overflow-x:hidden}#landing-page{display:block}#main-nav{position:fixed;top:0;left:0;right:0;z-index:100;height:60px;background:rgba(244,239,230,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--ink-20);display:flex;align-items:center;padding:0 28px;gap:40px}.logo{font-family:'Playfair Display',serif;font-size:18px;font-weight:900;letter-spacing:-.5px;cursor:pointer}.logo span{color:var(--gold)}.nav-links{display:flex;gap:32px;flex:1}.nav-links a{font-size:13px;font-weight:500;color:var(--ink-50);text-decoration:none;transition:color .2s}.nav-links a:hover{color:var(--ink)}.nav-actions{display:flex;gap:10px;align-items:center}.btn-ghost{background:0;border:0;color:var(--ink-50);font:500 13px 'DM Sans',sans-serif;cursor:pointer;padding:8px 16px;transition:color .2s}.btn-ghost:hover{color:var(--ink)}.btn-solid{background:var(--ink);color:var(--white);border:0;padding:10px 20px;border-radius:100px;font:600 13px 'DM Sans',sans-serif;cursor:pointer;transition:box-shadow .2s,transform .15s}.btn-solid:hover{box-shadow:0 8px 24px rgba(24,20,15,.25);transform:translateY(-1px)}.btn-hero{background:var(--gold);color:var(--ink);border:0;padding:13px 28px;border-radius:100px;font:600 14px 'DM Sans',sans-serif;cursor:pointer;transition:box-shadow .2s,transform .15s}.btn-hero:hover{box-shadow:0 8px 24px rgba(201,168,76,.4);transform:translateY(-1px)}.hero{margin-top:60px;min-height:100vh;padding:60px 28px;background:var(--cream);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:40px}.hero-glow{position:absolute;top:0;right:0;width:600px;height:600px;background:radial-gradient(ellipse 60% 80% at 80% 20%,rgba(201,168,76,.15) 0%,transparent 60%);pointer-events:none}.hero-content{max-width:520px;position:relative;z-index:2}.eyebrow{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--gold-dk);margin-bottom:16px}.hero-content h1{font-family:'Playfair Display',serif;font-size:clamp(44px,6vw,72px);font-weight:900;letter-spacing:-1.5px;line-height:1.1;margin-bottom:16px}.hero-content h1 em{font-style:italic;color:var(--gold)}.hero-sub{font-size:16px;color:var(--ink-80);line-height:1.6;margin-bottom:32px}.hero-cta{display:flex;align-items:center;gap:24px}.proof{display:flex;flex-direction:column;gap:6px}.proof-faces{display:flex;margin-left:-8px}.proof-faces span{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--rust));display:flex;align-items:center;justify-content:center;font:700 11px 'DM Sans',sans-serif;color:var(--white);margin-left:-8px;border:2px solid var(--cream)}.proof-text{font-size:12px;line-height:1.4}.proof-text strong{display:block;font-weight:600;color:var(--ink)}.hero-float{position:relative;height:500px;flex:1;min-width:300px;display:flex;align-items:center;justify-content:center}.stats{max-width:1200px;margin:0 auto;padding:40px 28px;display:grid;grid-template-columns:repeat(4,1fr);gap:32px;text-align:center}.stat{display:flex;flex-direction:column;gap:4px}.sn{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;color:var(--ink)}.sl{font-size:13px;color:var(--ink-50)}.how-section{max-width:1200px;margin:0 auto;padding:80px 28px}.how-title{font-family:'Playfair Display',serif;font-size:42px;font-weight:900;letter-spacing:-1px;margin-bottom:8px;text-align:center}.how-sub{font-size:14px;color:var(--ink-50);text-align:center;margin-bottom:48px}.steps-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:32px}.step{background:var(--white);border:1px solid var(--ink-20);border-radius:20px;padding:28px;text-align:center}.step-num{font-family:'Playfair Display',serif;font-size:48px;font-weight:900;color:var(--gold);margin-bottom:12px}.step-title{font-weight:600;margin-bottom:8px;font-size:15px}.step-desc{font-size:13px;color:var(--ink-50);line-height:1.6}.listings-section{max-width:1200px;margin:0 auto;padding:80px 28px}.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px;flex-wrap:wrap;gap:16px}.section-title{font-family:'Playfair Display',serif;font-size:42px;font-weight:900;letter-spacing:-1px}.see-all-link{font-size:13px;font-weight:600;color:var(--gold);text-decoration:none;cursor:pointer;transition:color .2s}.see-all-link:hover{color:var(--gold-dk)}.jc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}.jc{background:var(--white);border:1px solid var(--ink-20);border-radius:20px;overflow:hidden;transition:box-shadow .3s,transform .2s}.jc:hover{box-shadow:0 12px 40px rgba(24,20,15,.12);transform:translateY(-4px)}.jc-stripe{height:140px;background:linear-gradient(135deg,var(--gold) 0%,var(--rust) 100%);position:relative;display:flex;flex-direction:column;justify-content:flex-start;padding:12px}.jc-stripe.sage{background:linear-gradient(135deg,var(--sage) 0%,var(--sage-lt) 100%)}.jc-stripe.rust{background:linear-gradient(135deg,var(--rust) 0%,rgba(176,90,40,.7) 100%)}.jc-logo{width:44px;height:44px;border-radius:12px;background:var(--sand);border:2.5px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font:700 16px 'DM Sans',sans-serif;color:var(--gold-dk)}.jc-score{position:absolute;bottom:12px;right:12px;display:flex;align-items:center;gap:8px}.jc-ring{position:relative;width:52px;height:52px}.jc-ring svg{width:100%;height:100%}.ring-bg{stroke:rgba(255,255,255,.1);fill:none;stroke-width:1.5}.ring-fg{fill:none;stroke-width:2.5;stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.3,1)}.ring-label{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:700 12px 'DM Sans',sans-serif;color:var(--white)}.jc-score-text{display:flex;flex-direction:column;gap:1px}.jc-pct{font:700 12px 'DM Sans',sans-serif;color:var(--white)}.jc-word{font:400 10px 'DM Sans',sans-serif;color:rgba(254,252,247,.6)}.jc-save{position:absolute;top:12px;right:12px;width:28px;height:28px;border-radius:50%;border:1.5px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;color:rgba(255,255,255,.6);font-size:14px;z-index:5}.jc-save:hover{border-color:rgba(255,255,255,.5);color:#fff}.jc-save.saved{background:rgba(201,168,76,.3);border-color:var(--gold-lt);color:var(--gold-lt)}.jc-body{padding:16px}.jc-title{font:600 15px 'DM Sans',sans-serif;margin-bottom:4px;color:var(--ink)}.jc-co{font-size:13px;color:var(--ink-50);margin-bottom:8px}.jc-info{display:flex;gap:4px;font-size:12px;color:var(--ink-50);margin-bottom:8px;flex-wrap:wrap}.jc-dot{width:2px;height:2px;background:var(--ink-50);border-radius:50%;align-self:center}.jc-inf{white-space:nowrap}.jc-tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}.jc-tag{padding:4px 10px;border-radius:100px;font-size:11px;font-weight:500;background:var(--ink-08);color:var(--ink-50)}.t-intern{background:rgba(201,168,76,.12);color:var(--gold-dk)}.t-part{background:rgba(79,113,85,.12);color:var(--sage)}.t-remote{background:rgba(176,90,40,.12);color:var(--rust)}.jc-foot{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 16px;border-top:1px solid var(--ink-08)}.jc-sal{font:600 14px 'DM Sans',sans-serif;color:var(--ink)}.jc-sal span{font-size:11px;font-weight:400;color:var(--ink-50)}.jc-btn{background:0;border:1.5px solid var(--ink-20);padding:6px 14px;border-radius:100px;font:500 12px 'DM Sans',sans-serif;color:var(--ink-50);cursor:pointer;transition:all .2s}.jc-btn:hover{border-color:var(--gold);color:var(--gold)}.jc-btn.sage,.jc-btn.sage:focus{border-color:var(--sage);color:var(--sage)}.jc-btn.sage:hover{background:var(--sage-lt)}.jc-btn.rust,.jc-btn.rust:focus{border-color:var(--rust);color:var(--rust)}.jc-btn.rust:hover{background:rgba(176,90,40,.12)}.testi-section{max-width:1200px;margin:0 auto;padding:80px 28px}.testi-header{text-align:center;margin-bottom:40px}.testi-title{font-family:'Playfair Display',serif;font-size:42px;font-weight:900;letter-spacing:-1px;margin-bottom:8px}.testi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}.testi-card{background:var(--white);border:1px solid var(--ink-20);border-radius:20px;padding:24px}.testi-rating{font-size:12px;margin-bottom:8px}.testi-text{font-size:13px;color:var(--ink-80);line-height:1.7;margin-bottom:16px;min-height:60px}.testi-author{display:flex;gap:8px}.testi-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--rust));display:flex;align-items:center;justify-content:center;font:700 12px 'DM Sans',sans-serif;color:var(--white);flex-shrink:0}.testi-info{display:flex;flex-direction:column;gap:1px}.testi-name{font:600 13px 'DM Sans',sans-serif;color:var(--ink)}.testi-role{font-size:11px;color:var(--ink-50)}.cta-section{max-width:900px;margin:0 auto;padding:80px 28px;text-align:center}.cta-title{font-family:'Playfair Display',serif;font-size:42px;font-weight:900;letter-spacing:-1px;margin-bottom:16px}.cta-sub{font-size:16px;color:var(--ink-80);line-height:1.6;margin-bottom:32px}footer{background:var(--ink);color:var(--white);padding:40px 28px;margin-top:80px;position:relative;overflow:hidden}.footer-glow{position:absolute;bottom:0;right:0;width:400px;height:400px;background:radial-gradient(ellipse 60% 80% at 80% 20%,rgba(201,168,76,.1) 0%,transparent 60%);pointer-events:none}.footer-content{max-width:1200px;margin:0 auto;position:relative;z-index:2}.footer-main{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:32px;margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid rgba(255,255,255,.1)}.footer-col h3{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;color:rgba(255,255,255,.7)}.footer-col a{display:block;font-size:13px;color:rgba(255,255,255,.5);text-decoration:none;margin-bottom:8px;transition:color .2s}.footer-col a:hover{color:var(--gold)}.fbot{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.3);flex-wrap:wrap;gap:16px}@keyframes rise{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}@keyframes blink{0%,49%,100%{opacity:1}50%,99%{opacity:.3}}.rise{animation:rise 3s ease-in-out infinite}.blink{animation:blink 2s ease-in-out infinite}.app-shell{display:none}.app-nav{position:fixed;inset:0 0 auto;z-index:200;height:60px;background:rgba(244,239,230,.92);backdrop-filter:blur(20px);border-bottom:1px solid var(--ink-20);display:flex;align-items:center;padding:0 28px;gap:24px}.app-nav-logo{font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:var(--ink);cursor:pointer}.app-nav-logo span{color:var(--gold)}.app-nav-tabs{display:flex;gap:4px;margin-left:32px}.app-nav-tab{padding:6px 16px;border-radius:100px;font:500 13px 'DM Sans',sans-serif;color:var(--ink-50);cursor:pointer;border:0;background:0;transition:background .2s,color .2s}.app-nav-tab:hover{background:var(--ink-08);color:var(--ink)}.app-nav-tab.active{background:var(--ink);color:var(--white)}.app-nav-right{margin-left:auto;display:flex;gap:10px;align-items:center}.app-nav-avatar{width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--ink);font:700 13px 'DM Sans',sans-serif;display:flex;align-items:center;justify-content:center;cursor:pointer}.app-content{padding-top:60px;min-height:100vh;background:var(--cream)}.app-page{display:none}.app-page.visible{display:block}.feed-wrap{max-width:900px;margin:0 auto;padding:40px 28px}.feed-header{margin-bottom:32px}.feed-greeting{font-family:'Playfair Display',serif;font-size:clamp(28px,3.5vw,42px);font-weight:900;letter-spacing:-1.2px;line-height:1.1;margin-bottom:8px}.feed-greeting em{font-style:italic;color:var(--gold)}.feed-sub{font-size:14px;color:var(--ink-50)}.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}.chip{padding:8px 18px;border-radius:100px;border:1px solid var(--ink-20);background:var(--white);font:500 13px 'DM Sans',sans-serif;color:var(--ink-50);cursor:pointer;transition:all .2s}.chip:hover{border-color:var(--gold);color:var(--ink)}.chip.active{background:var(--ink);border-color:var(--ink);color:var(--white)}.feed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}.feed-grid .jc{width:100%}.browse-wrap{max-width:1100px;margin:0 auto;padding:40px 28px}.browse-top{display:flex;align-items:center;gap:16px;margin-bottom:32px;flex-wrap:wrap}.browse-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;letter-spacing:-1px}.search-box{flex:1;min-width:240px;max-width:400px;position:relative}.search-input{width:100%;padding:11px 16px 11px 40px;border-radius:100px;border:1px solid var(--ink-20);background:var(--white);font:15px 'DM Sans',sans-serif;color:var(--ink);outline:0;transition:border-color .2s}.search-input:focus{border-color:var(--gold)}.search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--ink-50);pointer-events:none}.browse-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:28px}.browse-count{font-size:13px;color:var(--ink-50);margin-bottom:16px}.browse-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}.browse-grid .jc{width:100%}.detail-wrap{max-width:780px;margin:0 auto;padding:40px 28px}.detail-back{display:inline-flex;align-items:center;gap:6px;font:500 13px 'DM Sans',sans-serif;color:var(--ink-50);cursor:pointer;margin-bottom:24px;transition:color .2s}.detail-back:hover{color:var(--ink)}.detail-hero{background:var(--ink);border-radius:22px;padding:32px;margin-bottom:24px;position:relative;overflow:hidden}.detail-hero-glow{position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 80% 20%,rgba(201,168,76,.2) 0%,transparent 60%);pointer-events:none}.detail-logo{width:60px;height:60px;border-radius:16px;background:var(--sand);border:2.5px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font:700 20px 'DM Sans',sans-serif;color:var(--gold-dk);margin-bottom:16px}.detail-title{font-family:'Playfair Display',serif;font-size:clamp(22px,3vw,32px);font-weight:900;color:var(--white);line-height:1.15;margin-bottom:8px;letter-spacing:-.8px;position:relative;z-index:2}.detail-co{font-size:14px;color:rgba(254,252,247,.5);margin-bottom:16px;position:relative;z-index:2}.detail-meta{display:flex;gap:10px;flex-wrap:wrap;position:relative;z-index:2}.detail-tag{padding:5px 14px;border-radius:100px;border:1px solid rgba(255,255,255,.15);color:rgba(254,252,247,.7);font:500 12px 'DM Sans',sans-serif}.detail-body{background:var(--white);border:1px solid var(--ink-20);border-radius:22px;padding:28px;margin-bottom:20px}.detail-section-title{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--gold-dk);margin-bottom:14px}.detail-desc{font-size:14px;color:var(--ink-80);line-height:1.8}.skill-bars{display:flex;flex-direction:column;gap:12px}.skill-bar-row{display:flex;align-items:center;gap:12px}.skill-bar-label{font-size:13px;font-weight:500;color:var(--ink);width:140px;flex-shrink:0}.skill-bar-track{flex:1;height:6px;background:var(--sand);border-radius:100px;overflow:hidden}.skill-bar-fill{height:100%;border-radius:100px;background:var(--gold);transition:width 1s cubic-bezier(.2,.8,.3,1)}.skill-bar-fill.match{background:var(--sage)}.skill-bar-fill.partial{background:var(--gold)}.skill-bar-fill.miss{background:var(--sand)}.skill-bar-pct{font-size:12px;font-weight:600;color:var(--ink-50);width:36px;text-align:right;flex-shrink:0}.detail-apply{background:var(--white);border:1px solid var(--ink-20);border-radius:22px;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 8px 32px rgba(24,20,15,.12);margin-top:20px;margin-bottom:40px}.detail-salary{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--ink)}.detail-salary span{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:400;color:var(--ink-50)}.saved-wrap{max-width:900px;margin:0 auto;padding:40px 28px}.saved-title{font-family:'Playfair Display',serif;font-size:32px;font-weight:900;letter-spacing:-1px;margin-bottom:8px}.saved-sub{font-size:14px;color:var(--ink-50);margin-bottom:28px}.saved-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:20px}.saved-empty{text-align:center;padding:80px 20px;grid-column:1/-1}.saved-empty-icon{font-size:48px;margin-bottom:16px;opacity:.3}.saved-empty h3{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;margin-bottom:8px}.saved-empty p{color:var(--ink-50);font-size:14px}.profile-wrap{max-width:680px;margin:0 auto;padding:40px 28px}.profile-card{background:var(--white);border:1px solid var(--ink-20);border-radius:22px;padding:32px;margin-bottom:20px}.profile-header{display:flex;align-items:center;gap:20px;margin-bottom:28px}.profile-av{width:64px;height:64px;border-radius:50%;background:var(--gold);display:flex;align-items:center;justify-content:center;font:700 24px 'DM Sans',sans-serif;color:var(--ink);flex-shrink:0}.profile-name{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;margin-bottom:4px}.profile-email{font-size:13px;color:var(--ink-50)}.form-label{display:block;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-dk);margin-bottom:8px;margin-top:20px}.form-input{width:100%;padding:11px 16px;border-radius:12px;border:1px solid var(--ink-20);background:var(--cream);font:15px 'DM Sans',sans-serif;color:var(--ink);outline:0;transition:border-color .2s}.form-input:focus{border-color:var(--gold);background:var(--white)}.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}.skills-input-wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 14px;border-radius:12px;border:1px solid var(--ink-20);background:var(--cream);min-height:46px;cursor:text}.skills-input-wrap:focus-within{border-color:var(--gold);background:var(--white)}.skill-pill{padding:3px 10px 3px 12px;background:var(--sand);border-radius:100px;font-size:12px;font-weight:500;color:var(--ink);display:inline-flex;align-items:center;gap:6px}.skill-pill-x{cursor:pointer;color:var(--ink-50);font-size:14px;line-height:1}.skill-pill-x:hover{color:var(--ink)}.skill-type-input{border:0;background:0;font:14px 'DM Sans',sans-serif;color:var(--ink);outline:0;min-width:80px;flex:1}.profile-save-btn{background:var(--ink);color:var(--white);border:0;padding:12px 28px;border-radius:100px;font:600 14px 'DM Sans',sans-serif;cursor:pointer;margin-top:24px;transition:background .2s}.profile-save-btn:hover{background:var(--gold-dk)}.resume-upload-area{border:2px dashed var(--ink-20);border-radius:16px;padding:32px;text-align:center;background:var(--ink-08);transition:border-color .2s,background .2s;cursor:pointer;margin-top:8px}.resume-upload-area:hover,.resume-upload-area.drag-over{border-color:var(--gold);background:rgba(201,168,76,.06)}.resume-upload-area h4{font-size:15px;font-weight:600;margin-bottom:6px;margin-top:12px}.resume-upload-area p{font-size:13px;color:var(--ink-50)}.resume-upload-icon{font-size:32px;opacity:.4}.ob-overlay{position:fixed;inset:0;z-index:500;background:rgba(24,20,15,.6);backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;padding:20px}.ob-panel{background:var(--white);border-radius:28px;width:100%;max-width:500px;overflow:hidden;box-shadow:0 24px 80px rgba(24,20,15,.25)}.ob-top{background:var(--ink);padding:28px 32px 24px;position:relative;overflow:hidden}.ob-top-glow{position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 80% 20%,rgba(201,168,76,.2) 0%,transparent 60%);pointer-events:none}.ob-step-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:rgba(254,252,247,.35);margin-bottom:10px}.ob-title{font-family:'Playfair Display',serif;font-size:26px;font-weight:900;color:var(--white);line-height:1.15;letter-spacing:-.5px;position:relative}.ob-title em{font-style:italic;color:var(--gold-lt)}.ob-body{padding:28px 32px 32px}.ob-dots{display:flex;gap:8px;margin-bottom:24px}.ob-dot{width:8px;height:8px;border-radius:50%;background:var(--sand);transition:all .3s}.ob-dot.active{background:var(--gold);width:24px;border-radius:100px}.ob-dot.done{background:var(--sage)}.ob-field-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1.5px;color:var(--gold-dk);margin-bottom:8px;margin-top:18px;display:block}.ob-input{width:100%;padding:11px 16px;border-radius:12px;border:1.5px solid var(--ink-20);background:var(--cream);font:15px 'DM Sans',sans-serif;color:var(--ink);outline:0;transition:border-color .2s}.ob-input:focus{border-color:var(--gold);background:var(--white)}.ob-select{width:100%;padding:11px 16px;border-radius:12px;border:1.5px solid var(--ink-20);background:var(--cream);font:15px 'DM Sans',sans-serif;color:var(--ink);outline:0;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2318140F' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px}.ob-select:focus{border-color:var(--gold);background-color:var(--white)}.ob-actions{display:flex;gap:10px;margin-top:28px;align-items:center}.ob-btn-next{flex:1;background:var(--gold);color:var(--ink);border:0;padding:13px 24px;border-radius:100px;font:600 14px 'DM Sans',sans-serif;cursor:pointer;transition:box-shadow .2s,transform .15s}.ob-btn-next:hover{box-shadow:0 8px 24px rgba(201,168,76,.4);transform:translateY(-1px)}.ob-btn-skip{background:0;border:0;color:var(--ink-50);font:500 13px 'DM Sans',sans-serif;cursor:pointer;transition:color .2s;display:none}.ob-btn-skip:hover{color:var(--ink)}.ob-dropzone{border:2px dashed var(--ink-20);border-radius:16px;padding:32px 20px;text-align:center;background:var(--ink-08);transition:all .2s;cursor:pointer;margin-top:8px}.ob-dropzone:hover,.ob-dropzone.drag-over{border-color:var(--gold);background:rgba(201,168,76,.07)}.ob-dropzone-icon{font-size:28px;opacity:.4;margin-bottom:10px}.ob-dropzone h4{font-size:14px;font-weight:600;margin-bottom:4px}.ob-dropzone p{font-size:12px;color:var(--ink-50)}.ob-dropzone.success{border-color:var(--sage);background:var(--sage-lt)}.scan-bar{height:3px;background:var(--sand);border-radius:100px;overflow:hidden;margin:16px 0 8px}.scan-fill{height:100%;background:var(--gold);border-radius:100px;animation:scan 1.5s ease-in-out forwards}@keyframes scan{from{width:0}to{width:100%}}.ob-interests{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.ob-int{padding:8px 16px;border-radius:100px;border:1.5px solid var(--ink-20);font:500 13px 'DM Sans',sans-serif;color:var(--ink-50);cursor:pointer;transition:all .2s;background:0}.ob-int:hover{border-color:var(--gold);color:var(--ink)}.ob-int.sel{background:var(--ink);border-color:var(--ink);color:var(--white)}@media (max-width:768px){.hero{flex-direction:column;padding:40px 20px}.hero-float{min-width:260px;height:360px}.stats{grid-template-columns:repeat(2,1fr);gap:20px}.form-row{grid-template-columns:1fr}.testi-grid{grid-template-columns:1fr}.detail-apply{flex-direction:column;gap:16px;align-items:flex-start}.app-nav{padding:0 16px;gap:12px}.app-nav-tabs{margin-left:12px}.nav-links{gap:16px}}
+  </style>
+</head>
+<body>
+  <div id="landing-page">
+    <nav id="main-nav">
+      <span class="logo">Steppe<span>Up</span></span>
+      <div class="nav-links">
+        <a href="#how">Как это работает</a>
+        <a href="#vacancies">Вакансии</a>
+        <a href="#about">О нас</a>
+      </div>
+      <div class="nav-actions">
+        <button class="btn-ghost" onclick="enterApp()">Войти</button>
+        <button class="btn-solid" onclick="startOnboarding()">Начать →</button>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-glow"></div>
+      <div class="hero-content">
+        <div class="eyebrow">2 000+ студентов уже с нами</div>
+        <h1>Найди<br/>свой <em>путь</em></h1>
+        <p class="hero-sub">Стажировки и вакансии для студентов Казахстана. Без опыта. Без стресса.</p>
+        <div class="hero-cta">
+          <button class="btn-hero" onclick="startOnboarding()">Начать бесплатно →</button>
+          <div class="proof">
+            <div class="proof-faces"><span>А</span><span>М</span><span>К</span><span>Д</span></div>
+            <div class="proof-text"><strong>2 000+ студентов</strong>уже нашли место</div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-float"></div>
+    </section>
+
+    <div class="stats">
+      <div class="stat"><span class="sn">5 183</span><span class="sl">вакансий</span></div>
+      <div class="stat"><span class="sn">49</span><span class="sl">IT стажировок</span></div>
+      <div class="stat"><span class="sn">12</span><span class="sl">городов</span></div>
+      <div class="stat"><span class="sn">4</span><span class="sl">источника</span></div>
+    </div>
+
+    <section class="how-section" id="how">
+      <div class="how-title">Как это работает</div>
+      <div class="how-sub">Всего 4 шага до первого дня на работе</div>
+      <div class="steps-grid">
+        <div class="step"><div class="step-num">1</div><div class="step-title">Заполните профиль</div><div class="step-desc">Расскажите о своих навыках и интересах. Это займёт 2 минуты.</div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-title">Получите подборку</div><div class="step-desc">Наш алгоритм подберёт для вас идеальные вакансии.</div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-title">Откликнитесь</div><div class="step-desc">Один клик — и ваш отклик в руках работодателя.</div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-title">Начните работать</div><div class="step-desc">Встретьтесь с командой и начните свой путь в карьере.</div></div>
+      </div>
+    </section>
+
+    <section class="listings-section" id="vacancies">
+      <div class="section-header">
+        <div class="section-title">Популярные вакансии</div>
+        <a class="see-all-link" onclick="navigate('browse'); return false;">Смотреть все →</a>
+      </div>
+      <div class="jc-grid" id="landing-grid"></div>
+    </section>
+
+    <section class="testi-section" id="about">
+      <div class="testi-header">
+        <div class="testi-title">Отзывы студентов</div>
+      </div>
+      <div class="testi-grid">
+        <div class="testi-card"><div class="testi-rating">⭐⭐⭐⭐⭐</div><div class="testi-text">«SteppeUp помог мне найти идеальную стажировку за несколько часов. Очень удобный интерфейс и персональная подборка!»</div><div class="testi-author"><div class="testi-av">А</div><div class="testi-info"><div class="testi-name">Айгерим</div><div class="testi-role">КазНУ, IT</div></div></div></div>
+        <div class="testi-card"><div class="testi-rating">⭐⭐⭐⭐⭐</div><div class="testi-text">«Нашёл работу в стартапе благодаря SteppeUp. Отличное сообщество молодых разработчиков и актуальные вакансии.»</div><div class="testi-author"><div class="testi-av">М</div><div class="testi-info"><div class="testi-name">Марат</div><div class="testi-role">AITU, Backend</div></div></div></div>
+        <div class="testi-card"><div class="testi-rating">⭐⭐⭐⭐⭐</div><div class="testi-text">«Как дизайнер без опыта я боялась искать работу, но SteppeUp показал мне, что это возможно. Спасибо за поддержку!»</div><div class="testi-author"><div class="testi-av">К</div><div class="testi-info"><div class="testi-name">Ксения</div><div class="testi-role">СарПС, UX/UI</div></div></div></div>
+      </div>
+    </section>
+
+    <section class="cta-section">
+      <div class="cta-title">Готовы к переменам?</div>
+      <div class="cta-sub">Присоединяйтесь к 2000+ студентов, которые уже нашли свой путь на SteppeUp</div>
+      <button class="btn-hero" onclick="startOnboarding()">Начать сейчас →</button>
+    </section>
+
+    <footer>
+      <div class="footer-glow"></div>
+      <div class="footer-content">
+        <div class="footer-main">
+          <div class="footer-col"><h3>Компания</h3><a href="#">О нас</a><a href="#">Блог</a><a href="#">Контакты</a></div>
+          <div class="footer-col"><h3>Для студентов</h3><a href="#">Найти вакансию</a><a href="#">Курсы</a><a href="#">Сообщество</a></div>
+          <div class="footer-col"><h3>Для работодателей</h3><a href="#">Разместить вакансию</a><a href="#">Цены</a><a href="#">Справка</a></div>
+          <div class="footer-col"><h3>Соцсети</h3><a href="#">Instagram</a><a href="#">LinkedIn</a><a href="#">Twitter</a></div>
+        </div>
+        <div class="fbot"><div>&copy; 2024 SteppeUp. Все права защищены.</div><div>Made in Kazakhstan 🇰🇿</div></div>
+      </div>
+    </footer>
+  </div>
+
+  <div id="app-shell">
+    <nav class="app-nav">
+      <span class="app-nav-logo" onclick="navigate('home')">Steppe<span>Up</span></span>
+      <div class="app-nav-tabs">
+        <button class="app-nav-tab active" data-view="home" onclick="navigate('home')">Главная</button>
+        <button class="app-nav-tab" data-view="browse" onclick="navigate('browse')">Все вакансии</button>
+        <button class="app-nav-tab" data-view="saved" onclick="navigate('saved')">Сохранённые</button>
+      </div>
+      <div class="app-nav-right">
+        <div class="app-nav-avatar" onclick="navigate('profile')" id="nav-avatar">Н</div>
+      </div>
+    </nav>
+    <div class="app-content">
+      <div class="app-page" id="page-home"><div class="feed-wrap"><div class="feed-header"><div class="feed-greeting">Привет, <em id="feed-name">студент</em> 👋</div><div class="feed-sub">Вот вакансии, подобранные специально для тебя</div></div><div class="filter-bar"><button class="chip active" data-filter="all">Все</button><button class="chip" data-filter="internship">Стажировки</button><button class="chip" data-filter="part-time">Неполный день</button><button class="chip" data-filter="remote">Удалённо</button></div><div class="feed-grid" id="feed-grid"></div></div></div>
+      <div class="app-page" id="page-browse"><div class="browse-wrap"><div class="browse-top"><div class="browse-title">Все вакансии</div><div class="search-box"><span class="search-icon">⌕</span><input class="search-input" id="browse-search" placeholder="Поиск по названию или компании..." oninput="filterBrowse()"/></div></div><div class="browse-filters"><button class="chip active" data-bfilter="all">Все</button><button class="chip" data-bfilter="internship">Стажировки</button><button class="chip" data-bfilter="part-time">Неполный день</button><button class="chip" data-bfilter="remote">Удалённо</button><button class="chip" data-bfilter="almaty">Алматы</button><button class="chip" data-bfilter="astana">Астана</button></div><div class="browse-count" id="browse-count">Загрузка...</div><div class="browse-grid" id="browse-grid"></div></div></div>
+      <div class="app-page" id="page-job"><div class="detail-wrap" id="detail-wrap"></div></div>
+      <div class="app-page" id="page-saved"><div class="saved-wrap"><div class="saved-title">Сохранённые</div><div class="saved-sub" id="saved-sub">0 вакансий</div><div class="saved-grid" id="saved-grid"></div></div></div>
+      <div class="app-page" id="page-profile"><div class="profile-wrap"><div class="profile-card"><div class="profile-header"><div class="profile-av" id="profile-av">Н</div><div><div class="profile-name" id="profile-name-display">Студент</div><div class="profile-email" id="profile-email-display">—</div></div></div><label class="form-label">Имя</label><input class="form-input" id="p-name" placeholder="Ваше имя"/><label class="form-label">Email</label><input class="form-input" id="p-email" placeholder="email@example.com" type="email"/><div class="form-row"><div><label class="form-label">Город</label><select class="form-input" id="p-city"><option value="">Выберите город</option><option value="Алматы">Алматы</option><option value="Астана">Астана</option><option value="Шымкент">Шымкент</option><option value="Другой">Другой</option></select></div><div><label class="form-label">Вуз</label><input class="form-input" id="p-uni" placeholder="КазНУ, AITU..."/></div></div><label class="form-label">Специальность</label><input class="form-input" id="p-major" placeholder="Информационные технологии..."/><label class="form-label">Навыки</label><div class="skills-input-wrap" id="skills-wrap" onclick="document.getElementById('skill-type').focus()"></div><button class="profile-save-btn" onclick="saveProfile()">Сохранить профиль →</button></div><div class="profile-card"><div class="detail-section-title">Резюме</div><div class="resume-upload-area" id="resume-upload-area" onclick="document.getElementById('resume-file').click()"><div style="font-size:32px;opacity:.4">📄</div><h4>Загрузить резюме</h4><p>PDF или DOCX · перетащите или нажмите</p></div><input type="file" id="resume-file" accept=".pdf,.docx" style="display:none" onchange="handleResumeUpload(this)"/></div></div></div>
+    </div>
+  </div>
+
+  <div class="ob-overlay" id="ob-overlay" style="display:none">
+    <div class="ob-panel">
+      <div class="ob-top">
+        <div class="ob-top-glow"></div>
+        <div class="ob-step-label" id="ob-step-label">Шаг 1 из 5</div>
+        <div class="ob-title" id="ob-title">Добро пожаловать<br/>в <em>SteppeUp</em></div>
+      </div>
+      <div class="ob-body">
+        <div class="ob-dots" id="ob-dots"></div>
+        <div id="ob-step-content"></div>
+        <div class="ob-actions">
+          <button class="ob-btn-next" id="ob-next-btn" onclick="obNext()">Далее →</button>
+          <button class="ob-btn-skip" onclick="obSkip()">Пропустить</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+const SB_URL = 'https://wiijdddhzddqgntfdbsx.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpaWpkZGRoemRkcWdudGZkYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1NDI0NjIsImV4cCI6MjA4NzExODQ2Mn0.rQyTBlIA1WVU-KfFyF8sXK8GVZUL9m9yFIHTydXPHe0';
+
+// ── State ──────────────────────────────────────────────────────────────────
+let ALL_JOBS = [];
+let currentView = 'landing';
+let prevView = 'home';
+let activeFilter = 'all';
+let activeBrowseFilter = 'all';
+let currentSkills = [];
+let profile = null;
+let savedJobs = [];
+let obStep = 0;
+let obData = {};
+
+// ── Mock Jobs ──────────────────────────────────────────────────────────────
+const MOCK_JOBS = [
+  { id:1,  title:'Стажёр-разработчик (Frontend)', company:'Kaspi Bank',       city:'Алматы', type:'internship', remote:false, salary:'150 000 ₸', skills:['JavaScript','React','CSS'],              description:'Разрабатываете UI-компоненты для мобильного банка с командой опытных фронтенд-разработчиков.',            url:'https://hh.kz/search/vacancy?text=kaspi+bank',    logo:'KB', stripe:'default' },
+  { id:2,  title:'Маркетинг-стажёр',              company:'Kolesa Group',      city:'Алматы', type:'internship', remote:true,  salary:'120 000 ₸', skills:['SMM','Canva','Аналитика'],               description:'Помогаете маркетинговой команде создавать контент и анализировать результаты кампаний.',                   url:'https://hh.kz/search/vacancy?text=kolesa+group',  logo:'KG', stripe:'sage'    },
+  { id:3,  title:'Аналитик данных (Junior)',       company:'Halyk Bank',        city:'Астана', type:'part-time',  remote:false, salary:'200 000 ₸', skills:['Excel','SQL','Python'],                  description:'Анализируете данные клиентов и создаёте отчёты для принятия управленческих решений.',                    url:'https://hh.kz/search/vacancy?text=halyk+bank',    logo:'HB', stripe:'rust'    },
+  { id:4,  title:'UX/UI стажёр',                  company:'Chocofamily',       city:'Алматы', type:'internship', remote:true,  salary:'100 000 ₸', skills:['Figma','UX Research','Прототипирование'], description:'Работаете над дизайном мобильных приложений и веб-платформ в одной из крупнейших tech-компаний Казахстана.', url:'https://hh.kz/search/vacancy?text=chocofamily',   logo:'CF', stripe:'default' },
+  { id:5,  title:'Backend-разработчик',            company:'Beeline Kazakhstan', city:'Алматы', type:'part-time', remote:false, salary:'250 000 ₸', skills:['Python','Django','PostgreSQL'],           description:'Разрабатываете backend API для мобильных приложений и внутренних сервисов.',                             url:'https://hh.kz/search/vacancy?text=beeline+kz',    logo:'BL', stripe:'sage'    },
+  { id:6,  title:'Контент-менеджер',              company:'OLX Kazakhstan',    city:'Астана', type:'internship', remote:true,  salary:'90 000 ₸',  skills:['Копирайтинг','SEO','WordPress'],          description:'Создаёте контент для платформы, управляете блогом и оптимизируете тексты под SEO.',                      url:'https://hh.kz/search/vacancy?text=olx+kz',        logo:'OL', stripe:'default' },
+  { id:7,  title:'Стажёр HR',                     company:'Air Astana',        city:'Астана', type:'internship', remote:false, salary:'130 000 ₸', skills:['Рекрутинг','HR','Коммуникации'],          description:'Помогаете HR-команде проводить собеседования и обрабатывать заявки кандидатов.',                         url:'https://hh.kz/search/vacancy?text=air+astana',    logo:'AA', stripe:'rust'    },
+  { id:8,  title:'Junior DevOps',                 company:'Kcell',             city:'Алматы', type:'part-time',  remote:true,  salary:'220 000 ₸', skills:['Linux','Docker','CI/CD'],                description:'Поддерживаете инфраструктуру и настраиваете деплой приложений в облаке.',                                url:'https://hh.kz/search/vacancy?text=kcell',          logo:'KC', stripe:'sage'    },
+  { id:9,  title:'SMM-менеджер',                  company:'Wildberries KZ',    city:'Алматы', type:'internship', remote:true,  salary:'110 000 ₸', skills:['Instagram','TikTok','Canva'],             description:'Ведёте социальные сети, создаёте вирусный контент и анализируете аудиторию.',                            url:'https://hh.kz/search/vacancy?text=wildberries+kz', logo:'WB', stripe:'default' },
+  { id:10, title:'Финансовый аналитик',           company:'Freedom Finance',   city:'Астана', type:'part-time',  remote:false, salary:'270 000 ₸', skills:['Excel','Финансы','1C'],                  description:'Анализируете финансовые показатели, создаёте прогнозы и готовите управленческую отчётность.',            url:'https://hh.kz/search/vacancy?text=freedom+finance', logo:'FF', stripe:'rust'  },
+  { id:11, title:'QA-тестировщик',                company:'2GIS Kazakhstan',   city:'Алматы', type:'internship', remote:false, salary:'140 000 ₸', skills:['Тестирование','Jira','SQL'],             description:'Тестируете функционал продукта, пишете тест-кейсы и отслеживаете баги в Jira.',                         url:'https://hh.kz/search/vacancy?text=2gis',           logo:'2G', stripe:'default' },
+  { id:12, title:'Python-разработчик',            company:'Jusan Bank',        city:'Астана', type:'part-time',  remote:true,  salary:'230 000 ₸', skills:['Python','FastAPI','Redis'],               description:'Разрабатываете микросервисы для финансовых систем на современном Python-стеке.',                         url:'https://hh.kz/search/vacancy?text=jusan+bank',     logo:'JB', stripe:'sage'    }
+];
+
+// ── Load persisted data ─────────────────────────────────────────────────────
+function loadPersistedData() {
+  try { profile   = JSON.parse(localStorage.getItem('steppeup_profile') || 'null'); } catch(e) { profile = null; }
+  try { savedJobs = JSON.parse(localStorage.getItem('steppeup_saved')   || '[]');   } catch(e) { savedJobs = []; }
+}
+
+// ── Match scoring ───────────────────────────────────────────────────────────
+
+// Map interests to job title keywords
+const INTEREST_KEYWORDS = {
+  'IT / Разработка': ['разраб','developer','devops','qa','тестиров','frontend','backend','python','javascript','java','kotlin'],
+  'Маркетинг':       ['маркетинг','smm','контент','content','copywr','seo'],
+  'Дизайн':          ['дизайн','ux','ui','figma','design'],
+  'Финансы':         ['финанс','аналитик','банк','бухгалтер','1c','excel','finance'],
+  'HR':              ['hr','рекрутинг','кадр','персонал'],
+  'Аналитика':       ['аналитик','analyst','data','данн','sql','excel','python'],
+  'Продажи':         ['продаж','sales','менеджер','manager'],
+  'Юриспруденция':   ['юрист','legal','law','право'],
+};
+
+// Map major keywords to skills for bonus matching
+const MAJOR_SKILL_MAP = {
+  'информат':  ['javascript','python','java','c++','sql','react','node'],
+  'программ':  ['javascript','python','java','c++','sql','react','node'],
+  'it':        ['javascript','python','java','sql','react','docker','linux'],
+  'маркетинг': ['smm','canva','excel','копирайтинг','seo','аналитика'],
+  'финанс':    ['excel','1c','sql','финансы','python','аналитика'],
+  'дизайн':    ['figma','ux research','прототипирование','canva'],
+  'менеджмент':['hr','excel','коммуникации','1c'],
+  'экономик':  ['excel','1c','финансы','sql','python'],
+};
+
+function calcMatch(job) {
+  // Zero profile at all → deterministic hash scores (55-94)
+  if (!profile) {
+    return 55 + ((job.id * 17 + 11) % 40);
+  }
+
+  const userSkills  = (profile.skills || []).map(s => s.toLowerCase());
+  const jobSkills   = (job.skills || []).map(s => s.toLowerCase());
+  const jobTitleLow = (job.title + ' ' + job.company).toLowerCase();
+
+  // ── 1. Skill match: 0–50 pts ─────────────────────────────────────────────
+  let skillScore = 0;
+  if (userSkills.length > 0 && jobSkills.length > 0) {
+    let hits = 0;
+    for (const js of jobSkills) {
+      if (userSkills.some(us => us.includes(js) || js.includes(us))) hits++;
+    }
+    skillScore = Math.round((hits / jobSkills.length) * 50);
+  } else if (userSkills.length === 0) {
+    skillScore = 20; // neutral base — user hasn't listed skills yet
+  }
+
+  // ── 2. City match: +12 pts ───────────────────────────────────────────────
+  const cityScore = (profile.city && job.city && profile.city === job.city) ? 12 : 0;
+
+  // ── 3. Interest match: +10 pts ───────────────────────────────────────────
+  let interestScore = 0;
+  if (profile.interests && profile.interests.length > 0) {
+    for (const interest of profile.interests) {
+      const kws = INTEREST_KEYWORDS[interest] || [];
+      if (kws.some(kw => jobTitleLow.includes(kw))) {
+        interestScore = 10;
+        break;
+      }
+    }
+  }
+
+  // ── 4. Major/specialty match: +8 pts ─────────────────────────────────────
+  let majorScore = 0;
+  if (profile.major) {
+    const majorLow = profile.major.toLowerCase();
+    for (const [majorKw, relatedSkills] of Object.entries(MAJOR_SKILL_MAP)) {
+      if (majorLow.includes(majorKw)) {
+        // Does job require any skill related to this major?
+        if (relatedSkills.some(rs => jobSkills.includes(rs) || jobTitleLow.includes(rs))) {
+          majorScore = 8;
+          break;
+        }
+      }
+    }
+  }
+
+  // ── 5. Small per-job jitter so scores don't all look the same: ±3 ────────
+  const jitter = ((job.id * 7 + 3) % 7) - 3;
+
+  // ── Total ─────────────────────────────────────────────────────────────────
+  // Base 18 + skill(0-50) + city(0-12) + interest(0-10) + major(0-8) + jitter(±3) = 18–101
+  const raw = 18 + skillScore + cityScore + interestScore + majorScore + jitter;
+  return Math.min(98, Math.max(25, raw));
+}
+
+function ringColor(score) {
+  if (score >= 80) return '#5BAA6E';
+  if (score >= 60) return '#C9A84C';
+  return '#B05A28';
+}
+
+function stripeClass(job) {
+  if (job.stripe === 'sage')    return 'sage';
+  if (job.stripe === 'rust')    return 'rust';
+  return '';
+}
+
+// ── Job Card HTML ───────────────────────────────────────────────────────────
+function buildJobCard(job, score) {
+  const sc      = stripeClass(job);
+  const color   = ringColor(score);
+  const circ    = 2 * Math.PI * 15; // 94.247...
+  const offset  = (circ * (1 - score / 100)).toFixed(2);
+  const isSaved = savedJobs.indexOf(job.id) !== -1;
+
+  const tags = [];
+  if (job.type === 'internship') tags.push('<span class="jc-tag t-intern">Стажировка</span>');
+  if (job.type === 'part-time')  tags.push('<span class="jc-tag t-part">Неполный день</span>');
+  if (job.remote)                tags.push('<span class="jc-tag t-remote">Удалённо</span>');
+
+  return `
+<div class="jc" onclick="goToJob(${job.id})" style="cursor:pointer">
+  <div class="jc-stripe ${sc}">
+    <div class="jc-logo">${job.logo}</div>
+    <div class="jc-score">
+      <div class="jc-ring">
+        <svg viewBox="0 0 40 40">
+          <circle class="ring-bg" cx="20" cy="20" r="15"/>
+          <circle class="ring-fg" cx="20" cy="20" r="15"
+            stroke="${color}" stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${offset}"/>
+        </svg>
+        <div class="ring-label">${score}</div>
+      </div>
+      <div class="jc-score-text">
+        <div class="jc-pct">${score}%</div>
+        <div class="jc-word">Совпадение</div>
+      </div>
+    </div>
+    <div class="jc-save ${isSaved ? 'saved' : ''}" onclick="doToggleSave(event, ${job.id})">${isSaved ? '♥' : '♡'}</div>
+  </div>
+  <div class="jc-body">
+    <div class="jc-title">${job.title}</div>
+    <div class="jc-co">${job.company}</div>
+    <div class="jc-info">
+      <div class="jc-inf">📍 ${job.city}</div>
+      ${job.remote ? '<div class="jc-dot"></div><div class="jc-inf">Удалённо</div>' : ''}
+    </div>
+    <div class="jc-tags">${tags.join('')}</div>
+  </div>
+  <div class="jc-foot">
+    <div class="jc-sal">${job.salary} <span>/ мес</span></div>
+    <button class="jc-btn ${sc}" onclick="event.stopPropagation(); goToJob(${job.id})">Подробнее →</button>
+  </div>
+</div>`;
+}
+
+// ── Navigation ──────────────────────────────────────────────────────────────
+function navigate(view, jobId) {
+  // Save previous view (for back button in job detail)
+  if (view !== 'job') prevView = currentView;
+  currentView = view;
+
+  // Toggle landing vs app shell
+  const landingEl = document.getElementById('landing-page');
+  const appEl     = document.getElementById('app-shell');
+  if (view === 'landing') {
+    landingEl.style.display = 'block';
+    appEl.style.display = 'none';
+    return;
+  }
+  landingEl.style.display = 'none';
+  appEl.style.display = 'block';
+
+  // Hide all pages
+  document.querySelectorAll('.app-page').forEach(function(pg) {
+    pg.classList.remove('visible');
+  });
+
+  // Update nav tabs
+  document.querySelectorAll('.app-nav-tab').forEach(function(tab) {
+    tab.classList.toggle('active', tab.dataset.view === view);
+  });
+
+  // Show the target page
+  if (view === 'home') {
+    document.getElementById('page-home').classList.add('visible');
+    renderFeed();
+  } else if (view === 'browse') {
+    document.getElementById('page-browse').classList.add('visible');
+    renderBrowse();
+  } else if (view === 'job') {
+    document.getElementById('page-job').classList.add('visible');
+    renderJobDetail(jobId);
+  } else if (view === 'saved') {
+    document.getElementById('page-saved').classList.add('visible');
+    renderSaved();
+  } else if (view === 'profile') {
+    document.getElementById('page-profile').classList.add('visible');
+    loadProfileForm();
+  }
+  // Scroll to top
+  window.scrollTo(0, 0);
+}
+
+function goToJob(jobId) {
+  navigate('job', jobId);
+}
+
+function enterApp() {
+  if (localStorage.getItem('steppeup_onboarded')) {
+    navigate('home');
+  } else {
+    startOnboarding();
+  }
+}
+
+// ── Feed ────────────────────────────────────────────────────────────────────
+function renderFeed() {
+  // Update greeting
+  if (profile && profile.name) {
+    const firstName = profile.name.split(' ')[0];
+    document.getElementById('feed-name').textContent = firstName;
+    const avatarEl = document.getElementById('nav-avatar');
+    if (avatarEl) avatarEl.textContent = firstName[0].toUpperCase();
+  }
+
+  // Filter + score + sort
+  let jobs = getFilteredJobs(activeFilter);
+  jobs = jobs.map(function(j) {
+    return Object.assign({}, j, { _score: calcMatch(j) });
+  });
+  jobs.sort(function(a, b) { return b._score - a._score; });
+
+  document.getElementById('feed-grid').innerHTML = jobs.map(function(j) {
+    return buildJobCard(j, j._score);
+  }).join('');
+}
+
+function getFilteredJobs(filter) {
+  if (filter === 'internship') return ALL_JOBS.filter(function(j) { return j.type === 'internship'; });
+  if (filter === 'part-time')  return ALL_JOBS.filter(function(j) { return j.type === 'part-time'; });
+  if (filter === 'remote')     return ALL_JOBS.filter(function(j) { return j.remote; });
+  return ALL_JOBS;
+}
+
+// ── Browse ──────────────────────────────────────────────────────────────────
+function renderBrowse() {
+  filterBrowse();
+}
+
+function filterBrowse() {
+  const searchEl = document.getElementById('browse-search');
+  const query = searchEl ? searchEl.value.toLowerCase().trim() : '';
+
+  let jobs = ALL_JOBS.slice();
+
+  // Type/location filter
+  if (activeBrowseFilter === 'internship') jobs = jobs.filter(function(j) { return j.type === 'internship'; });
+  if (activeBrowseFilter === 'part-time')  jobs = jobs.filter(function(j) { return j.type === 'part-time'; });
+  if (activeBrowseFilter === 'remote')     jobs = jobs.filter(function(j) { return j.remote; });
+  if (activeBrowseFilter === 'almaty')     jobs = jobs.filter(function(j) { return j.city === 'Алматы'; });
+  if (activeBrowseFilter === 'astana')     jobs = jobs.filter(function(j) { return j.city === 'Астана'; });
+
+  // Search query
+  if (query) {
+    jobs = jobs.filter(function(j) {
+      return j.title.toLowerCase().indexOf(query) !== -1 ||
+             j.company.toLowerCase().indexOf(query) !== -1;
+    });
+  }
+
+  const countEl = document.getElementById('browse-count');
+  if (countEl) countEl.textContent = 'Найдено ' + jobs.length + ' вакансий';
+
+  document.getElementById('browse-grid').innerHTML = jobs.map(function(j) {
+    return buildJobCard(j, calcMatch(j));
+  }).join('');
+}
+
+// ── Job Detail ──────────────────────────────────────────────────────────────
+function renderJobDetail(jobId) {
+  const job = ALL_JOBS.find(function(j) { return j.id == jobId; });
+  if (!job) {
+    document.getElementById('detail-wrap').innerHTML = '<p style="padding:40px;text-align:center;color:var(--ink-50)">Вакансия не найдена</p>';
+    return;
+  }
+
+  const score    = calcMatch(job);
+  const isSaved  = savedJobs.indexOf(job.id) !== -1;
+  const jobSkills = job.skills || [];
+  const userSkills = (profile && profile.skills) ? profile.skills.map(function(s) { return s.toLowerCase(); }) : [];
+  const hasProfile = userSkills.length > 0;
+
+  // Build skill bars
+  let skillBarsHTML = '';
+  if (jobSkills.length > 0) {
+    const bars = jobSkills.map(function(skill) {
+      const isMatch = userSkills.some(function(us) {
+        return us.indexOf(skill.toLowerCase()) !== -1 || skill.toLowerCase().indexOf(us) !== -1;
+      });
+      const pct = isMatch ? 95 : (hasProfile ? 20 : 65);
+      const cls = isMatch ? 'match' : (hasProfile ? 'miss' : 'partial');
+      return '<div class="skill-bar-row">' +
+               '<div class="skill-bar-label">' + skill + '</div>' +
+               '<div class="skill-bar-track"><div class="skill-bar-fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
+               '<div class="skill-bar-pct">' + pct + '%</div>' +
+             '</div>';
+    });
+    skillBarsHTML = '<div class="detail-body">' +
+      '<div class="detail-section-title">Соответствие навыков</div>' +
+      '<div class="skill-bars">' + bars.join('') + '</div>' +
+    '</div>';
+  }
+
+  // Tags for detail header
+  const tagLabels = [];
+  if (job.type === 'internship') tagLabels.push('Стажировка');
+  if (job.type === 'part-time')  tagLabels.push('Неполный день');
+  if (job.remote) tagLabels.push('Удалённо');
+  tagLabels.push(job.city);
+  const tagsHTML = tagLabels.map(function(t) {
+    return '<span class="detail-tag">' + t + '</span>';
+  }).join('');
+
+  // The apply URL
+  const applyURL = job.url || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent(job.title);
+
+  document.getElementById('detail-wrap').innerHTML =
+    '<div class="detail-back" onclick="navigate(prevView)">← Назад</div>' +
+
+    '<div class="detail-hero">' +
+      '<div class="detail-hero-glow"></div>' +
+      '<div class="detail-logo">' + job.logo + '</div>' +
+      '<div class="detail-title">' + job.title + '</div>' +
+      '<div class="detail-co">' + job.company + '</div>' +
+      '<div class="detail-meta">' + tagsHTML + '</div>' +
+    '</div>' +
+
+    '<div class="detail-body">' +
+      '<div class="detail-section-title">О вакансии</div>' +
+      '<div class="detail-desc">' + (job.description || 'Описание не указано.') +
+        ' Это отличная возможность для студента получить реальный опыт работы в динамичной команде.' +
+      '</div>' +
+    '</div>' +
+
+    skillBarsHTML +
+
+    '<div class="detail-apply">' +
+      '<div>' +
+        '<div class="detail-salary">' + job.salary + ' <span>/ месяц</span></div>' +
+        '<div style="font-size:12px;color:var(--ink-50);margin-top:4px">Совпадение: ' + score + '%</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:10px;align-items:center">' +
+        '<div class="jc-save ' + (isSaved ? 'saved' : '') + '" ' +
+             'style="position:static;width:40px;height:40px;border:1.5px solid var(--ink-20);' +
+                    'color:var(--ink-50);font-size:18px;border-radius:50%;background:var(--white);' +
+                    'display:flex;align-items:center;justify-content:center;cursor:pointer;" ' +
+             'onclick="doToggleSave(event,' + job.id + ')">' +
+          (isSaved ? '♥' : '♡') +
+        '</div>' +
+        '<a href="' + applyURL + '" target="_blank" rel="noopener" ' +
+           'class="btn-hero" style="padding:12px 28px;text-decoration:none;display:inline-block">' +
+          'Откликнуться →' +
+        '</a>' +
+      '</div>' +
+    '</div>';
+}
+
+// ── Saved ────────────────────────────────────────────────────────────────────
+function renderSaved() {
+  const jobs = ALL_JOBS.filter(function(j) { return savedJobs.indexOf(j.id) !== -1; });
+  const countEl = document.getElementById('saved-sub');
+  if (countEl) {
+    const n = jobs.length;
+    countEl.textContent = n + ' ' + (n === 1 ? 'вакансия' : n < 5 ? 'вакансии' : 'вакансий');
+  }
+  const gridEl = document.getElementById('saved-grid');
+  if (!jobs.length) {
+    gridEl.innerHTML = '<div class="saved-empty">' +
+      '<div class="saved-empty-icon">🔖</div>' +
+      '<h3>Пусто пока</h3>' +
+      '<p>Нажмите ♡ на любой вакансии, чтобы сохранить её</p>' +
+    '</div>';
+  } else {
+    gridEl.innerHTML = jobs.map(function(j) { return buildJobCard(j, calcMatch(j)); }).join('');
+  }
+}
+
+function doToggleSave(evt, jobId) {
+  evt.stopPropagation();
+  evt.preventDefault();
+  const idx = savedJobs.indexOf(jobId);
+  if (idx !== -1) {
+    savedJobs.splice(idx, 1);
+  } else {
+    savedJobs.push(jobId);
+  }
+  localStorage.setItem('steppeup_saved', JSON.stringify(savedJobs));
+
+  // Re-render current view
+  if (currentView === 'saved')  renderSaved();
+  else if (currentView === 'home')   renderFeed();
+  else if (currentView === 'browse') filterBrowse();
+  else if (currentView === 'job') {
+    // Just update save button in detail
+    const saveBtn = document.querySelector('.detail-apply .jc-save');
+    if (saveBtn) {
+      const isSaved = savedJobs.indexOf(jobId) !== -1;
+      saveBtn.classList.toggle('saved', isSaved);
+      saveBtn.textContent = isSaved ? '♥' : '♡';
+    }
+  }
+}
+
+// ── Profile ──────────────────────────────────────────────────────────────────
+function loadProfileForm() {
+  if (!profile) profile = {};
+  document.getElementById('p-name').value  = profile.name  || '';
+  document.getElementById('p-email').value = profile.email || '';
+  document.getElementById('p-city').value  = profile.city  || '';
+  document.getElementById('p-uni').value   = profile.uni   || '';
+  document.getElementById('p-major').value = profile.major || '';
+  renderSkillPills(profile.skills || []);
+  const initial = (profile.name || 'С')[0].toUpperCase();
+  const avEl = document.getElementById('profile-av');
+  const nameEl = document.getElementById('profile-name-display');
+  const emailEl = document.getElementById('profile-email-display');
+  if (avEl)    avEl.textContent   = initial;
+  if (nameEl)  nameEl.textContent = profile.name  || 'Студент';
+  if (emailEl) emailEl.textContent = profile.email || '—';
+}
+
+function renderSkillPills(skills) {
+  currentSkills = skills.slice();
+  const wrap = document.getElementById('skills-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = currentSkills.map(function(s, i) {
+    return '<span class="skill-pill">' + s +
+           '<span class="skill-pill-x" onclick="removeSkill(' + i + ')">×</span>' +
+           '</span>';
+  }).join('') + '<input class="skill-type-input" id="skill-type" placeholder="' +
+    (currentSkills.length ? '' : 'Введите навык + Enter') + '"/>';
+  const inp = document.getElementById('skill-type');
+  if (inp) {
+    inp.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && e.target.value.trim()) {
+        currentSkills.push(e.target.value.trim());
+        renderSkillPills(currentSkills);
+        e.preventDefault();
+      }
+    });
+  }
+}
+
+function removeSkill(idx) {
+  currentSkills.splice(idx, 1);
+  renderSkillPills(currentSkills);
+}
+
+function saveProfile() {
+  profile = {
+    name:  document.getElementById('p-name').value,
+    email: document.getElementById('p-email').value,
+    city:  document.getElementById('p-city').value,
+    uni:   document.getElementById('p-uni').value,
+    major: document.getElementById('p-major').value,
+    skills: currentSkills.slice()
+  };
+  localStorage.setItem('steppeup_profile', JSON.stringify(profile));
+
+  // Update nav avatar immediately
+  if (profile.name) {
+    const av = document.getElementById('nav-avatar');
+    if (av) av.textContent = profile.name[0].toUpperCase();
+  }
+
+  // Re-render feed & browse in background so scores refresh when user switches back
+  // (pre-render into the hidden grids so switching tabs is instant)
+  const feedGrid = document.getElementById('feed-grid');
+  if (feedGrid) {
+    let jobs = getFilteredJobs(activeFilter).map(function(j) {
+      return Object.assign({}, j, { _score: calcMatch(j) });
+    });
+    jobs.sort(function(a, b) { return b._score - a._score; });
+    feedGrid.innerHTML = jobs.map(function(j) { return buildJobCard(j, j._score); }).join('');
+    // Also update greeting
+    if (profile.name) {
+      const nameEl = document.getElementById('feed-name');
+      if (nameEl) nameEl.textContent = profile.name.split(' ')[0];
+    }
+  }
+  const browseGrid = document.getElementById('browse-grid');
+  if (browseGrid && browseGrid.children.length > 0) {
+    filterBrowse();
+  }
+
+  const btn = document.querySelector('.profile-save-btn');
+  if (btn) {
+    btn.textContent = '✓ Профиль сохранён — подборка обновлена!';
+    btn.style.background = 'var(--sage)';
+    setTimeout(function() {
+      btn.textContent = 'Сохранить профиль →';
+      btn.style.background = '';
+    }, 2500);
+  }
+}
+
+function handleResumeUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const area = document.getElementById('resume-upload-area');
+  if (area) {
+    area.innerHTML = '<div style="font-size:32px">📄</div>' +
+                     '<h4>' + file.name + '</h4>' +
+                     '<p style="color:var(--sage)">✓ Загружено</p>';
+    area.style.borderColor = 'var(--sage)';
+  }
+}
+
+// ── Onboarding ───────────────────────────────────────────────────────────────
+const OB_STEPS = [
+  {
+    label: 'Шаг 1 из 5',
+    title: 'Добро пожаловать<br/>в <em>SteppeUp</em>',
+    next:  'Начать →',
+    render: function() {
+      return '<p style="font-size:14px;color:var(--ink-50);line-height:1.75">' +
+             'Найдите стажировку или работу за 2 минуты. ' +
+             'Никаких требований «5 лет опыта». Только подходящие вам вакансии.</p>';
+    }
+  },
+  {
+    label: 'Шаг 2 из 5',
+    title: 'Как вас <em>зовут?</em>',
+    next:  'Далее →',
+    collect: function() {
+      obData.name  = (document.getElementById('ob-name')  || {}).value || '';
+      obData.email = (document.getElementById('ob-email') || {}).value || '';
+    },
+    render: function() {
+      return '<label class="ob-field-label">Ваше имя</label>' +
+             '<input class="ob-input" id="ob-name" placeholder="Айгерим Бекова" value="' + (obData.name||'') + '"/>' +
+             '<label class="ob-field-label">Email</label>' +
+             '<input class="ob-input" id="ob-email" type="email" placeholder="email@example.com" value="' + (obData.email||'') + '"/>';
+    }
+  },
+  {
+    label: 'Шаг 3 из 5',
+    title: 'Расскажите<br/>о <em>себе</em>',
+    next:  'Далее →',
+    collect: function() {
+      obData.city  = (document.getElementById('ob-city')  || {}).value || '';
+      obData.uni   = (document.getElementById('ob-uni')   || {}).value || '';
+      obData.major = (document.getElementById('ob-major') || {}).value || '';
+    },
+    render: function() {
+      return '<label class="ob-field-label">Город</label>' +
+             '<select class="ob-select" id="ob-city">' +
+               '<option value="">Выберите город</option>' +
+               '<option value="Алматы"'  + (obData.city==='Алматы'  ?' selected':'') + '>Алматы</option>' +
+               '<option value="Астана"'  + (obData.city==='Астана'  ?' selected':'') + '>Астана</option>' +
+               '<option value="Шымкент"' + (obData.city==='Шымкент' ?' selected':'') + '>Шымкент</option>' +
+               '<option value="Другой"'  + (obData.city==='Другой'  ?' selected':'') + '>Другой</option>' +
+             '</select>' +
+             '<label class="ob-field-label">Вуз</label>' +
+             '<input class="ob-input" id="ob-uni" placeholder="Назарбаев Университет, AITU..." value="' + (obData.uni||'') + '"/>' +
+             '<label class="ob-field-label">Специальность</label>' +
+             '<input class="ob-input" id="ob-major" placeholder="Информатика, Маркетинг..." value="' + (obData.major||'') + '"/>';
+    }
+  },
+  {
+    label:    'Шаг 4 из 5',
+    title:    'Загрузите <em>резюме</em>',
+    next:     'Далее →',
+    canSkip:  true,
+    render: function() {
+      return '<p style="font-size:13px;color:var(--ink-50);margin-bottom:12px">Мы автоматически извлечём ваши навыки и опыт</p>' +
+             '<div class="ob-dropzone ' + (obData.resumeFile ? 'success' : '') + '" id="ob-dz" onclick="document.getElementById(\'ob-resume-input\').click()">' +
+               '<div class="ob-dropzone-icon">' + (obData.resumeFile ? '✓' : '📄') + '</div>' +
+               '<h4>' + (obData.resumeFile ? obData.resumeFile : 'Перетащите файл сюда') + '</h4>' +
+               '<p>' + (obData.resumeFile ? 'Файл загружен' : 'PDF или DOCX · до 10 МБ') + '</p>' +
+             '</div>' +
+             '<input type="file" id="ob-resume-input" accept=".pdf,.docx" style="display:none" onchange="obResumeUpload(this)"/>';
+    }
+  },
+  {
+    label: 'Шаг 5 из 5',
+    title: 'Что вас <em>интересует?</em>',
+    next:  'Начать поиск →',
+    collect: function() {},
+    render: function() {
+      const areas = ['IT / Разработка','Маркетинг','Дизайн','Финансы','HR','Аналитика','Продажи','Юриспруденция'];
+      const interests = obData.interests || [];
+      return '<p style="font-size:13px;color:var(--ink-50);margin-bottom:8px">Выберите направления (можно несколько)</p>' +
+             '<div class="ob-interests">' +
+             areas.map(function(a) {
+               return '<button class="ob-int ' + (interests.indexOf(a) !== -1 ? 'sel' : '') + '" ' +
+                      'onclick="toggleInterest(this,\'' + a + '\')">' + a + '</button>';
+             }).join('') +
+             '</div>';
+    }
+  }
+];
+
+function toggleInterest(btn, val) {
+  btn.classList.toggle('sel');
+  if (!obData.interests) obData.interests = [];
+  const idx = obData.interests.indexOf(val);
+  if (idx !== -1) obData.interests.splice(idx, 1);
+  else obData.interests.push(val);
+}
+
+function renderObStep() {
+  const step = OB_STEPS[obStep];
+  document.getElementById('ob-step-label').textContent = step.label;
+  document.getElementById('ob-title').innerHTML = step.title;
+  document.getElementById('ob-next-btn').textContent = step.next || 'Далее →';
+  document.getElementById('ob-step-content').innerHTML = step.render();
+  // Dots
+  document.getElementById('ob-dots').innerHTML = OB_STEPS.map(function(_, i) {
+    const cls = i < obStep ? 'done' : i === obStep ? 'active' : '';
+    return '<div class="ob-dot ' + cls + '"></div>';
+  }).join('');
+  // Skip button
+  document.querySelector('.ob-btn-skip').style.display = step.canSkip ? 'inline-block' : 'none';
+}
+
+function obNext() {
+  const step = OB_STEPS[obStep];
+  if (step.collect) step.collect();
+  if (obStep < OB_STEPS.length - 1) {
+    obStep++;
+    renderObStep();
+  } else {
+    finishOnboarding();
+  }
+}
+
+function obSkip() {
+  if (obStep < OB_STEPS.length - 1) {
+    obStep++;
+    renderObStep();
+  } else {
+    finishOnboarding();
+  }
+}
+
+function obResumeUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  obData.resumeFile = file.name;
+  const dz = document.getElementById('ob-dz');
+  dz.innerHTML = '<div class="ob-dropzone-icon">⏳</div>' +
+                 '<h4>Анализируем резюме...</h4>' +
+                 '<div class="scan-bar"><div class="scan-fill"></div></div>' +
+                 '<p style="color:var(--sage)">Извлекаем навыки</p>';
+  dz.classList.add('success');
+  setTimeout(function() {
+    const mockSkills = ['JavaScript','React','CSS','Figma','Excel'];
+    if (!obData.skills) obData.skills = mockSkills.slice(0, 3);
+    dz.innerHTML = '<div class="ob-dropzone-icon">✓</div>' +
+                   '<h4>' + file.name + '</h4>' +
+                   '<p style="color:var(--sage)">Навыки: ' + obData.skills.join(', ') + '</p>';
+  }, 1500);
+}
+
+function startOnboarding() {
+  obStep = 0;
+  obData = {};
+  document.getElementById('ob-overlay').style.display = 'flex';
+  renderObStep();
+}
+
+function finishOnboarding() {
+  const step = OB_STEPS[obStep];
+  if (step.collect) step.collect();
+
+  // Derive starter skills from selected interests if no resume was uploaded
+  let skills = obData.skills || [];
+  if (skills.length === 0 && obData.interests && obData.interests.length > 0) {
+    const interestToSkills = {
+      'IT / Разработка': ['Python','JavaScript','Git'],
+      'Маркетинг':       ['SMM','Canva','Аналитика'],
+      'Дизайн':          ['Figma','UX Research'],
+      'Финансы':         ['Excel','Финансы','1C'],
+      'HR':              ['Рекрутинг','HR','Коммуникации'],
+      'Аналитика':       ['Excel','SQL','Аналитика'],
+      'Продажи':         ['Продажи','Коммуникации','CRM'],
+      'Юриспруденция':   ['Юриспруденция','Договоры'],
+    };
+    for (const interest of obData.interests) {
+      const s = interestToSkills[interest] || [];
+      skills = skills.concat(s.filter(sk => skills.indexOf(sk) === -1));
+    }
+  }
+
+  profile = {
+    name:      obData.name      || '',
+    email:     obData.email     || '',
+    city:      obData.city      || '',
+    uni:       obData.uni       || '',
+    major:     obData.major     || '',
+    skills:    skills,
+    interests: obData.interests || []
+  };
+  localStorage.setItem('steppeup_profile', JSON.stringify(profile));
+  localStorage.setItem('steppeup_onboarded', '1');
+  document.getElementById('ob-overlay').style.display = 'none';
+  navigate('home');
+}
+
+// ── Data Loading ─────────────────────────────────────────────────────────────
+
+// Map a raw Supabase row → the shape the app expects
+function mapSupabaseJob(j) {
+  const tags     = Array.isArray(j.tags) ? j.tags.map(function(t){ return t.toLowerCase(); }) : [];
+  const isIntern = tags.some(function(t){ return t.includes('стажировк') || t.includes('intern') || t.includes('trainee'); });
+  const isPart   = tags.some(function(t){ return t.includes('частичн')   || t.includes('part-time') || t.includes('подработк'); });
+  const isRemote = tags.some(function(t){ return t.includes('удалённо')  || t.includes('remote')    || t.includes('дистанц'); });
+
+  // Salary string
+  var salary = '—';
+  if (j.salary_min && j.salary_max) salary = j.salary_min.toLocaleString('ru') + '–' + j.salary_max.toLocaleString('ru') + ' ₸';
+  else if (j.salary_min)            salary = 'от ' + j.salary_min.toLocaleString('ru') + ' ₸';
+  else if (j.salary_max)            salary = 'до ' + j.salary_max.toLocaleString('ru') + ' ₸';
+
+  var type   = isIntern ? 'internship' : isPart ? 'part-time' : 'full-time';
+  var stripe = isIntern ? 'sage'       : isPart ? 'rust'      : 'default';
+
+  var co   = (j.company || 'СТ').trim();
+  var logo = co.split(' ').length > 1
+    ? (co.split(' ')[0][0] + co.split(' ')[1][0]).toUpperCase()
+    : co.substring(0, 2).toUpperCase();
+
+  return {
+    id:          j.id,
+    title:       j.title       || 'Без названия',
+    company:     j.company     || 'Компания',
+    city:        j.location    || 'Казахстан',
+    type:        type,
+    remote:      isRemote,
+    salary:      salary,
+    skills:      [],
+    description: j.description || '',
+    url:         j.source_url  || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent(j.title || ''),
+    logo:        logo,
+    stripe:      stripe,
+  };
+}
+
+async function loadJobs() {
+  try {
+    var res = await fetch(
+      SB_URL + '/rest/v1/jobs?select=*&status=eq.active&order=posted_at.desc&limit=150',
+      { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+    );
+    if (res.ok) {
+      var data = await res.json();
+      if (data && data.length > 0) {
+        ALL_JOBS = data.map(mapSupabaseJob);
+        console.log('[SteppeUp] Loaded ' + ALL_JOBS.length + ' live jobs from Supabase');
+        return;
+      }
+    }
+  } catch(e) {
+    console.warn('[SteppeUp] Supabase unavailable, using mock data:', e.message);
+  }
+  ALL_JOBS = MOCK_JOBS;
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  loadPersistedData();
+  await loadJobs();
+
+  // Populate landing page grid
+  const landingGrid = document.getElementById('landing-grid');
+  if (landingGrid) {
+    landingGrid.innerHTML = MOCK_JOBS.slice(0, 6).map(function(job) {
+      const score = 55 + ((job.id * 17 + 11) % 40);
+      return buildJobCard(job, score);
+    }).join('');
+  }
+
+  // Feed filter chips
+  document.querySelectorAll('.chip[data-filter]').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      activeFilter = chip.dataset.filter;
+      document.querySelectorAll('.chip[data-filter]').forEach(function(c) { c.classList.remove('active'); });
+      chip.classList.add('active');
+      if (currentView === 'home') renderFeed();
+    });
+  });
+
+  // Browse filter chips
+  document.querySelectorAll('.chip[data-bfilter]').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      activeBrowseFilter = chip.dataset.bfilter;
+      document.querySelectorAll('.chip[data-bfilter]').forEach(function(c) { c.classList.remove('active'); });
+      chip.classList.add('active');
+      if (currentView === 'browse') filterBrowse();
+    });
+  });
+
+  // Check onboarding state
+  if (localStorage.getItem('steppeup_onboarded')) {
+    // Already onboarded: stay on landing, user clicks "Войти" to enter
+    // (or check hash for direct link)
+    const hash = location.hash;
+    if (hash === '#/home' || hash === '#/browse' || hash === '#/saved' || hash === '#/profile') {
+      navigate(hash.replace('#/', ''));
+    }
+  } else {
+    startOnboarding();
+  }
+}
+
+window.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
