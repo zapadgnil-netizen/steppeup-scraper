@@ -204,7 +204,11 @@ const MAJOR_SKILL_MAP = {
 function calcMatch(job) {
   // Zero profile at all → deterministic hash scores (55-94)
   if (!profile) {
-    return 55 + ((job.id * 17 + 11) % 40);
+    // Use a simple hash that works with both numeric and string IDs
+    var h = 0;
+    var idStr = String(job.id);
+    for (var i = 0; i < idStr.length; i++) h = ((h << 5) - h + idStr.charCodeAt(i)) | 0;
+    return 55 + (Math.abs(h) % 40);
   }
 
   const userSkills  = (profile.skills || []).map(s => s.toLowerCase());
@@ -254,7 +258,9 @@ function calcMatch(job) {
   }
 
   // ── 5. Small per-job jitter so scores don't all look the same: ±3 ────────
-  const jitter = ((job.id * 7 + 3) % 7) - 3;
+  var jh = 0; var jidStr = String(job.id);
+  for (var ji = 0; ji < jidStr.length; ji++) jh = ((jh << 5) - jh + jidStr.charCodeAt(ji)) | 0;
+  const jitter = (Math.abs(jh) % 7) - 3;
 
   // ── Total ─────────────────────────────────────────────────────────────────
   // Base 18 + skill(0-50) + city(0-12) + interest(0-10) + major(0-8) + jitter(±3) = 18–101
@@ -288,7 +294,7 @@ function buildJobCard(job, score) {
   if (job.remote)                tags.push('<span class="jc-tag t-remote">Удалённо</span>');
 
   return `
-<div class="jc" onclick="goToJob(${job.id})" style="cursor:pointer">
+<div class="jc" onclick="goToJob('${job.id}')" style="cursor:pointer">
   <div class="jc-stripe ${sc}">
     <div class="jc-logo">${job.logo}</div>
     <div class="jc-score">
@@ -305,7 +311,7 @@ function buildJobCard(job, score) {
         <div class="jc-word">Совпадение</div>
       </div>
     </div>
-    <div class="jc-save ${isSaved ? 'saved' : ''}" onclick="doToggleSave(event, ${job.id})">${isSaved ? '♥' : '♡'}</div>
+    <div class="jc-save ${isSaved ? 'saved' : ''}" onclick="doToggleSave(event, '${job.id}')">${isSaved ? '♥' : '♡'}</div>
   </div>
   <div class="jc-body">
     <div class="jc-title">${job.title}</div>
@@ -318,7 +324,7 @@ function buildJobCard(job, score) {
   </div>
   <div class="jc-foot">
     <div class="jc-sal">${job.salary} <span>/ мес</span></div>
-    <button class="jc-btn ${sc}" onclick="event.stopPropagation(); goToJob(${job.id})">Подробнее →</button>
+    <button class="jc-btn ${sc}" onclick="event.stopPropagation(); goToJob('${job.id}')">Подробнее →</button>
   </div>
 </div>`;
 }
@@ -491,8 +497,11 @@ function renderJobDetail(jobId) {
     return '<span class="detail-tag">' + t + '</span>';
   }).join('');
 
-  // The apply URL
-  const applyURL = job.url || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent(job.title);
+  // The apply URL — use source_url if valid, else search on hh.kz
+  const directURL = job.url;
+  const searchURL = 'https://hh.kz/search/vacancy?text=' + encodeURIComponent(job.title + ' ' + job.company);
+  const applyURL  = directURL || searchURL;
+  const hasDirectLink = !!directURL && directURL.indexOf('/search/') === -1;
 
   document.getElementById('detail-wrap').innerHTML =
     '<div class="detail-back" onclick="navigate(prevView)">← Назад</div>' +
@@ -524,7 +533,7 @@ function renderJobDetail(jobId) {
              'style="position:static;width:40px;height:40px;border:1.5px solid var(--ink-20);' +
                     'color:var(--ink-50);font-size:18px;border-radius:50%;background:var(--white);' +
                     'display:flex;align-items:center;justify-content:center;cursor:pointer;" ' +
-             'onclick="doToggleSave(event,' + job.id + ')">' +
+             'onclick="doToggleSave(event,\'' + job.id + '\')">' +
           (isSaved ? '♥' : '♡') +
         '</div>' +
         '<a href="' + applyURL + '" target="_blank" rel="noopener" ' +
@@ -532,7 +541,15 @@ function renderJobDetail(jobId) {
           'Откликнуться →' +
         '</a>' +
       '</div>' +
-    '</div>';
+    '</div>' +
+
+    (hasDirectLink ?
+      '<div style="text-align:center;margin-bottom:40px">' +
+        '<a href="' + searchURL + '" target="_blank" rel="noopener" ' +
+           'style="font-size:12px;color:var(--ink-50);text-decoration:underline">' +
+          'Не открывается? Найти на hh.kz →' +
+        '</a>' +
+      '</div>' : '');
 }
 
 // ── Saved ────────────────────────────────────────────────────────────────────
@@ -911,7 +928,7 @@ function mapSupabaseJob(j) {
     salary:      salary,
     skills:      [],
     description: j.description || '',
-    url:         j.source_url  || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent(j.title || ''),
+    url:         j.source_url  || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent((j.title || '') + ' ' + (j.company || '')),
     logo:        logo,
     stripe:      stripe,
   };
@@ -942,12 +959,12 @@ async function init() {
   loadPersistedData();
   await loadJobs();
 
-  // Populate landing page grid
+  // Populate landing page grid with REAL jobs (fallback to mock if none)
   const landingGrid = document.getElementById('landing-grid');
   if (landingGrid) {
-    landingGrid.innerHTML = MOCK_JOBS.slice(0, 6).map(function(job) {
-      const score = 55 + ((job.id * 17 + 11) % 40);
-      return buildJobCard(job, score);
+    const displayJobs = ALL_JOBS.length > 0 ? ALL_JOBS.slice(0, 6) : MOCK_JOBS.slice(0, 6);
+    landingGrid.innerHTML = displayJobs.map(function(job) {
+      return buildJobCard(job, calcMatch(job));
     }).join('');
   }
 
