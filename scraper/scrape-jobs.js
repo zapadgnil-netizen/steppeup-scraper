@@ -579,6 +579,21 @@ async function main() {
   console.log(`  Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
   console.log('═══════════════════════════════════════════\n');
 
+  // Remove seed/placeholder jobs (IDs 1-20) that have fake search URLs instead of real vacancy links
+  if (db) {
+    try {
+      const { data, error } = await db
+        .from('jobs')
+        .update({ status: 'inactive' })
+        .lte('id', 20)
+        .eq('status', 'active');
+      if (error) log('cleanup', `Seed cleanup error: ${error.message}`);
+      else log('cleanup', `Deactivated seed jobs (IDs 1-20)`);
+    } catch (e) {
+      log('cleanup', `Seed cleanup failed: ${e.message}`);
+    }
+  }
+
   // Run all scrapers
   const [hhJobs, enbekJobs, githubJobs, kolesaJobs, youthJobs] = await Promise.all([
     scrapeHH(),
