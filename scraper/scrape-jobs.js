@@ -151,7 +151,7 @@ async function scrapeHH() {
         jobs.push({
           source: 'hh_kz',
           source_id: `hh_${v.id}`,
-          source_url: v.alternate_url || `https://hh.kz/vacancy/${v.id}`,
+          source_url: (v.alternate_url || `https://hh.kz/vacancy/${v.id}`).replace('hh.ru', 'hh.kz'),
           title: v.name,
           company: v.employer?.name || 'Unknown',
           company_logo: v.employer?.logo_urls?.['90'] || null,
@@ -430,7 +430,7 @@ async function scrapeYouthPortal() {
         jobs.push({
           source: 'youth_portal',
           source_id: `youth_hh_${v.id}`,
-          source_url: v.alternate_url || `https://hh.kz/vacancy/${v.id}`,
+          source_url: (v.alternate_url || `https://hh.kz/vacancy/${v.id}`).replace('hh.ru', 'hh.kz'),
           title: v.name,
           company: v.employer?.name || 'Unknown',
           company_logo: v.employer?.logo_urls?.['90'] || null,

@@ -928,7 +928,7 @@ function mapSupabaseJob(j) {
     salary:      salary,
     skills:      [],
     description: j.description || '',
-    url:         j.source_url  || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent((j.title || '') + ' ' + (j.company || '')),
+    url:         (j.source_url  || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent((j.title || '') + ' ' + (j.company || ''))).replace('hh.ru', 'hh.kz'),
     logo:        logo,
     stripe:      stripe,
   };
