@@ -13,13 +13,14 @@
 .nav-links{display:none}
 .nav-actions{gap:6px}
 .btn-ghost,.btn-solid{padding:8px 12px;font-size:12px}
-.hero{flex-direction:column;padding:20px 16px;margin-top:56px;gap:20px}
-.hero-glow{width:300px;height:300px}
+.hero{flex-direction:column;padding:24px 16px 32px;margin-top:56px;gap:0;min-height:auto}
+.hero-glow{width:260px;height:260px;opacity:.6}
 .hero-content{max-width:100%}
-.hero-content h1{font-size:clamp(28px,5vw,42px)}
-.hero-cta{flex-direction:column;gap:16px;width:100%}
-.btn-hero{width:100%;padding:12px 20px}
-.hero-float{height:280px;min-width:100%}
+.hero-content h1{font-size:clamp(32px,8vw,48px);margin-bottom:12px}
+.hero-sub{font-size:14px;margin-bottom:24px}
+.hero-cta{flex-direction:column;align-items:flex-start;gap:20px;width:100%}
+.btn-hero{width:100%;padding:14px 20px;font-size:14px;justify-content:center}
+.hero-float{display:none}
 .stats{grid-template-columns:repeat(2,1fr);gap:12px;padding:24px 16px}
 .stat{gap:2px}
 .sn{font-size:24px}
@@ -36,14 +37,24 @@
 .section-header{margin-bottom:24px}
 .section-title{font-size:28px}
 .see-all-link{font-size:12px}
-.jc-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
-.jc-stripe{height:48px;padding:0 10px;gap:8px}
-.jc-logo{width:30px;height:30px;font-size:11px}
+.jc-grid{grid-template-columns:1fr 1fr;gap:10px}
+.jc{border-radius:14px}
+.jc-stripe{height:46px;padding:0 10px;gap:7px;border-radius:14px 14px 0 0}
+.jc-logo{width:28px;height:28px;font-size:10px;border-radius:8px}
+.jc-ring{width:28px;height:28px}
+.jc-save{width:22px;height:22px;font-size:11px}
 .jc-body{padding:8px 10px}
 .jc-title{font-size:12px}
-.jc-co{font-size:11px}
-.jc-foot{padding:6px 10px}
-.jc-btn{padding:4px 10px;font-size:11px}
+.jc-co{font-size:11px;margin-bottom:3px}
+.jc-info{font-size:10px;margin-bottom:3px}
+.jc-tags{margin-bottom:4px}
+.jc-tag{padding:2px 6px;font-size:9px}
+.jc-match-hint{font-size:9px}
+.jc-foot{padding:6px 10px 8px}
+.jc-sal{font-size:11px}
+.jc-sal span{font-size:9px}
+.jc-sal-warn{font-size:10px}
+.jc-btn{padding:5px 10px;font-size:11px;min-height:unset}
 .testi-section{padding:40px 16px}
 .testi-title{font-size:28px}
 .testi-grid{grid-template-columns:1fr;gap:16px}
@@ -59,33 +70,37 @@ footer{padding:24px 16px}
 .fbot{font-size:11px;flex-direction:column;gap:8px;text-align:center}
 
 /* ── App Pages Mobile ─────────────────────────────────────────────────────── */
-.app-nav{padding:0 12px;gap:8px;height:56px}
+.app-nav{padding:0 12px;gap:8px;height:52px}
 .app-nav-logo{font-size:16px}
 .app-nav-tabs{display:none}
 .app-nav-right{gap:6px}
 .lang-sw{gap:0}
 .lang-btn{padding:4px 8px;font-size:11px}
 .dark-toggle{padding:4px 8px;font-size:12px}
-.app-nav-avatar{width:32px;height:32px;font-size:12px}
-.app-content{padding-top:56px}
+.app-nav-avatar{width:32px;height:32px;font-size:12px;display:none}
+.app-content{padding-top:52px;padding-bottom:68px}
+#mob-nav{display:flex !important}
 
-.feed-wrap{padding:20px 16px;max-width:100%}
-.feed-header{margin-bottom:16px}
-.feed-greeting{font-size:clamp(20px,4vw,28px)}
-.feed-sub{font-size:12px}
-.filter-bar{gap:6px;margin-bottom:16px}
-.chip{padding:6px 12px;font-size:11px;min-height:32px}
-.feed-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.feed-wrap{padding:16px 14px;max-width:100%}
+.feed-header{margin-bottom:14px}
+.feed-greeting{font-size:clamp(20px,4vw,26px)}
+.feed-sub{font-size:12px;margin-top:2px}
+.filter-bar{gap:6px;margin-bottom:14px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
+.filter-bar::-webkit-scrollbar{display:none}
+.chip{height:34px;padding:0 14px;font-size:12px;flex-shrink:0;white-space:nowrap;min-height:unset}
+.feed-grid{grid-template-columns:1fr 1fr;gap:10px}
 
-.browse-wrap{padding:20px 16px;max-width:100%}
-.browse-top{gap:12px;margin-bottom:16px;flex-direction:column}
-.browse-title{font-size:24px}
+.browse-wrap{padding:16px 14px;max-width:100%}
+.browse-top{gap:10px;margin-bottom:14px;flex-direction:column}
+.browse-title{font-size:22px}
 .search-box{flex:1;min-width:100%;max-width:100%}
-.search-input{font-size:14px}
-.browse-filters{gap:6px;margin-bottom:16px}
-.browse-count{font-size:12px;margin-bottom:12px}
-.cat-select{padding:6px 12px;font-size:12px}
-.browse-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.search-input{font-size:14px;padding:10px 14px 10px 36px}
+.browse-filters{gap:6px;margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px;scrollbar-width:none}
+.browse-filters::-webkit-scrollbar{display:none}
+.browse-filters .chip{flex-shrink:0;white-space:nowrap}
+.browse-count{font-size:12px;margin-bottom:10px}
+.cat-select{padding:6px 12px;font-size:12px;flex-shrink:0}
+.browse-grid{grid-template-columns:1fr 1fr;gap:10px}
 
 .detail-wrap{padding:20px 16px;max-width:100%}
 .detail-back{font-size:12px;margin-bottom:16px}
@@ -103,10 +118,10 @@ footer{padding:24px 16px}
 .detail-salary{font-size:18px}
 .detail-salary span{font-size:11px}
 
-.saved-wrap{padding:20px 16px;max-width:100%}
-.saved-title{font-size:24px;margin-bottom:6px}
-.saved-sub{font-size:12px;margin-bottom:16px}
-.saved-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+.saved-wrap{padding:16px 14px;max-width:100%}
+.saved-title{font-size:22px;margin-bottom:4px}
+.saved-sub{font-size:12px;margin-bottom:12px}
+.saved-grid{grid-template-columns:1fr 1fr;gap:10px}
 .saved-empty{padding:40px 16px}
 .saved-empty-icon{font-size:32px;margin-bottom:12px}
 .saved-empty h3{font-size:18px}
@@ -148,9 +163,22 @@ footer{padding:24px 16px}
 .ob-interests{gap:6px;margin-top:6px}
 .ob-int{padding:6px 12px;font-size:12px}
 
-/* ── Touch-friendly targets (min 44x44) ──────────────────────────────────── */
-button,a,.chip,.ob-int{min-height:44px;display:flex;align-items:center;justify-content:center}
-.app-nav-avatar{min-width:44px}
+/* ── Fix: chips should be compact, not oversized ─────────────────────────── */
+.chip{min-height:unset;display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 14px}
+.ob-int{min-height:unset;display:inline-flex;align-items:center;justify-content:center;height:36px}
+/* Large touch targets only for primary action buttons */
+.ob-btn-next,.btn-hero,.profile-save-btn{min-height:48px}
+.app-nav-avatar,.dark-toggle,.lang-btn{min-height:36px;min-width:36px;display:flex;align-items:center;justify-content:center}
+/* Hide hero-float completely on mobile — it's just empty space */
+.hero-float{display:none}
+/* ── Mobile Bottom Navigation ─────────────────────────────────────────────── */
+#mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:300;background:rgba(244,239,230,.97);backdrop-filter:blur(20px);border-top:1px solid var(--ink-20);padding:6px 0 calc(6px + env(safe-area-inset-bottom));display:none}
+html.dark #mob-nav{background:rgba(26,22,18,.97)}
+#mob-nav.visible{display:flex}
+.mob-nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 0;background:none;border:none;cursor:pointer;color:var(--ink-50);font:500 10px 'DM Sans',sans-serif;transition:color .15s;min-height:52px}
+.mob-nav-btn.active{color:var(--gold)}
+.mob-nav-btn svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.mob-nav-btn.active svg{stroke:var(--gold)}
 }
 
 @media (max-width:480px){
@@ -163,7 +191,7 @@ button,a,.chip,.ob-int{min-height:44px;display:flex;align-items:center;justify-c
 .hero-content h1{font-size:clamp(24px,4vw,32px)}
 .hero-cta{gap:12px}
 .btn-hero{font-size:12px;padding:10px 16px}
-.hero-float{height:240px}
+.hero-float{display:none}
 .stats{padding:16px 12px;gap:8px}
 .sn{font-size:20px}
 .how-section{padding:24px 12px}
@@ -176,17 +204,17 @@ button,a,.chip,.ob-int{min-height:44px;display:flex;align-items:center;justify-c
 .step-desc{font-size:11px;line-height:1.5}
 .listings-section{padding:24px 12px}
 .section-title{font-size:22px}
-.jc-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
-.jc-stripe{height:44px;padding:0 8px;gap:6px}
-.jc-logo{width:28px;height:28px;font-size:10px}
+.jc-grid{grid-template-columns:1fr 1fr;gap:8px}
+.jc-stripe{height:42px;padding:0 8px;gap:6px}
+.jc-logo{width:26px;height:26px;font-size:9px}
 .jc-body{padding:6px 8px}
 .jc-title{font-size:11px}
 .jc-co{font-size:10px}
-.jc-info{font-size:10px}
-.jc-tags{gap:2px;margin-bottom:4px}
+.jc-info{font-size:9px}
+.jc-tags{gap:2px;margin-bottom:3px}
 .jc-tag{padding:1px 6px;font-size:9px}
-.jc-foot{padding:4px 8px;gap:4px}
-.jc-btn{padding:3px 8px;font-size:10px}
+.jc-foot{padding:4px 8px}
+.jc-btn{padding:4px 8px;font-size:10px;min-height:unset}
 .jc-sal{font-size:11px}
 .jc-sal span{font-size:9px}
 .testi-section{padding:24px 12px}
@@ -199,27 +227,26 @@ footer{padding:16px 12px}
 .footer-col h3{font-size:11px;margin-bottom:6px}
 .footer-col a{font-size:11px;margin-bottom:4px}
 
-.app-nav{height:52px;padding:0 8px;gap:4px}
+.app-nav{height:50px;padding:0 8px;gap:4px}
 .app-nav-logo{font-size:14px}
 .app-nav-right{gap:4px}
 .lang-btn{padding:3px 6px;font-size:10px}
 .dark-toggle{padding:3px 6px;font-size:11px}
-.app-nav-avatar{width:30px;height:30px;font-size:11px}
-.app-content{padding-top:52px}
+.app-content{padding-top:50px;padding-bottom:64px}
 
 .feed-wrap{padding:12px 12px}
 .feed-greeting{font-size:clamp(18px,3vw,24px);margin-bottom:4px}
 .feed-sub{font-size:11px}
-.filter-bar{gap:4px;margin-bottom:12px}
-.chip{padding:5px 10px;font-size:10px}
-.feed-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.filter-bar{gap:5px;margin-bottom:10px}
+.chip{height:32px;padding:0 11px;font-size:11px}
+.feed-grid{grid-template-columns:1fr 1fr;gap:8px}
 
 .browse-wrap{padding:12px 12px}
-.browse-top{gap:8px;margin-bottom:12px}
+.browse-top{gap:8px;margin-bottom:10px}
 .browse-title{font-size:20px}
 .search-input{font-size:13px;padding:9px 12px 9px 32px}
 .search-icon{left:10px}
-.browse-filters{gap:4px;margin-bottom:12px}
+.browse-filters{gap:4px;margin-bottom:10px}
 .browse-count{font-size:11px;margin-bottom:8px}
 .cat-select{padding:6px 10px;font-size:11px}
 
@@ -413,6 +440,25 @@ footer{padding:16px 12px}
       <div class="app-page" id="page-saved"><div class="saved-wrap"><div class="saved-title" data-i18n="saved_title">Сохранённые</div><div class="saved-sub" id="saved-sub"></div><div class="saved-grid" id="saved-grid"></div></div></div>
       <div class="app-page" id="page-profile"><div class="profile-wrap"><div class="profile-card"><div class="profile-header"><div class="profile-av" id="profile-av">С</div><div><div class="profile-name" id="profile-name-display" data-i18n="prof_name">Студент</div><div class="profile-email" id="profile-email-display">—</div></div></div><label class="form-label" data-i18n="lbl_name">Имя</label><input class="form-input" id="p-name" data-i18n-ph="ph_name" placeholder="Ваше имя"/><label class="form-label" data-i18n="lbl_email">Email</label><input class="form-input" id="p-email" placeholder="email@example.com" type="email"/><div class="form-row"><div><label class="form-label" data-i18n="lbl_city">Город</label><select class="form-input" id="p-city"><option value="" data-i18n="ph_city">Выберите город</option><option value="Алматы">Алматы</option><option value="Астана">Астана</option><option value="Шымкент">Шымкент</option><option value="Другой" data-i18n="city_other">Другой</option></select></div><div><label class="form-label" data-i18n="lbl_uni">Вуз</label><input class="form-input" id="p-uni" data-i18n-ph="ph_uni" placeholder="КазНУ, AITU..."/></div></div><label class="form-label" data-i18n="lbl_major">Специальность</label><input class="form-input" id="p-major" data-i18n-ph="ph_major" placeholder="Информационные технологии..."/><label class="form-label" data-i18n="lbl_skills">Навыки</label><div class="skills-input-wrap" id="skills-wrap" onclick="document.getElementById('skill-type').focus()"></div><button class="profile-save-btn" onclick="saveProfile()" data-i18n="save_profile">Сохранить профиль →</button></div><div class="profile-card"><div class="detail-section-title" data-i18n="lbl_resume">Резюме</div><div class="resume-upload-area" id="resume-upload-area" onclick="document.getElementById('resume-file').click()"><div style="font-size:32px;opacity:.4">📄</div><h4 data-i18n="upload_resume">Загрузить резюме</h4><p data-i18n="upload_hint">PDF или DOCX · перетащите или нажмите</p></div><input type="file" id="resume-file" accept=".pdf,.docx" style="display:none" onchange="handleResumeUpload(this)"/></div></div></div>
     </div>
+    <!-- Mobile bottom navigation -->
+    <nav id="mob-nav">
+      <button class="mob-nav-btn active" id="mob-btn-home" onclick="navigate('home')">
+        <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        <span data-i18n="nav_home">Главная</span>
+      </button>
+      <button class="mob-nav-btn" id="mob-btn-browse" onclick="navigate('browse')">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span data-i18n="nav_browse">Вакансии</span>
+      </button>
+      <button class="mob-nav-btn" id="mob-btn-saved" onclick="navigate('saved')">
+        <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span data-i18n="nav_saved">Сохранённые</span>
+      </button>
+      <button class="mob-nav-btn" id="mob-btn-profile" onclick="navigate('profile')">
+        <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Профиль</span>
+      </button>
+    </nav>
   </div>
 
   <div class="ob-overlay" id="ob-overlay" style="display:none">
@@ -660,10 +706,15 @@ function navigate(view, jobId) {
     pg.classList.remove('visible');
   });
 
-  // Update nav tabs
+  // Update nav tabs (desktop)
   document.querySelectorAll('.app-nav-tab').forEach(function(tab) {
     tab.classList.toggle('active', tab.dataset.view === view);
   });
+  // Update bottom nav (mobile)
+  var mobMap = { home:'mob-btn-home', browse:'mob-btn-browse', saved:'mob-btn-saved', profile:'mob-btn-profile' };
+  document.querySelectorAll('.mob-nav-btn').forEach(function(btn) { btn.classList.remove('active'); });
+  var activeBtn = document.getElementById(mobMap[view]);
+  if (activeBtn) activeBtn.classList.add('active');
 
   // Show the target page
   if (view === 'home') {
