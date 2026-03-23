@@ -434,11 +434,12 @@ async function scrapeKolesa() {
   const jobs = [];
 
   try {
-    const url = 'https://kolesa.group/career';
+    // New URL structure as of 2026 — /career/job has the vacancy listings
+    const url = 'https://kolesa.group/career/job';
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)',
-        'Accept': 'text/html'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml'
       }
     });
 
@@ -450,31 +451,59 @@ async function scrapeKolesa() {
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    $('a[href*="career"], a[href*="vacancy"], .vacancy, .job-card, [class*="vacancy"]').each((_, el) => {
+    // Job links follow pattern: /career/job/{slug}-{id}
+    $('a[href*="/career/job/"]').each((_, el) => {
       const $el = $(el);
-      const title = $el.find('h3, h4, .title, .vacancy-title').text().trim() || $el.text().trim();
       const link = $el.attr('href') || '';
-      const fullLink = link.startsWith('http') ? link : `https://kolesa.group${link}`;
-      const dept = $el.find('.department, .team, .category').text().trim();
+      // Skip navigation links (the main /career/job page itself)
+      if (link === '/career/job' || link === '/career/job/') return;
 
-      if (title && title.length > 3 && title.length < 200) {
-        jobs.push({
-          source: 'kolesa_group',
-          source_id: `kolesa_${Buffer.from(fullLink).toString('base64').slice(0, 32)}`,
-          source_url: fullLink,
-          title,
-          company: 'Kolesa Group',
-          company_logo: null,
-          location: 'Almaty',
-          description: dept ? `Department: ${dept}` : 'Kolesa Group — leading tech company in Central Asia',
-          salary_min: null,
-          salary_max: null,
-          currency: 'KZT',
-          tags: ['kolesa', 'tech', dept].filter(Boolean),
-          status: 'active',
-          posted_at: new Date().toISOString()
-        });
+      const fullLink = link.startsWith('http') ? link : `https://kolesa.group${link}`;
+      const text = $el.text().trim();
+
+      // Extract structured data from the card text
+      // Cards show: "City • Experience\nJob Title\nSalary Range ₸"
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      let title = '', location = 'Almaty', salaryText = '';
+
+      for (const line of lines) {
+        if (line.includes('₸') || line.includes('тенге')) {
+          salaryText = line;
+        } else if (line.includes('Опыт') || line.includes('опыт')) {
+          // "Алматы • Опыт 1-3 года" — extract city
+          const cityMatch = line.match(/^([^•]+)/);
+          if (cityMatch) location = cityMatch[1].trim();
+        } else if (line.length > 5 && !title) {
+          title = line;
+        }
       }
+
+      if (!title || title.length < 4) return;
+
+      let salaryMin = null, salaryMax = null;
+      const salaryMatch = salaryText.match(/(\d[\d\s]*)/g);
+      if (salaryMatch) {
+        const nums = salaryMatch.map(s => parseInt(s.replace(/\s/g, '')));
+        salaryMin = nums[0] || null;
+        salaryMax = nums[1] || nums[0] || null;
+      }
+
+      jobs.push({
+        source: 'kolesa_group',
+        source_id: `kolesa_${Buffer.from(fullLink).toString('base64').slice(0, 32)}`,
+        source_url: fullLink,
+        title,
+        company: 'Kolesa Group',
+        company_logo: null,
+        location,
+        description: `Kolesa Group — leading tech company in Central Asia. ${salaryText}`.trim(),
+        salary_min: salaryMin,
+        salary_max: salaryMax,
+        currency: 'KZT',
+        tags: ['kolesa', 'tech'],
+        status: 'active',
+        posted_at: new Date().toISOString()
+      });
     });
   } catch (e) {
     log('kolesa', `Error: ${e.message}`);
@@ -539,68 +568,29 @@ async function scrapeYouthPortal() {
 // ══════════════════════════════════════════════════════════════
 
 // Popular KZ job channels — add/remove as you find more
+// Verified active channels from TGStat.com/kz/career (March 2026)
 const TELEGRAM_CHANNELS = [
-  // ── General KZ Jobs ──
-  '@rabota_almaty',
-  '@rabota_astana_kz',
-  '@jobs_kz',
-  '@rabota_kz_official',
-  '@vakansii_almaty',
-  '@vakansii_astana',
-  '@rabota_shymkent',
-  // ── IT / Startup specific ──
-  '@it_jobs_kz',
-  '@devkz',
-  '@kz_it_jobs',
-  '@techjobs_kz',
-  '@startup_kz_jobs',
-  // ── Student / Intern specific ──
-  '@stazhirovki_kz',
-  '@students_kz_jobs',
-  '@praktika_kz',
-  // ── Freelance / Part-time ──
-  '@freelance_kz',
-  '@podrabotka_almaty',
-  '@podrabotka_astana',
+  // ── Top KZ Job Channels (10K+ subscribers, active daily) ──
+  '@almaty_rabota01',       // Ярмарка вакансий Алматы — 38K subs
+  '@jobkz_1',               // JobKZ: вакансии/работа в Казахстане — 32K subs
+  '@workitkz',              // IT Вакансии Казахстан — 31K subs
+  '@astana_job_vakansii',   // Работа в Астане | Вакансии — 22K subs
+  '@devkz_jobs',            // Dev KZ | Vacancy (IT) — 22K subs
+  '@zhumys_astana_kz',      // Работа в Астане | Жұмыс — 18K subs
+  '@Astana_rabota',         // Работа в Астане — 14K subs
+  '@almaty_rabota_work',    // Работа в Алматы | Ярмарка вакансий — 11K subs
+  '@digitaljobkz',          // Вакансии Казахстан Digital & Education
+  '@rabota_almaty',         // Работа в Алмате — 4K subs (less active)
 ];
 
 async function scrapeTelegram() {
   const jobs = [];
 
-  if (!TELEGRAM_BOT_TOKEN) {
-    log('telegram', 'No TELEGRAM_BOT_TOKEN set — skipping. See SETUP_INSTRUCTIONS.md for setup.');
-    return jobs;
-  }
-
-  const botApi = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
-
   for (const channel of TELEGRAM_CHANNELS) {
     try {
-      // getUpdates won't work for channels — we use getChat + channel history approach
-      // For public channels, we can use the channel username directly
-
-      // Step 1: Verify channel exists and bot can access it
-      const chatRes = await fetch(`${botApi}/getChat?chat_id=${encodeURIComponent(channel)}`);
-      if (!chatRes.ok) {
-        log('telegram', `Cannot access ${channel} — skipping (bot may not be a member)`);
-        continue;
-      }
-
-      const chatData = await chatRes.json();
-      if (!chatData.ok) {
-        log('telegram', `Channel ${channel} not found — skipping`);
-        continue;
-      }
-
-      const channelTitle = chatData.result?.title || channel;
-
-      // Step 2: Get recent messages using getUpdates or channel forwarding
-      // For channels where bot is admin, we can read message history
-      // We use the "copy" approach: fetch last N message IDs and read them
-
-      // Method: Use Telegram's web preview for public channels
-      // This works without the bot being an admin!
-      const webUrl = `https://t.me/s/${channel.replace('@', '')}`;
+      // Use Telegram's public web preview — no bot token or membership needed!
+      const channelName = channel.replace('@', '');
+      const webUrl = `https://t.me/s/${channelName}`;
       const webRes = await fetch(webUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)',
@@ -628,10 +618,10 @@ async function scrapeTelegram() {
         // Skip if too short or too old
         if (!msgText || msgText.length < 50) return;
 
-        // Only process messages from last 3 days
+        // Only process messages from last 7 days
         if (msgDate) {
           const postAge = Date.now() - new Date(msgDate).getTime();
-          if (postAge > 3 * 24 * 60 * 60 * 1000) return;
+          if (postAge > 7 * 24 * 60 * 60 * 1000) return;
         }
 
         // Check if it looks like a job posting
@@ -662,13 +652,13 @@ async function scrapeTelegram() {
         }
 
         // Try to extract company name
-        let company = channelTitle;
+        let company = channelName;
         const companyMatch = msgText.match(/(?:компания|company)[:\s]*([^\n,]+)/i);
         if (companyMatch) {
           company = companyMatch[1].trim();
         }
 
-        const sourceUrl = msgLink.startsWith('http') ? msgLink : `https://t.me/${channel.replace('@', '')}/${msgId}`;
+        const sourceUrl = msgLink.startsWith('http') ? msgLink : `https://t.me/${channelName}/${msgId}`;
 
         jobs.push({
           source: 'telegram',
@@ -1143,7 +1133,7 @@ async function main() {
   console.log('  SteppeUp Job Scraper v2');
   console.log(`  ${new Date().toISOString()}`);
   console.log(`  Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
-  console.log(`  Telegram: ${TELEGRAM_BOT_TOKEN ? 'ENABLED' : 'DISABLED (no token)'}`);
+  console.log(`  Telegram: ENABLED (${TELEGRAM_CHANNELS.length} channels via web preview)`);
   console.log('═══════════════════════════════════════════════════\n');
 
   // Remove seed/placeholder jobs
@@ -1172,13 +1162,13 @@ async function main() {
 
   // Group 2: Web scraping (run sequentially to avoid rate limits)
   const telegramJobs = await scrapeTelegram();
-  const linkedinJobs = await scrapeLinkedInViaGoogle();
-  const googleJobs = await scrapeGoogleJobs();
+  // LinkedIn via Google and Google catch-all removed — they never return results
+  // from server IPs (Google blocks automated requests with CAPTCHAs).
   const communityJobs = await processCommunitySubmissions();
 
   const allJobs = [
     ...hhJobs, ...enbekJobs, ...githubJobs, ...kolesaJobs, ...youthJobs,
-    ...telegramJobs, ...linkedinJobs, ...googleJobs, ...communityJobs
+    ...telegramJobs, ...communityJobs
   ];
 
   console.log('\n── Summary ──────────────────────────────────────');
@@ -1187,10 +1177,7 @@ async function main() {
   console.log(`  GitHub:         ${githubJobs.length} jobs`);
   console.log(`  Kolesa Group:   ${kolesaJobs.length} jobs`);
   console.log(`  Youth Portal:   ${youthJobs.length} jobs`);
-  console.log(`  ── NEW SOURCES ──────────────────────────`);
   console.log(`  Telegram:       ${telegramJobs.length} jobs`);
-  console.log(`  LinkedIn:       ${linkedinJobs.length} jobs`);
-  console.log(`  Google (social): ${googleJobs.length} jobs`);
   console.log(`  Community:      ${communityJobs.length} jobs`);
   console.log(`  ─────────────────────────────────────────`);
   console.log(`  TOTAL:          ${allJobs.length} jobs`);
@@ -1231,8 +1218,6 @@ async function main() {
         kolesa_group: kolesaJobs.length,
         youth_portal: youthJobs.length,
         telegram: telegramJobs.length,
-        linkedin: linkedinJobs.length,
-        google_social: googleJobs.length,
         community: communityJobs.length
       }
     });
