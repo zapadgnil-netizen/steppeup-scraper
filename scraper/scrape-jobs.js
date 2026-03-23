@@ -435,76 +435,128 @@ async function scrapeKolesa() {
 
   try {
     // New URL structure as of 2026 — /career/job has the vacancy listings
+    // Site is Nuxt.js SSR — vacancy data is embedded in a __NUXT__ payload
     const url = 'https://kolesa.group/career/job';
     const res = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Cache-Control': 'no-cache'
       }
     });
 
     if (!res.ok) {
-      log('kolesa', `Failed: ${res.status}`);
+      log('kolesa', `Failed: ${res.status} ${res.statusText}`);
       return jobs;
     }
 
     const html = await res.text();
-    const $ = cheerio.load(html);
+    log('kolesa', `Page fetched: ${html.length} bytes`);
 
-    // Job links follow pattern: /career/job/{slug}-{id}
-    $('a[href*="/career/job/"]').each((_, el) => {
-      const $el = $(el);
-      const link = $el.attr('href') || '';
-      // Skip navigation links (the main /career/job page itself)
-      if (link === '/career/job' || link === '/career/job/') return;
+    // Strategy 1: Parse the __NUXT__ payload for ALL vacancies (19+ across all categories)
+    // The Nuxt SSR embeds a window.__NUXT__ object with vacancy-list data
+    const nuxtMatch = html.match(/window\.__NUXT__\s*=\s*(\{[\s\S]*?\})\s*<\/script>/);
+    if (nuxtMatch) {
+      try {
+        // Use Function to safely evaluate the NUXT payload (it may contain JS expressions)
+        const nuxtData = new Function('return ' + nuxtMatch[1])();
+        const vacancyList = nuxtData?.data?.['vacancy-list'];
+        if (vacancyList) {
+          for (const [category, val] of Object.entries(vacancyList)) {
+            if (!val?.vacancies) continue;
+            for (const v of val.vacancies) {
+              const fullLink = `https://kolesa.group/career/job/${v.slug}`;
+              const salaryFrom = v.salary?.from || null;
+              const salaryTo = v.salary?.to || null;
+              const salaryText = salaryFrom ? `${salaryFrom.toLocaleString()} – ${(salaryTo || salaryFrom).toLocaleString()} ₸` : '';
 
-      const fullLink = link.startsWith('http') ? link : `https://kolesa.group${link}`;
-      const text = $el.text().trim();
-
-      // Extract structured data from the card text
-      // Cards show: "City • Experience\nJob Title\nSalary Range ₸"
-      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-      let title = '', location = 'Almaty', salaryText = '';
-
-      for (const line of lines) {
-        if (line.includes('₸') || line.includes('тенге')) {
-          salaryText = line;
-        } else if (line.includes('Опыт') || line.includes('опыт')) {
-          // "Алматы • Опыт 1-3 года" — extract city
-          const cityMatch = line.match(/^([^•]+)/);
-          if (cityMatch) location = cityMatch[1].trim();
-        } else if (line.length > 5 && !title) {
-          title = line;
+              jobs.push({
+                source: 'kolesa_group',
+                source_id: `kolesa_${v.id}`,
+                source_url: fullLink,
+                title: v.position,
+                company: 'Kolesa Group',
+                company_logo: null,
+                location: v.area || 'Almaty',
+                description: `Kolesa Group — leading tech company in Central Asia. Category: ${category}. ${salaryText}`.trim(),
+                salary_min: salaryFrom,
+                salary_max: salaryTo,
+                currency: 'KZT',
+                tags: ['kolesa', 'tech', category],
+                status: 'active',
+                posted_at: new Date().toISOString()
+              });
+            }
+          }
+          log('kolesa', `Parsed ${jobs.length} vacancies from __NUXT__ payload`);
         }
+      } catch (parseErr) {
+        log('kolesa', `NUXT parse failed: ${parseErr.message}, falling back to DOM`);
       }
+    }
 
-      if (!title || title.length < 4) return;
+    // Strategy 2: Fall back to DOM selectors if NUXT parsing got nothing
+    if (jobs.length === 0) {
+      const $ = cheerio.load(html);
+      $('a[href*="/career/job/"]').each((_, el) => {
+        const $el = $(el);
+        const link = $el.attr('href') || '';
+        if (link === '/career/job' || link === '/career/job/') return;
 
-      let salaryMin = null, salaryMax = null;
-      const salaryMatch = salaryText.match(/(\d[\d\s]*)/g);
-      if (salaryMatch) {
-        const nums = salaryMatch.map(s => parseInt(s.replace(/\s/g, '')));
-        salaryMin = nums[0] || null;
-        salaryMax = nums[1] || nums[0] || null;
-      }
+        const fullLink = link.startsWith('http') ? link : `https://kolesa.group${link}`;
+        const text = $el.text().trim();
 
-      jobs.push({
-        source: 'kolesa_group',
-        source_id: `kolesa_${Buffer.from(fullLink).toString('base64').slice(0, 32)}`,
-        source_url: fullLink,
-        title,
-        company: 'Kolesa Group',
-        company_logo: null,
-        location,
-        description: `Kolesa Group — leading tech company in Central Asia. ${salaryText}`.trim(),
-        salary_min: salaryMin,
-        salary_max: salaryMax,
-        currency: 'KZT',
-        tags: ['kolesa', 'tech'],
-        status: 'active',
-        posted_at: new Date().toISOString()
+        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+        let title = '', location = 'Almaty', salaryText = '';
+
+        for (const line of lines) {
+          if (line.includes('₸') || line.includes('тенге')) {
+            salaryText = line;
+          } else if (line.includes('Опыт') || line.includes('опыт')) {
+            const cityMatch = line.match(/^([^•]+)/);
+            if (cityMatch) location = cityMatch[1].trim();
+          } else if (line.length > 5 && !title) {
+            title = line;
+          }
+        }
+
+        if (!title || title.length < 4) return;
+
+        let salaryMin = null, salaryMax = null;
+        const salaryMatchResult = salaryText.match(/(\d[\d\s]*)/g);
+        if (salaryMatchResult) {
+          const nums = salaryMatchResult.map(s => parseInt(s.replace(/\s/g, '')));
+          salaryMin = nums[0] || null;
+          salaryMax = nums[1] || nums[0] || null;
+        }
+
+        jobs.push({
+          source: 'kolesa_group',
+          source_id: `kolesa_${Buffer.from(fullLink).toString('base64').slice(0, 32)}`,
+          source_url: fullLink,
+          title,
+          company: 'Kolesa Group',
+          company_logo: null,
+          location,
+          description: `Kolesa Group — leading tech company in Central Asia. ${salaryText}`.trim(),
+          salary_min: salaryMin,
+          salary_max: salaryMax,
+          currency: 'KZT',
+          tags: ['kolesa', 'tech'],
+          status: 'active',
+          posted_at: new Date().toISOString()
+        });
       });
-    });
+      if (jobs.length > 0) {
+        log('kolesa', `Parsed ${jobs.length} vacancies from DOM selectors (fallback)`);
+      } else {
+        // Log first 500 chars to help debug what the server returned
+        log('kolesa', `No jobs found. HTML preview: ${html.substring(0, 500).replace(/\n/g, ' ')}`);
+      }
+    }
   } catch (e) {
     log('kolesa', `Error: ${e.message}`);
   }
