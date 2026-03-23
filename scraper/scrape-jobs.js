@@ -1,14 +1,19 @@
 /**
- * SteppeUp Job Scraper
- * Runs daily via GitHub Actions (free). Scrapes KZ job sites for student-friendly
- * positions, upserts to Supabase, and removes stale listings.
+ * SteppeUp Job Scraper v2
+ * Runs daily via GitHub Actions (free). Scrapes KZ job sites + social platforms
+ * for student-friendly positions, upserts to Supabase, and removes stale listings.
  *
  * Sources:
  *   1. hh.kz (HeadHunter) — public API, no auth needed
  *   2. enbek.kz — government employment portal
- *   3. Kolesa Group careers
- *   4. GitHub Jobs (KZ-related tech)
+ *   3. GitHub Jobs (KZ-related tech)
+ *   4. Kolesa Group careers
  *   5. Youth employment portal
+ *   ── NEW ──────────────────────────────────
+ *   6. Telegram channels — public KZ job channels via Bot API
+ *   7. LinkedIn — via Google site search (no LinkedIn API needed)
+ *   8. Google Jobs — catches postings from Instagram, Threads, Facebook, etc.
+ *   9. Community submissions — user-submitted jobs from Supabase queue
  */
 
 const fetch = require('node-fetch');
@@ -17,7 +22,8 @@ const { createClient } = require('@supabase/supabase-js');
 
 // ── Config ────────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY; // use service role for server-side
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const DRY_RUN = process.argv.includes('--dry-run');
 
 if (!DRY_RUN && (!SUPABASE_URL || !SUPABASE_KEY)) {
@@ -60,6 +66,16 @@ const KZ_CITIES = {
   195: 'Taldykorgan', 196: 'Ekibastuz', 197: 'Temirtau', 198: 'Rudny'
 };
 
+// KZ city names for detecting location in unstructured text
+const KZ_CITY_NAMES = [
+  'almaty', 'алматы', 'астана', 'astana', 'нур-султан', 'nur-sultan',
+  'караганда', 'karaganda', 'шымкент', 'shymkent', 'актобе', 'aktobe',
+  'атырау', 'atyrau', 'костанай', 'kostanay', 'павлодар', 'pavlodar',
+  'семей', 'semey', 'усть-каменогорск', 'актау', 'aktau', 'тараз', 'taraz',
+  'петропавловск', 'кызылорда', 'туркестан', 'талдыкорган', 'экибастуз',
+  'рудный', 'удаленно', 'remote', 'удалённо', 'дистанционно'
+];
+
 // ── Helpers ───────────────────────────────────────────────────
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -67,20 +83,16 @@ function isStudentFriendly(title, description, tags = []) {
   const titleText = (title || '').toLowerCase();
   const fullText = `${title} ${description || ''} ${tags.join(' ')}`.toLowerCase();
 
-  // 1. Explicitly reject senior/middle/lead roles by title
   if (['senior', 'middle', 'lead', 'сеньор', 'мидл', 'ведущий', 'руководитель', 'директор', 'главный', 'head', 'эксперт'].some(kw => titleText.includes(kw))) {
     return false;
   }
 
-  // 2. Reject if the full text contains strong experience requirements
   if (NON_STUDENT_KEYWORDS.some(kw => fullText.includes(kw))) {
-    // Exception: Explicitly allow if it also says "без опыта" 
     if (!fullText.includes('без опыта') && !fullText.includes('опыт не требуется')) {
       return false;
     }
   }
 
-  // 3. Must contain at least one student or junior keyword
   return ALL_KEYWORDS.some(kw => fullText.includes(kw));
 }
 
@@ -100,9 +112,87 @@ function cleanHtml(html) {
 
 const log = (src, msg) => console.log(`[${src}] ${msg}`);
 
-// ── Source 1: HeadHunter (hh.kz) ─────────────────────────────
-// Public API: https://api.hh.ru/vacancies — works for .kz too
-// Area 40 = Kazakhstan
+/**
+ * Extract city from unstructured text (for Telegram/social posts)
+ */
+function extractCity(text) {
+  const lower = (text || '').toLowerCase();
+  for (const city of KZ_CITY_NAMES) {
+    if (lower.includes(city)) {
+      // Return capitalized version
+      if (city === 'удаленно' || city === 'remote' || city === 'удалённо' || city === 'дистанционно') return 'Remote';
+      return city.charAt(0).toUpperCase() + city.slice(1);
+    }
+  }
+  return 'Kazakhstan';
+}
+
+/**
+ * Extract salary from unstructured text (handles "от 150 000" / "150-300k" / etc.)
+ */
+function extractSalaryFromText(text) {
+  if (!text) return { min: null, max: null, currency: 'KZT' };
+
+  // Detect currency
+  let currency = 'KZT';
+  if (/\$|usd|долл/i.test(text)) currency = 'USD';
+  else if (/€|eur|евро/i.test(text)) currency = 'EUR';
+  else if (/₽|rub|руб/i.test(text)) currency = 'RUB';
+
+  // Pattern: "от 150 000 до 300 000" or "150000-300000"
+  const rangeMatch = text.match(/(?:от\s*)?(\d[\d\s]{2,})\s*(?:[-–—до]+)\s*(\d[\d\s]{2,})/i);
+  if (rangeMatch) {
+    return {
+      min: parseInt(rangeMatch[1].replace(/\s/g, '')),
+      max: parseInt(rangeMatch[2].replace(/\s/g, '')),
+      currency
+    };
+  }
+
+  // Pattern: "от 150 000" (just minimum)
+  const fromMatch = text.match(/от\s*(\d[\d\s]{2,})/i);
+  if (fromMatch) {
+    return { min: parseInt(fromMatch[1].replace(/\s/g, '')), max: null, currency };
+  }
+
+  // Pattern: "до 300 000" (just maximum)
+  const toMatch = text.match(/до\s*(\d[\d\s]{2,})/i);
+  if (toMatch) {
+    return { min: null, max: parseInt(toMatch[1].replace(/\s/g, '')), currency };
+  }
+
+  // Pattern: standalone number like "200000 тенге"
+  const singleMatch = text.match(/(\d{5,})\s*(?:тг|тенге|kzt|₸)/i);
+  if (singleMatch) {
+    return { min: parseInt(singleMatch[1]), max: parseInt(singleMatch[1]), currency: 'KZT' };
+  }
+
+  return { min: null, max: null, currency };
+}
+
+/**
+ * Check if a Telegram message looks like a job posting
+ * (not just chat noise or news)
+ */
+function looksLikeJobPost(text) {
+  const lower = (text || '').toLowerCase();
+  const jobSignals = [
+    'вакансия', 'ищем', 'требуется', 'набираем', 'открыта позиция',
+    'hiring', 'we are looking', 'job opening', 'vacancy', 'position open',
+    'приглашаем', 'нужен', 'нужна', 'ищу сотрудника', 'оплата',
+    'зарплата', 'з/п', 'оклад', 'salary', 'резюме', 'откликнуться',
+    'обязанности', 'требования', 'условия', 'график работы',
+    'responsibilities', 'requirements', 'apply', 'отправляйте',
+    'стажер', 'стажировка', 'intern', 'trainee', 'junior'
+  ];
+  // Need at least 2 job signals to qualify (reduces false positives)
+  const matches = jobSignals.filter(s => lower.includes(s));
+  return matches.length >= 2;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  Source 1: HeadHunter (hh.kz)
+// ══════════════════════════════════════════════════════════════
 async function scrapeHH() {
   const jobs = [];
   const queries = [
@@ -124,7 +214,6 @@ async function scrapeHH() {
 
       const data = await res.json();
       for (const v of (data.items || [])) {
-        // Fetch full vacancy for description
         let description = v.snippet?.responsibility || v.snippet?.requirement || '';
         try {
           const detailRes = await fetch(`https://api.hh.ru/vacancies/${v.id}`, {
@@ -144,9 +233,7 @@ async function scrapeHH() {
           ...(v.professional_roles || []).map(r => r.name)
         ].filter(Boolean);
 
-        if (!isStudentFriendly(v.name, description, tags)) {
-          continue; // Skip if it's actually a senior/middle role disguised in search results
-        }
+        if (!isStudentFriendly(v.name, description, tags)) continue;
 
         jobs.push({
           source: 'hh_kz',
@@ -156,16 +243,16 @@ async function scrapeHH() {
           company: v.employer?.name || 'Unknown',
           company_logo: v.employer?.logo_urls?.['90'] || null,
           location: v.area?.name || 'Kazakhstan',
-          description: description,
+          description,
           salary_min: salary.min,
           salary_max: salary.max,
           currency: salary.currency,
-          tags: tags,
+          tags,
           status: 'active',
           posted_at: v.published_at || new Date().toISOString()
         });
 
-        await sleep(200); // be nice to the API
+        await sleep(200);
       }
 
       log('hh.kz', `Query "${query}": found ${data.items?.length || 0} vacancies`);
@@ -175,7 +262,6 @@ async function scrapeHH() {
     }
   }
 
-  // Deduplicate by source_id
   const seen = new Set();
   const unique = jobs.filter(j => {
     if (seen.has(j.source_id)) return false;
@@ -187,12 +273,13 @@ async function scrapeHH() {
   return unique;
 }
 
-// ── Source 2: Enbek.kz (Government Portal) ────────────────────
+// ══════════════════════════════════════════════════════════════
+//  Source 2: Enbek.kz (Government Portal)
+// ══════════════════════════════════════════════════════════════
 async function scrapeEnbek() {
   const jobs = [];
 
   try {
-    // Enbek has a public search page we can parse
     const queries = ['стажер', 'студент', 'junior', 'без опыта'];
 
     for (const query of queries) {
@@ -223,7 +310,6 @@ async function scrapeEnbek() {
           const link = $el.attr('href') || $el.find('a').attr('href') || '';
           const fullLink = link.startsWith('http') ? link : `https://www.enbek.kz${link}`;
           const salaryText = $el.find('.salary, [class*="salary"]').text().trim();
-
           const description = $el.find('.description, .snippet, p').text().trim().slice(0, 5000);
 
           if (title && title.length > 3 && isStudentFriendly(title, description)) {
@@ -243,7 +329,7 @@ async function scrapeEnbek() {
               company: company || 'Enbek.kz Listing',
               company_logo: null,
               location,
-              description: description,
+              description,
               salary_min: salaryMin,
               salary_max: salaryMax,
               currency: 'KZT',
@@ -264,7 +350,6 @@ async function scrapeEnbek() {
     log('enbek.kz', `Scraper error: ${e.message}`);
   }
 
-  // Deduplicate
   const seen = new Set();
   const unique = jobs.filter(j => {
     if (seen.has(j.source_id)) return false;
@@ -276,14 +361,13 @@ async function scrapeEnbek() {
   return unique;
 }
 
-// ── Source 3: GitHub Jobs (KZ tech companies) ─────────────────
-// GitHub Jobs API is deprecated, so we search GitHub for KZ companies
-// and their career pages / job issues
+// ══════════════════════════════════════════════════════════════
+//  Source 3: GitHub Jobs (KZ tech companies)
+// ══════════════════════════════════════════════════════════════
 async function scrapeGitHubJobs() {
   const jobs = [];
 
   try {
-    // Search for job issues in KZ tech repos
     const queries = [
       'label:job location:kazakhstan',
       'hiring intern kazakhstan',
@@ -314,7 +398,7 @@ async function scrapeGitHubJobs() {
               source: 'github_kz',
               source_id: `gh_${issue.id}`,
               source_url: issue.html_url,
-              title: title,
+              title,
               company: repoName || 'GitHub Listing',
               company_logo: issue.user?.avatar_url || null,
               location: 'Remote / Kazakhstan',
@@ -343,7 +427,9 @@ async function scrapeGitHubJobs() {
   return jobs;
 }
 
-// ── Source 4: Kolesa Group Careers ─────────────────────────────
+// ══════════════════════════════════════════════════════════════
+//  Source 4: Kolesa Group Careers
+// ══════════════════════════════════════════════════════════════
 async function scrapeKolesa() {
   const jobs = [];
 
@@ -364,7 +450,6 @@ async function scrapeKolesa() {
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    // Parse job cards from Kolesa Group career page
     $('a[href*="career"], a[href*="vacancy"], .vacancy, .job-card, [class*="vacancy"]').each((_, el) => {
       const $el = $(el);
       const title = $el.find('h3, h4, .title, .vacancy-title').text().trim() || $el.text().trim();
@@ -399,18 +484,13 @@ async function scrapeKolesa() {
   return jobs;
 }
 
-// ── Source 5: Youth Employment (zhastar / youth portals) ──────
+// ══════════════════════════════════════════════════════════════
+//  Source 5: Youth Employment Portal
+// ══════════════════════════════════════════════════════════════
 async function scrapeYouthPortal() {
   const jobs = [];
 
   try {
-    // Try the Zhasproject / youth employment portals
-    const urls = [
-      'https://www.zhastar.zhastar.kz',
-      'https://jasproject.kz'
-    ];
-
-    // Fallback: search hh.kz specifically for youth/zhasproject programs
     const url = `https://api.hh.ru/vacancies?area=40&text=${encodeURIComponent('Жас маман OR zhasproject OR молодой специалист OR первое рабочее место')}&per_page=30&order_by=publication_time&period=7`;
     const res = await fetch(url, {
       headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
@@ -422,9 +502,7 @@ async function scrapeYouthPortal() {
         const description = v.snippet?.responsibility || v.snippet?.requirement || '';
         const tags = ['youth', 'zhasproject', 'government-program', v.experience?.name, v.employment?.name].filter(Boolean);
 
-        if (!isStudentFriendly(v.name, description, tags)) {
-          continue;
-        }
+        if (!isStudentFriendly(v.name, description, tags)) continue;
 
         const salary = extractSalary(v.salary);
         jobs.push({
@@ -435,11 +513,11 @@ async function scrapeYouthPortal() {
           company: v.employer?.name || 'Unknown',
           company_logo: v.employer?.logo_urls?.['90'] || null,
           location: v.area?.name || 'Kazakhstan',
-          description: description,
+          description,
           salary_min: salary.min,
           salary_max: salary.max,
           currency: salary.currency,
-          tags: tags,
+          tags,
           status: 'active',
           posted_at: v.published_at
         });
@@ -453,22 +531,506 @@ async function scrapeYouthPortal() {
   return jobs;
 }
 
+// ══════════════════════════════════════════════════════════════
+//  ★ Source 6: Telegram Channels (NEW)
+//  Uses Telegram Bot API to read public KZ job channels.
+//  Requires TELEGRAM_BOT_TOKEN env var.
+//  The bot must be added to each channel (or channels must be public).
+// ══════════════════════════════════════════════════════════════
+
+// Popular KZ job channels — add/remove as you find more
+const TELEGRAM_CHANNELS = [
+  // ── General KZ Jobs ──
+  '@rabota_almaty',
+  '@rabota_astana_kz',
+  '@jobs_kz',
+  '@rabota_kz_official',
+  '@vakansii_almaty',
+  '@vakansii_astana',
+  '@rabota_shymkent',
+  // ── IT / Startup specific ──
+  '@it_jobs_kz',
+  '@devkz',
+  '@kz_it_jobs',
+  '@techjobs_kz',
+  '@startup_kz_jobs',
+  // ── Student / Intern specific ──
+  '@stazhirovki_kz',
+  '@students_kz_jobs',
+  '@praktika_kz',
+  // ── Freelance / Part-time ──
+  '@freelance_kz',
+  '@podrabotka_almaty',
+  '@podrabotka_astana',
+];
+
+async function scrapeTelegram() {
+  const jobs = [];
+
+  if (!TELEGRAM_BOT_TOKEN) {
+    log('telegram', 'No TELEGRAM_BOT_TOKEN set — skipping. See SETUP_INSTRUCTIONS.md for setup.');
+    return jobs;
+  }
+
+  const botApi = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+
+  for (const channel of TELEGRAM_CHANNELS) {
+    try {
+      // getUpdates won't work for channels — we use getChat + channel history approach
+      // For public channels, we can use the channel username directly
+
+      // Step 1: Verify channel exists and bot can access it
+      const chatRes = await fetch(`${botApi}/getChat?chat_id=${encodeURIComponent(channel)}`);
+      if (!chatRes.ok) {
+        log('telegram', `Cannot access ${channel} — skipping (bot may not be a member)`);
+        continue;
+      }
+
+      const chatData = await chatRes.json();
+      if (!chatData.ok) {
+        log('telegram', `Channel ${channel} not found — skipping`);
+        continue;
+      }
+
+      const channelTitle = chatData.result?.title || channel;
+
+      // Step 2: Get recent messages using getUpdates or channel forwarding
+      // For channels where bot is admin, we can read message history
+      // We use the "copy" approach: fetch last N message IDs and read them
+
+      // Method: Use Telegram's web preview for public channels
+      // This works without the bot being an admin!
+      const webUrl = `https://t.me/s/${channel.replace('@', '')}`;
+      const webRes = await fetch(webUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)',
+          'Accept': 'text/html',
+          'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8'
+        }
+      });
+
+      if (!webRes.ok) {
+        log('telegram', `Web preview failed for ${channel}: ${webRes.status}`);
+        continue;
+      }
+
+      const html = await webRes.text();
+      const $ = cheerio.load(html);
+
+      // Parse messages from Telegram's public web view
+      $('.tgme_widget_message_wrap, .tgme_widget_message').each((_, el) => {
+        const $msg = $(el);
+        const msgText = $msg.find('.tgme_widget_message_text, .js-message_text').text().trim();
+        const msgDate = $msg.find('.tgme_widget_message_date time').attr('datetime') || '';
+        const msgLink = $msg.find('.tgme_widget_message_date').attr('href') || '';
+        const msgId = msgLink.split('/').pop() || '';
+
+        // Skip if too short or too old
+        if (!msgText || msgText.length < 50) return;
+
+        // Only process messages from last 3 days
+        if (msgDate) {
+          const postAge = Date.now() - new Date(msgDate).getTime();
+          if (postAge > 3 * 24 * 60 * 60 * 1000) return;
+        }
+
+        // Check if it looks like a job posting
+        if (!looksLikeJobPost(msgText)) return;
+
+        // Check if student-friendly
+        if (!isStudentFriendly('', msgText)) {
+          // Even if no explicit student keywords, include if it says
+          // "без опыта" or similar and passes the job-post filter
+          const lower = msgText.toLowerCase();
+          const hasNoExpReq = lower.includes('без опыта') || lower.includes('опыт не требуется') ||
+            lower.includes('no experience') || lower.includes('обучим');
+          if (!hasNoExpReq) return;
+        }
+
+        // Extract structured info from unstructured message
+        const city = extractCity(msgText);
+        const salary = extractSalaryFromText(msgText);
+
+        // Try to extract job title (usually first line or after "Вакансия:")
+        let title = '';
+        const titleMatch = msgText.match(/(?:вакансия|позиция|ищем|требуется|hiring|position)[:\s]*([^\n]+)/i);
+        if (titleMatch) {
+          title = titleMatch[1].trim().slice(0, 120);
+        } else {
+          // First line as title
+          title = msgText.split('\n')[0].trim().slice(0, 120);
+        }
+
+        // Try to extract company name
+        let company = channelTitle;
+        const companyMatch = msgText.match(/(?:компания|company)[:\s]*([^\n,]+)/i);
+        if (companyMatch) {
+          company = companyMatch[1].trim();
+        }
+
+        const sourceUrl = msgLink.startsWith('http') ? msgLink : `https://t.me/${channel.replace('@', '')}/${msgId}`;
+
+        jobs.push({
+          source: 'telegram',
+          source_id: `tg_${channel.replace('@', '')}_${msgId || Date.now()}`,
+          source_url: sourceUrl,
+          title: title || 'Job Posting',
+          company,
+          company_logo: null,
+          location: city,
+          description: msgText.slice(0, 5000),
+          salary_min: salary.min,
+          salary_max: salary.max,
+          currency: salary.currency,
+          tags: ['telegram', channel.replace('@', '')],
+          status: 'active',
+          posted_at: msgDate || new Date().toISOString()
+        });
+      });
+
+      log('telegram', `${channel}: parsed ${jobs.length} potential jobs so far`);
+      await sleep(1000); // be nice
+    } catch (e) {
+      log('telegram', `Error on ${channel}: ${e.message}`);
+    }
+  }
+
+  // Deduplicate (similar titles from crossposted jobs)
+  const seen = new Set();
+  const unique = jobs.filter(j => {
+    // Use a fingerprint of title + company to catch crossposts
+    const fingerprint = `${j.title.toLowerCase().slice(0, 50)}_${j.company.toLowerCase().slice(0, 30)}`;
+    if (seen.has(j.source_id) || seen.has(fingerprint)) return false;
+    seen.add(j.source_id);
+    seen.add(fingerprint);
+    return true;
+  });
+
+  log('telegram', `Total unique Telegram jobs: ${unique.length}`);
+  return unique;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ★ Source 7: LinkedIn Jobs via Google (NEW)
+//  LinkedIn blocks direct scraping, but Google indexes their
+//  public job pages. We search Google for LinkedIn KZ job posts.
+// ══════════════════════════════════════════════════════════════
+async function scrapeLinkedInViaGoogle() {
+  const jobs = [];
+
+  const queries = [
+    'site:linkedin.com/jobs intern kazakhstan',
+    'site:linkedin.com/jobs стажер казахстан',
+    'site:linkedin.com/jobs junior almaty',
+    'site:linkedin.com/jobs "entry level" astana',
+    'site:linkedin.com/jobs student kazakhstan',
+    'site:linkedin.com/jobs стажировка алматы',
+  ];
+
+  for (const query of queries) {
+    try {
+      // Use Google's public search (no API key needed)
+      // Note: Google may rate-limit, so we're conservative
+      const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=15&tbs=qdr:w`; // last week
+      const res = await fetch(googleUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8'
+        }
+      });
+
+      if (!res.ok) {
+        log('linkedin', `Google search failed for "${query.slice(0, 40)}": ${res.status}`);
+        continue;
+      }
+
+      const html = await res.text();
+      const $ = cheerio.load(html);
+
+      // Parse Google search results
+      $('div.g, div[data-sokoban-container]').each((_, el) => {
+        const $el = $(el);
+        const link = $el.find('a').first().attr('href') || '';
+        const title = $el.find('h3').first().text().trim();
+        const snippet = $el.find('.VwiC3b, .st, [data-sncf]').text().trim();
+
+        // Only keep LinkedIn job links
+        if (!link.includes('linkedin.com/jobs') || !title) return;
+
+        // Extract company from snippet or title
+        // LinkedIn titles are usually "Job Title - Company Name - Location"
+        const parts = title.split(/\s*[-–—|]\s*/);
+        const jobTitle = parts[0] || title;
+        const company = parts[1] || 'LinkedIn Listing';
+        const location = extractCity(title + ' ' + snippet);
+
+        if (isStudentFriendly(jobTitle, snippet)) {
+          const salary = extractSalaryFromText(snippet);
+          jobs.push({
+            source: 'linkedin',
+            source_id: `li_${Buffer.from(link).toString('base64').slice(0, 32)}`,
+            source_url: link,
+            title: jobTitle.slice(0, 150),
+            company: company.slice(0, 100),
+            company_logo: null,
+            location,
+            description: snippet.slice(0, 5000),
+            salary_min: salary.min,
+            salary_max: salary.max,
+            currency: salary.currency,
+            tags: ['linkedin'],
+            status: 'active',
+            posted_at: new Date().toISOString()
+          });
+        }
+      });
+
+      log('linkedin', `Query "${query.slice(0, 40)}...": parsed Google results`);
+      await sleep(3000); // be very conservative with Google
+    } catch (e) {
+      log('linkedin', `Error: ${e.message}`);
+    }
+  }
+
+  const seen = new Set();
+  const unique = jobs.filter(j => {
+    if (seen.has(j.source_id)) return false;
+    seen.add(j.source_id);
+    return true;
+  });
+
+  log('linkedin', `Total LinkedIn jobs: ${unique.length}`);
+  return unique;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ★ Source 8: Google Jobs Catch-All (NEW)
+//  Catches jobs posted on Instagram, Facebook, company sites,
+//  Threads, random forums — anything Google indexes.
+// ══════════════════════════════════════════════════════════════
+async function scrapeGoogleJobs() {
+  const jobs = [];
+
+  // These queries catch what slips through other scrapers
+  const queries = [
+    'вакансия стажер казахстан -site:hh.kz -site:hh.ru -site:enbek.kz -site:linkedin.com',
+    'intern hiring almaty -site:hh.kz -site:hh.ru -site:linkedin.com',
+    '"ищем стажера" алматы OR астана',
+    '"мы ищем" junior казахстан',
+    'стажировка 2025 2026 алматы OR астана OR казахстан',
+    'hiring "no experience" kazakhstan almaty OR astana',
+  ];
+
+  for (const query of queries) {
+    try {
+      const googleUrl = `https://www.google.com/search?q=${encodeURIComponent(query)}&num=10&tbs=qdr:w`;
+      const res = await fetch(googleUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'text/html',
+          'Accept-Language': 'en-US,en;q=0.9,ru;q=0.8'
+        }
+      });
+
+      if (!res.ok) {
+        log('google', `Search failed: ${res.status}`);
+        continue;
+      }
+
+      const html = await res.text();
+      const $ = cheerio.load(html);
+
+      $('div.g, div[data-sokoban-container]').each((_, el) => {
+        const $el = $(el);
+        const link = $el.find('a').first().attr('href') || '';
+        const title = $el.find('h3').first().text().trim();
+        const snippet = $el.find('.VwiC3b, .st, [data-sncf]').text().trim();
+
+        if (!link || !title || link.includes('google.com')) return;
+
+        // Determine the source platform
+        let sourceName = 'web';
+        if (link.includes('instagram.com')) sourceName = 'instagram';
+        else if (link.includes('threads.net')) sourceName = 'threads';
+        else if (link.includes('facebook.com')) sourceName = 'facebook';
+        else if (link.includes('twitter.com') || link.includes('x.com')) sourceName = 'twitter';
+        else if (link.includes('olx.kz')) sourceName = 'olx_kz';
+
+        const fullText = `${title} ${snippet}`;
+        if (!isStudentFriendly(title, snippet) && !looksLikeJobPost(fullText)) return;
+
+        const salary = extractSalaryFromText(fullText);
+        const location = extractCity(fullText);
+
+        jobs.push({
+          source: sourceName,
+          source_id: `google_${Buffer.from(link).toString('base64').slice(0, 32)}`,
+          source_url: link,
+          title: title.slice(0, 150),
+          company: sourceName === 'olx_kz' ? 'OLX.kz Listing' : 'Web Listing',
+          company_logo: null,
+          location,
+          description: snippet.slice(0, 5000),
+          salary_min: salary.min,
+          salary_max: salary.max,
+          currency: salary.currency,
+          tags: [sourceName, 'google-discovery'],
+          status: 'active',
+          posted_at: new Date().toISOString()
+        });
+      });
+
+      log('google', `Query "${query.slice(0, 50)}...": parsed`);
+      await sleep(4000); // very conservative with Google
+    } catch (e) {
+      log('google', `Error: ${e.message}`);
+    }
+  }
+
+  const seen = new Set();
+  const unique = jobs.filter(j => {
+    if (seen.has(j.source_id)) return false;
+    seen.add(j.source_id);
+    return true;
+  });
+
+  log('google', `Total Google-discovered jobs: ${unique.length}`);
+  return unique;
+}
+
+// ══════════════════════════════════════════════════════════════
+//  ★ Source 9: Community Submissions (NEW)
+//  Users submit job links via the app → goes to a queue table
+//  → scraper approves and migrates them to main jobs table
+// ══════════════════════════════════════════════════════════════
+async function processCommunitySubmissions() {
+  const jobs = [];
+
+  if (!db) {
+    log('community', 'No DB connection — skipping');
+    return jobs;
+  }
+
+  try {
+    // Fetch pending submissions
+    const { data: submissions, error } = await db
+      .from('community_submissions')
+      .select('*')
+      .eq('status', 'pending')
+      .limit(50);
+
+    if (error) {
+      log('community', `Error fetching submissions: ${error.message}`);
+      return jobs;
+    }
+
+    if (!submissions || submissions.length === 0) {
+      log('community', 'No pending submissions');
+      return jobs;
+    }
+
+    log('community', `Found ${submissions.length} pending submissions`);
+
+    for (const sub of submissions) {
+      try {
+        // Basic validation
+        if (!sub.title || sub.title.length < 3) {
+          await db.from('community_submissions').update({ status: 'rejected', review_note: 'Title too short' }).eq('id', sub.id);
+          continue;
+        }
+
+        // Auto-approve if it has enough detail
+        const hasCompany = sub.company && sub.company.length > 1;
+        const hasDescription = sub.description && sub.description.length > 20;
+        const hasUrl = sub.source_url && sub.source_url.startsWith('http');
+
+        if (!hasUrl) {
+          await db.from('community_submissions').update({ status: 'rejected', review_note: 'No valid URL' }).eq('id', sub.id);
+          continue;
+        }
+
+        // Try to enrich by fetching the URL
+        let enrichedDescription = sub.description || '';
+        if (hasUrl && enrichedDescription.length < 50) {
+          try {
+            const pageRes = await fetch(sub.source_url, {
+              headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)' },
+              redirect: 'follow'
+            });
+            if (pageRes.ok) {
+              const pageHtml = await pageRes.text();
+              const $page = cheerio.load(pageHtml);
+              // Extract page description
+              const metaDesc = $page('meta[name="description"]').attr('content') || '';
+              const ogDesc = $page('meta[property="og:description"]').attr('content') || '';
+              const bodyText = $page('article, .content, .description, main').text().trim().slice(0, 3000);
+              enrichedDescription = metaDesc || ogDesc || bodyText || enrichedDescription;
+            }
+          } catch (e) {
+            // URL fetch failed, use what we have
+          }
+        }
+
+        // Determine source from URL
+        let sourceName = 'community';
+        if (sub.source_url.includes('instagram')) sourceName = 'instagram';
+        else if (sub.source_url.includes('t.me') || sub.source_url.includes('telegram')) sourceName = 'telegram';
+        else if (sub.source_url.includes('linkedin')) sourceName = 'linkedin';
+        else if (sub.source_url.includes('twitter') || sub.source_url.includes('x.com')) sourceName = 'twitter';
+        else if (sub.source_url.includes('threads.net')) sourceName = 'threads';
+        else if (sub.source_url.includes('whatsapp')) sourceName = 'whatsapp';
+
+        const salary = extractSalaryFromText(enrichedDescription);
+
+        jobs.push({
+          source: sourceName,
+          source_id: `community_${sub.id}`,
+          source_url: sub.source_url,
+          title: sub.title,
+          company: sub.company || `${sourceName} Listing`,
+          company_logo: null,
+          location: sub.location || extractCity(enrichedDescription),
+          description: enrichedDescription.slice(0, 5000),
+          salary_min: salary.min,
+          salary_max: salary.max,
+          currency: salary.currency,
+          tags: [sourceName, 'community-submitted', ...(sub.tags || [])],
+          status: 'active',
+          posted_at: sub.created_at || new Date().toISOString()
+        });
+
+        // Mark as approved
+        await db.from('community_submissions').update({
+          status: 'approved',
+          review_note: 'Auto-approved by scraper'
+        }).eq('id', sub.id);
+
+      } catch (e) {
+        log('community', `Error processing submission ${sub.id}: ${e.message}`);
+      }
+    }
+  } catch (e) {
+    log('community', `Error: ${e.message}`);
+  }
+
+  log('community', `Total community jobs: ${jobs.length}`);
+  return jobs;
+}
+
 // ── Stale Job Cleanup ─────────────────────────────────────────
-// Checks if jobs are still live on their source. If source returns 404
-// or the listing is gone, mark as inactive.
 async function cleanupStaleJobs() {
   if (!db) return { checked: 0, removed: 0 };
 
   log('cleanup', 'Checking for stale job listings...');
 
-  // Get active jobs older than 3 days
   const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
   const { data: activeJobs, error } = await db
     .from('jobs')
     .select('id, source_url, source, source_id, posted_at')
     .eq('status', 'active')
     .lt('posted_at', threeDaysAgo)
-    .limit(50); // check 50 at a time to stay within limits
+    .limit(50);
 
   if (error || !activeJobs) {
     log('cleanup', `Error fetching jobs: ${error?.message}`);
@@ -479,7 +1041,6 @@ async function cleanupStaleJobs() {
 
   for (const job of activeJobs) {
     try {
-      // For hh.kz jobs, check via API
       if (job.source === 'hh_kz' && job.source_id?.startsWith('hh_')) {
         const hhId = job.source_id.replace('hh_', '');
         const res = await fetch(`https://api.hh.ru/vacancies/${hhId}`, {
@@ -489,19 +1050,33 @@ async function cleanupStaleJobs() {
         if (res.status === 404 || res.status === 403) {
           await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
           removed++;
-          log('cleanup', `Removed hh.kz job ${hhId} (${res.status})`);
         } else if (res.ok) {
           const data = await res.json();
           if (data.archived || data.type?.id === 'closed') {
             await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
             removed++;
-            log('cleanup', `Archived hh.kz job ${hhId}`);
           }
         }
-
         await sleep(300);
       }
-      // For other sources, check if URL still returns 200
+      // For Telegram jobs, expire after 7 days (posts get buried fast)
+      else if (job.source === 'telegram') {
+        const age = Date.now() - new Date(job.posted_at).getTime();
+        if (age > 7 * 24 * 60 * 60 * 1000) {
+          await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
+          removed++;
+          log('cleanup', `Expired Telegram job: ${job.source_id}`);
+        }
+      }
+      // For social media jobs (Instagram, Threads, etc.), expire after 14 days
+      else if (['instagram', 'threads', 'twitter', 'facebook', 'community'].includes(job.source)) {
+        const age = Date.now() - new Date(job.posted_at).getTime();
+        if (age > 14 * 24 * 60 * 60 * 1000) {
+          await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
+          removed++;
+        }
+      }
+      // Generic URL check for others
       else if (job.source_url) {
         try {
           const res = await fetch(job.source_url, {
@@ -514,26 +1089,19 @@ async function cleanupStaleJobs() {
           if (res.status === 404 || res.status === 410) {
             await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
             removed++;
-            log('cleanup', `Removed ${job.source} job (${res.status}): ${job.source_url}`);
           }
-        } catch (e) {
-          // Network error — don't remove, might be temporary
-        }
-
+        } catch (e) { /* temporary error, skip */ }
         await sleep(500);
       }
 
-      // Also remove jobs older than 30 days regardless
+      // Hard expire at 30 days
       const age = Date.now() - new Date(job.posted_at).getTime();
       if (age > 30 * 24 * 60 * 60 * 1000) {
         await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
         removed++;
-        log('cleanup', `Expired 30+ day old job: ${job.source_id}`);
       }
 
-    } catch (e) {
-      // Skip this job on error
-    }
+    } catch (e) { /* skip */ }
   }
 
   log('cleanup', `Checked ${activeJobs.length} jobs, removed ${removed}`);
@@ -544,10 +1112,8 @@ async function cleanupStaleJobs() {
 async function upsertJobs(jobs) {
   if (!db || jobs.length === 0) return;
 
-  // We need source_id as a unique key — add it to our table
-  // Upsert in batches of 50
   const batchSize = 50;
-  let inserted = 0, updated = 0, errors = 0;
+  let inserted = 0, errors = 0;
 
   for (let i = 0; i < jobs.length; i += batchSize) {
     const batch = jobs.slice(i, i + batchSize);
@@ -573,28 +1139,29 @@ async function upsertJobs(jobs) {
 
 // ── Main ──────────────────────────────────────────────────────
 async function main() {
-  console.log('═══════════════════════════════════════════');
-  console.log('  SteppeUp Job Scraper');
+  console.log('═══════════════════════════════════════════════════');
+  console.log('  SteppeUp Job Scraper v2');
   console.log(`  ${new Date().toISOString()}`);
   console.log(`  Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
-  console.log('═══════════════════════════════════════════\n');
+  console.log(`  Telegram: ${TELEGRAM_BOT_TOKEN ? 'ENABLED' : 'DISABLED (no token)'}`);
+  console.log('═══════════════════════════════════════════════════\n');
 
-  // Remove seed/placeholder jobs (IDs 1-20) that have fake search URLs instead of real vacancy links
+  // Remove seed/placeholder jobs
   if (db) {
     try {
-      const { data, error } = await db
+      const { error } = await db
         .from('jobs')
         .update({ status: 'inactive' })
         .lte('id', 20)
         .eq('status', 'active');
-      if (error) log('cleanup', `Seed cleanup error: ${error.message}`);
-      else log('cleanup', `Deactivated seed jobs (IDs 1-20)`);
+      if (!error) log('cleanup', 'Deactivated seed jobs (IDs 1-20)');
     } catch (e) {
       log('cleanup', `Seed cleanup failed: ${e.message}`);
     }
   }
 
-  // Run all scrapers
+  // Run all scrapers (original + new)
+  // Group 1: API-based (can run in parallel)
   const [hhJobs, enbekJobs, githubJobs, kolesaJobs, youthJobs] = await Promise.all([
     scrapeHH(),
     scrapeEnbek(),
@@ -603,23 +1170,37 @@ async function main() {
     scrapeYouthPortal()
   ]);
 
-  const allJobs = [...hhJobs, ...enbekJobs, ...githubJobs, ...kolesaJobs, ...youthJobs];
+  // Group 2: Web scraping (run sequentially to avoid rate limits)
+  const telegramJobs = await scrapeTelegram();
+  const linkedinJobs = await scrapeLinkedInViaGoogle();
+  const googleJobs = await scrapeGoogleJobs();
+  const communityJobs = await processCommunitySubmissions();
 
-  console.log('\n── Summary ──────────────────────────────');
-  console.log(`  hh.kz:        ${hhJobs.length} jobs`);
-  console.log(`  enbek.kz:     ${enbekJobs.length} jobs`);
-  console.log(`  GitHub:       ${githubJobs.length} jobs`);
-  console.log(`  Kolesa Group: ${kolesaJobs.length} jobs`);
-  console.log(`  Youth Portal: ${youthJobs.length} jobs`);
-  console.log(`  ─────────────────────────────`);
-  console.log(`  TOTAL:        ${allJobs.length} jobs`);
+  const allJobs = [
+    ...hhJobs, ...enbekJobs, ...githubJobs, ...kolesaJobs, ...youthJobs,
+    ...telegramJobs, ...linkedinJobs, ...googleJobs, ...communityJobs
+  ];
+
+  console.log('\n── Summary ──────────────────────────────────────');
+  console.log(`  hh.kz:          ${hhJobs.length} jobs`);
+  console.log(`  enbek.kz:       ${enbekJobs.length} jobs`);
+  console.log(`  GitHub:         ${githubJobs.length} jobs`);
+  console.log(`  Kolesa Group:   ${kolesaJobs.length} jobs`);
+  console.log(`  Youth Portal:   ${youthJobs.length} jobs`);
+  console.log(`  ── NEW SOURCES ──────────────────────────`);
+  console.log(`  Telegram:       ${telegramJobs.length} jobs`);
+  console.log(`  LinkedIn:       ${linkedinJobs.length} jobs`);
+  console.log(`  Google (social): ${googleJobs.length} jobs`);
+  console.log(`  Community:      ${communityJobs.length} jobs`);
+  console.log(`  ─────────────────────────────────────────`);
+  console.log(`  TOTAL:          ${allJobs.length} jobs`);
 
   if (DRY_RUN) {
     console.log('\n[DRY RUN] Would upsert these jobs to Supabase:');
-    allJobs.slice(0, 5).forEach(j => {
+    allJobs.slice(0, 10).forEach(j => {
       console.log(`  - [${j.source}] ${j.title} @ ${j.company} (${j.location})`);
     });
-    if (allJobs.length > 5) console.log(`  ... and ${allJobs.length - 5} more`);
+    if (allJobs.length > 10) console.log(`  ... and ${allJobs.length - 10} more`);
     return;
   }
 
@@ -631,12 +1212,12 @@ async function main() {
   // Clean up stale listings
   const cleanup = await cleanupStaleJobs();
 
-  console.log('\n── Done ─────────────────────────────────');
+  console.log('\n── Done ─────────────────────────────────────────');
   console.log(`  New/updated: ${allJobs.length}`);
   console.log(`  Stale removed: ${cleanup.removed}`);
-  console.log('═══════════════════════════════════════════\n');
+  console.log('═══════════════════════════════════════════════════\n');
 
-  // Log scraping run to Supabase
+  // Log scraping run
   try {
     await db.from('scraping_logs').insert({
       source: 'all',
@@ -648,12 +1229,14 @@ async function main() {
         enbek_kz: enbekJobs.length,
         github_kz: githubJobs.length,
         kolesa_group: kolesaJobs.length,
-        youth_portal: youthJobs.length
+        youth_portal: youthJobs.length,
+        telegram: telegramJobs.length,
+        linkedin: linkedinJobs.length,
+        google_social: googleJobs.length,
+        community: communityJobs.length
       }
     });
-  } catch (e) {
-    // Logging table might not exist yet, that's fine
-  }
+  } catch (e) { /* logging table might not exist yet */ }
 }
 
 main().catch(e => {
