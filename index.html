@@ -319,6 +319,22 @@ footer{padding:16px 12px}
   html.dark .jc-match-hint{color:#6aaa72}
   html.dark .jc-sal-warn{color:#d67a4a}
   .jc-stripe-name{font:600 11px 'DM Sans',sans-serif;color:rgba(254,252,247,.85);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* ── Source badges ──────────────────────────────────────────────────── */
+  .jc-source{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:100px;font:500 9px 'DM Sans',sans-serif;letter-spacing:.3px;text-transform:uppercase;white-space:nowrap}
+  .jc-source.src-hh{background:rgba(209,52,56,.12);color:#d13438}
+  .jc-source.src-telegram{background:rgba(36,161,222,.12);color:#24a1de}
+  .jc-source.src-kolesa{background:rgba(255,183,0,.15);color:#b38600}
+  .jc-source.src-enbek{background:rgba(0,128,96,.12);color:#008060}
+  .jc-source.src-github{background:rgba(110,84,148,.12);color:#6e5494}
+  .jc-source.src-youth{background:rgba(0,120,212,.12);color:#0078d4}
+  .jc-source.src-community{background:rgba(232,105,162,.12);color:#e869a2}
+  html.dark .jc-source.src-hh{background:rgba(209,52,56,.2);color:#f07075}
+  html.dark .jc-source.src-telegram{background:rgba(36,161,222,.2);color:#5cc1ee}
+  html.dark .jc-source.src-kolesa{background:rgba(255,183,0,.2);color:#ffc94d}
+  html.dark .jc-source.src-enbek{background:rgba(0,128,96,.2);color:#3dbf8e}
+  html.dark .jc-source.src-github{background:rgba(110,84,148,.2);color:#b09adb}
+  html.dark .jc-source.src-youth{background:rgba(0,120,212,.2);color:#5aa8e0}
+  html.dark .jc-source.src-community{background:rgba(232,105,162,.2);color:#f099c0}
   </style>
 </head>
 <body>
@@ -656,6 +672,21 @@ function stripeClass(job) {
   return '';
 }
 
+function sourceBadge(source) {
+  var map = {
+    hh_kz:         { cls: 'src-hh',        label: 'hh.kz' },
+    hh_ru:         { cls: 'src-hh',        label: 'hh.kz' },
+    telegram:      { cls: 'src-telegram',   label: 'Telegram' },
+    kolesa_group:  { cls: 'src-kolesa',     label: 'Kolesa' },
+    enbek:         { cls: 'src-enbek',      label: 'enbek.kz' },
+    github:        { cls: 'src-github',     label: 'GitHub' },
+    youth_portal:  { cls: 'src-youth',      label: 'Youth' },
+    community:     { cls: 'src-community',  label: 'Community' },
+  };
+  var info = map[source] || { cls: 'src-hh', label: source || '—' };
+  return '<span class="jc-source ' + info.cls + '">' + info.label + '</span>';
+}
+
 // ── Job Card HTML ───────────────────────────────────────────────────────────
 function buildJobCard(job, score) {
   const sc      = stripeClass(job);
@@ -705,7 +736,7 @@ function buildJobCard(job, score) {
       <div class="jc-inf">📍 ${job.city}</div>
       ${job.remote ? '<div class="jc-dot"></div><div class="jc-inf">' + t('tag_remote') + '</div>' : ''}
     </div>
-    <div class="jc-tags">${tags.join('')}</div>
+    <div class="jc-tags">${sourceBadge(job.source)}${tags.join('')}</div>
     ${reasonHTML}
   </div>
   <div class="jc-foot">
@@ -912,7 +943,7 @@ function renderJobDetail(jobId) {
       '<div class="detail-logo">' + job.logo + '</div>' +
       '<div class="detail-title">' + job.title + '</div>' +
       '<div class="detail-co">' + job.company + '</div>' +
-      '<div class="detail-meta">' + tagsHTML + '</div>' +
+      '<div class="detail-meta">' + sourceBadge(job.source) + tagsHTML + '</div>' +
     '</div>' +
 
     '<div class="detail-body">' +
@@ -1405,6 +1436,7 @@ function mapSupabaseJob(j) {
     url:         (j.source_url  || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent((j.title || '') + ' ' + (j.company || ''))).replace('hh.ru', 'hh.kz'),
     logo:        logo,
     stripe:      stripe,
+    source:      j.source       || 'unknown',
   };
 }
 
