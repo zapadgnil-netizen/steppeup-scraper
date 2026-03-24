@@ -7,7 +7,7 @@
  *   1. hh.kz (HeadHunter) — public API, no auth needed
  *   2. enbek.kz — government employment portal
  *   3. GitHub Jobs (KZ-related tech)
- *   4. Kolesa Group careers
+ *   4. Kolesa Group careers (via hh.kz employer API — their site blocks datacenter IPs)
  *   5. Youth employment portal
  *   ── NEW ──────────────────────────────────
  *   6. Telegram channels — public KZ job channels via Bot API
@@ -285,13 +285,18 @@ async function scrapeEnbek() {
     for (const query of queries) {
       try {
         const url = `https://www.enbek.kz/ru/search/vacancy?key=${encodeURIComponent(query)}&sort=date`;
+        // AbortController with 15s timeout to prevent enbek.kz ETIMEDOUT hangs (site often down)
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 15000);
         const res = await fetch(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)',
             'Accept': 'text/html,application/xhtml+xml',
             'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8'
-          }
+          },
+          signal: controller.signal
         });
+        clearTimeout(timeout);
 
         if (!res.ok) {
           log('enbek.kz', `Query "${query}" failed: ${res.status}`);
@@ -343,7 +348,8 @@ async function scrapeEnbek() {
         log('enbek.kz', `Query "${query}": parsed page`);
         await sleep(1000);
       } catch (e) {
-        log('enbek.kz', `Error on "${query}": ${e.message}`);
+        const isTimeout = e.name === 'AbortError' || e.code === 'ETIMEDOUT' || e.code === 'ECONNRESET';
+        log('enbek.kz', `${isTimeout ? 'Timeout' : 'Error'} on "${query}": ${e.message}`);
       }
     }
   } catch (e) {
@@ -428,134 +434,70 @@ async function scrapeGitHubJobs() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  Source 4: Kolesa Group Careers
+//  Source 4: Kolesa Group Careers (via hh.kz employer API)
 // ══════════════════════════════════════════════════════════════
+// kolesa.group is a Nuxt.js SPA that serves empty __NUXT__={} to datacenter IPs,
+// so we can't scrape it from GitHub Actions. Instead, we pull Kolesa Group vacancies
+// from hh.kz using their employer ID (40662). This is reliable and always works.
 async function scrapeKolesa() {
   const jobs = [];
+  const KOLESA_EMPLOYER_ID = 40662;
 
   try {
-    // New URL structure as of 2026 — /career/job has the vacancy listings
-    // Site is Nuxt.js SSR — vacancy data is embedded in a __NUXT__ payload
-    const url = 'https://kolesa.group/career/job';
+    // Fetch all open vacancies for Kolesa Group from hh.kz API
+    const url = `https://api.hh.ru/vacancies?employer_id=${KOLESA_EMPLOYER_ID}&area=40&per_page=100&order_by=publication_time`;
     const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive',
-        'Cache-Control': 'no-cache'
-      }
+      headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
     });
 
     if (!res.ok) {
-      log('kolesa', `Failed: ${res.status} ${res.statusText}`);
+      log('kolesa', `hh.kz API failed: ${res.status} ${res.statusText}`);
       return jobs;
     }
 
-    const html = await res.text();
-    log('kolesa', `Page fetched: ${html.length} bytes`);
+    const data = await res.json();
+    log('kolesa', `hh.kz returned ${data.items?.length || 0} Kolesa Group vacancies`);
 
-    // Strategy 1: Parse the __NUXT__ payload for ALL vacancies (19+ across all categories)
-    // The Nuxt SSR embeds a window.__NUXT__ object with vacancy-list data
-    const nuxtMatch = html.match(/window\.__NUXT__\s*=\s*(\{[\s\S]*?\})\s*<\/script>/);
-    if (nuxtMatch) {
+    for (const v of (data.items || [])) {
+      // Fetch full vacancy details for description
+      let description = v.snippet?.responsibility || v.snippet?.requirement || '';
       try {
-        // Use Function to safely evaluate the NUXT payload (it may contain JS expressions)
-        const nuxtData = new Function('return ' + nuxtMatch[1])();
-        const vacancyList = nuxtData?.data?.['vacancy-list'];
-        if (vacancyList) {
-          for (const [category, val] of Object.entries(vacancyList)) {
-            if (!val?.vacancies) continue;
-            for (const v of val.vacancies) {
-              const fullLink = `https://kolesa.group/career/job/${v.slug}`;
-              const salaryFrom = v.salary?.from || null;
-              const salaryTo = v.salary?.to || null;
-              const salaryText = salaryFrom ? `${salaryFrom.toLocaleString()} – ${(salaryTo || salaryFrom).toLocaleString()} ₸` : '';
-
-              jobs.push({
-                source: 'kolesa_group',
-                source_id: `kolesa_${v.id}`,
-                source_url: fullLink,
-                title: v.position,
-                company: 'Kolesa Group',
-                company_logo: null,
-                location: v.area || 'Almaty',
-                description: `Kolesa Group — leading tech company in Central Asia. Category: ${category}. ${salaryText}`.trim(),
-                salary_min: salaryFrom,
-                salary_max: salaryTo,
-                currency: 'KZT',
-                tags: ['kolesa', 'tech', category],
-                status: 'active',
-                posted_at: new Date().toISOString()
-              });
-            }
-          }
-          log('kolesa', `Parsed ${jobs.length} vacancies from __NUXT__ payload`);
-        }
-      } catch (parseErr) {
-        log('kolesa', `NUXT parse failed: ${parseErr.message}, falling back to DOM`);
-      }
-    }
-
-    // Strategy 2: Fall back to DOM selectors if NUXT parsing got nothing
-    if (jobs.length === 0) {
-      const $ = cheerio.load(html);
-      $('a[href*="/career/job/"]').each((_, el) => {
-        const $el = $(el);
-        const link = $el.attr('href') || '';
-        if (link === '/career/job' || link === '/career/job/') return;
-
-        const fullLink = link.startsWith('http') ? link : `https://kolesa.group${link}`;
-        const text = $el.text().trim();
-
-        const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-        let title = '', location = 'Almaty', salaryText = '';
-
-        for (const line of lines) {
-          if (line.includes('₸') || line.includes('тенге')) {
-            salaryText = line;
-          } else if (line.includes('Опыт') || line.includes('опыт')) {
-            const cityMatch = line.match(/^([^•]+)/);
-            if (cityMatch) location = cityMatch[1].trim();
-          } else if (line.length > 5 && !title) {
-            title = line;
-          }
-        }
-
-        if (!title || title.length < 4) return;
-
-        let salaryMin = null, salaryMax = null;
-        const salaryMatchResult = salaryText.match(/(\d[\d\s]*)/g);
-        if (salaryMatchResult) {
-          const nums = salaryMatchResult.map(s => parseInt(s.replace(/\s/g, '')));
-          salaryMin = nums[0] || null;
-          salaryMax = nums[1] || nums[0] || null;
-        }
-
-        jobs.push({
-          source: 'kolesa_group',
-          source_id: `kolesa_${Buffer.from(fullLink).toString('base64').slice(0, 32)}`,
-          source_url: fullLink,
-          title,
-          company: 'Kolesa Group',
-          company_logo: null,
-          location,
-          description: `Kolesa Group — leading tech company in Central Asia. ${salaryText}`.trim(),
-          salary_min: salaryMin,
-          salary_max: salaryMax,
-          currency: 'KZT',
-          tags: ['kolesa', 'tech'],
-          status: 'active',
-          posted_at: new Date().toISOString()
+        const detailRes = await fetch(`https://api.hh.ru/vacancies/${v.id}`, {
+          headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
         });
+        if (detailRes.ok) {
+          const detail = await detailRes.json();
+          description = cleanHtml(detail.description) || description;
+        }
+      } catch (e) { /* use snippet */ }
+
+      const salary = extractSalary(v.salary);
+      const tags = [
+        'kolesa', 'tech',
+        v.schedule?.name,
+        v.experience?.name,
+        v.employment?.name,
+        ...(v.professional_roles || []).map(r => r.name)
+      ].filter(Boolean);
+
+      jobs.push({
+        source: 'kolesa_group',
+        source_id: `kolesa_hh_${v.id}`,
+        source_url: (v.alternate_url || `https://hh.kz/vacancy/${v.id}`).replace('hh.ru', 'hh.kz'),
+        title: v.name,
+        company: 'Kolesa Group',
+        company_logo: v.employer?.logo_urls?.['90'] || null,
+        location: v.area?.name || 'Almaty',
+        description,
+        salary_min: salary.min,
+        salary_max: salary.max,
+        currency: salary.currency,
+        tags,
+        status: 'active',
+        posted_at: v.published_at || new Date().toISOString()
       });
-      if (jobs.length > 0) {
-        log('kolesa', `Parsed ${jobs.length} vacancies from DOM selectors (fallback)`);
-      } else {
-        // Log first 500 chars to help debug what the server returned
-        log('kolesa', `No jobs found. HTML preview: ${html.substring(0, 500).replace(/\n/g, ' ')}`);
-      }
+
+      await sleep(200); // be nice to the API
     }
   } catch (e) {
     log('kolesa', `Error: ${e.message}`);
