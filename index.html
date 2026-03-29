@@ -1450,7 +1450,7 @@ function mapSupabaseJob(j) {
 async function loadJobs() {
   try {
     var res = await fetch(
-      SB_URL + '/rest/v1/jobs?select=*&status=eq.active&order=posted_at.desc&limit=150',
+      SB_URL + '/rest/v1/jobs?select=*&status=eq.active&order=posted_at.desc&limit=500',
       { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
     );
     if (res.ok) {
