@@ -11,9 +11,11 @@
  *   5. Youth employment portal
  *   ── NEW ──────────────────────────────────
  *   6. Telegram channels — public KZ job channels via Bot API
- *   7. LinkedIn — via Google site search (no LinkedIn API needed)
- *   8. Google Jobs — catches postings from Instagram, Threads, Facebook, etc.
- *   9. Community submissions — user-submitted jobs from Supabase queue
+ *   7. JSearch (RapidAPI) — aggregates LinkedIn + Indeed + Glassdoor,
+ *      filtered to internships & entry-level in Kazakhstan only.
+ *      Free tier: 200 req/month (~6 queries/day, fits perfectly).
+ *      Requires JSEARCH_API_KEY secret in GitHub Actions.
+ *   8. Community submissions — user-submitted jobs from Supabase queue
  */
 
 const fetch = require('node-fetch');
@@ -24,6 +26,7 @@ const { createClient } = require('@supabase/supabase-js');
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const JSEARCH_API_KEY   = process.env.JSEARCH_API_KEY || '';
 const DRY_RUN = process.argv.includes('--dry-run');
 
 if (!DRY_RUN && (!SUPABASE_URL || !SUPABASE_KEY)) {
@@ -1002,6 +1005,145 @@ async function processCommunitySubmissions() {
   return jobs;
 }
 
+// ══════════════════════════════════════════════════════════════
+//  ★ Source 7: JSearch API — LinkedIn + Indeed + Glassdoor
+//  Aggregates jobs from the major platforms without scraping them
+//  directly. Filtered strictly to internships & entry-level in KZ.
+//  Free tier: 200 requests/month → ~6 req/day → zero cost for now.
+//  Sign up: https://rapidapi.com/letscrape-6bfbfe/api/jsearch
+//  Secret:  JSEARCH_API_KEY in GitHub Actions
+// ══════════════════════════════════════════════════════════════
+async function scrapeJSearch() {
+  const jobs = [];
+
+  if (!JSEARCH_API_KEY) {
+    log('jsearch', 'No JSEARCH_API_KEY — skipping (add secret to GitHub Actions to enable)');
+    return jobs;
+  }
+
+  // Targeted queries for internships & entry-level in Kazakhstan
+  // We keep queries focused so we don't blow through the free tier
+  const queries = [
+    { q: 'intern internship Kazakhstan',        type: 'INTERN'     },
+    { q: 'intern internship Almaty',            type: 'INTERN'     },
+    { q: 'intern internship Astana',            type: 'INTERN'     },
+    { q: 'junior entry level developer Kazakhstan', type: 'FULLTIME' },
+    { q: 'стажер стажировка Казахстан',         type: 'INTERN'     },
+    { q: 'junior entry level Kazakhstan',       type: 'FULLTIME'   },
+  ];
+
+  for (const { q, type } of queries) {
+    try {
+      // Build request — date_posted=week keeps results fresh
+      const params = new URLSearchParams({
+        query:            q,
+        page:             '1',
+        num_pages:        '1',
+        date_posted:      'week',
+        employment_types: type,
+      });
+
+      const res = await fetch(
+        `https://jsearch.p.rapidapi.com/search?${params}`,
+        {
+          headers: {
+            'X-RapidAPI-Key':  JSEARCH_API_KEY,
+            'X-RapidAPI-Host': 'jsearch.p.rapidapi.com',
+          },
+        }
+      );
+
+      if (res.status === 429) {
+        log('jsearch', 'Rate limit hit — stopping early to preserve quota');
+        break;
+      }
+      if (!res.ok) {
+        log('jsearch', `Query "${q.slice(0, 40)}" failed: ${res.status}`);
+        continue;
+      }
+
+      const data = await res.json();
+      const items = data.data || [];
+      log('jsearch', `Query "${q.slice(0, 40)}": ${items.length} results`);
+
+      for (const v of items) {
+        // Hard-filter: only Kazakhstan or remote jobs
+        const country = (v.job_country || '').toLowerCase();
+        const city    = (v.job_city    || '').toLowerCase();
+        const isKZ    = country === 'kz' || country === 'kazakhstan' ||
+                        city.includes('almaty') || city.includes('astana') ||
+                        city.includes('алматы') || city.includes('астана');
+        const isRemote = v.job_is_remote === true;
+        if (!isKZ && !isRemote) continue;
+
+        // Build description from all available fields
+        const highlights = v.job_highlights || {};
+        const highlightText = [
+          ...(highlights.Qualifications   || []),
+          ...(highlights.Responsibilities || []),
+          ...(highlights.Benefits         || []),
+        ].join(' ');
+        const description = (v.job_description || highlightText || '').slice(0, 5000);
+
+        // Build tags
+        const tags = [];
+        const publisher = (v.job_publisher || '').toLowerCase();
+        if (publisher.includes('linkedin'))  tags.push('linkedin');
+        if (publisher.includes('indeed'))    tags.push('indeed');
+        if (publisher.includes('glassdoor')) tags.push('glassdoor');
+        if (v.job_employment_type === 'INTERN')    tags.push('internship');
+        if (v.job_employment_type === 'PART_TIME') tags.push('part-time');
+        if (v.job_is_remote) tags.push('remote');
+        const exp = v.job_required_experience || {};
+        if (exp.no_experience_required) tags.push('no experience required');
+
+        // Source label — show original platform in the badge
+        let sourceName = 'jsearch';
+        if (publisher.includes('linkedin'))  sourceName = 'linkedin';
+        else if (publisher.includes('indeed')) sourceName = 'indeed';
+
+        // Skip senior/middle roles that slipped through the query
+        if (!isStudentFriendly(v.job_title, description, tags)) continue;
+
+        const location = [v.job_city, v.job_state, v.job_country]
+          .filter(Boolean).join(', ') || 'Kazakhstan';
+
+        jobs.push({
+          source:       sourceName,
+          source_id:    `jsearch_${v.job_id}`,
+          source_url:   v.job_apply_link || `https://jsearch.p.rapidapi.com/job-details?job_id=${v.job_id}`,
+          title:        v.job_title,
+          company:      v.employer_name  || 'Unknown',
+          company_logo: v.employer_logo  || null,
+          location,
+          description,
+          salary_min:   v.job_min_salary || null,
+          salary_max:   v.job_max_salary || null,
+          currency:     v.job_salary_currency || 'KZT',
+          tags,
+          status:       'active',
+          posted_at:    v.job_posted_at_datetime_utc || new Date().toISOString(),
+        });
+      }
+
+      await sleep(500); // stay well within rate limits
+    } catch (e) {
+      log('jsearch', `Error on "${q.slice(0, 40)}": ${e.message}`);
+    }
+  }
+
+  // Deduplicate by job_id (same listing can appear across queries)
+  const seen  = new Set();
+  const unique = jobs.filter(j => {
+    if (seen.has(j.source_id)) return false;
+    seen.add(j.source_id);
+    return true;
+  });
+
+  log('jsearch', `Total unique jobs: ${unique.length} (LinkedIn/Indeed/Glassdoor)`);
+  return unique;
+}
+
 // ── Stale Job Cleanup ─────────────────────────────────────────
 async function cleanupStaleJobs() {
   if (!db) return { checked: 0, removed: 0 };
@@ -1128,6 +1270,7 @@ async function main() {
   console.log(`  ${new Date().toISOString()}`);
   console.log(`  Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
   console.log(`  Telegram: ENABLED (${TELEGRAM_CHANNELS.length} channels via web preview)`);
+  console.log(`  JSearch:  ${JSEARCH_API_KEY ? 'ENABLED (LinkedIn/Indeed/Glassdoor)' : 'DISABLED (add JSEARCH_API_KEY secret to enable)'}`);
   console.log('═══════════════════════════════════════════════════\n');
 
   // Remove seed/placeholder jobs
@@ -1154,15 +1297,14 @@ async function main() {
     scrapeYouthPortal()
   ]);
 
-  // Group 2: Web scraping (run sequentially to avoid rate limits)
-  const telegramJobs = await scrapeTelegram();
-  // LinkedIn via Google and Google catch-all removed — they never return results
-  // from server IPs (Google blocks automated requests with CAPTCHAs).
+  // Group 2: Web scraping + external APIs (run sequentially to avoid rate limits)
+  const telegramJobs  = await scrapeTelegram();
+  const jsearchJobs   = await scrapeJSearch();
   const communityJobs = await processCommunitySubmissions();
 
   const allJobs = [
     ...hhJobs, ...enbekJobs, ...githubJobs, ...kolesaJobs, ...youthJobs,
-    ...telegramJobs, ...communityJobs
+    ...telegramJobs, ...jsearchJobs, ...communityJobs
   ];
 
   console.log('\n── Summary ──────────────────────────────────────');
@@ -1172,6 +1314,7 @@ async function main() {
   console.log(`  Kolesa Group:   ${kolesaJobs.length} jobs`);
   console.log(`  Youth Portal:   ${youthJobs.length} jobs`);
   console.log(`  Telegram:       ${telegramJobs.length} jobs`);
+  console.log(`  JSearch (LI/Indeed): ${jsearchJobs.length} jobs`);
   console.log(`  Community:      ${communityJobs.length} jobs`);
   console.log(`  ─────────────────────────────────────────`);
   console.log(`  TOTAL:          ${allJobs.length} jobs`);

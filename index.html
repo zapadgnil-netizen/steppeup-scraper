@@ -328,6 +328,8 @@ footer{padding:16px 12px}
   .jc-source.src-github{background:rgba(110,84,148,.12);color:#6e5494}
   .jc-source.src-youth{background:rgba(0,120,212,.12);color:#0078d4}
   .jc-source.src-community{background:rgba(232,105,162,.12);color:#e869a2}
+  .jc-source.src-linkedin{background:rgba(10,102,194,.12);color:#0a66c2}
+  .jc-source.src-indeed{background:rgba(35,82,124,.12);color:#23527c}
   html.dark .jc-source.src-hh{background:rgba(209,52,56,.2);color:#f07075}
   html.dark .jc-source.src-telegram{background:rgba(36,161,222,.2);color:#5cc1ee}
   html.dark .jc-source.src-kolesa{background:rgba(255,183,0,.2);color:#ffc94d}
@@ -335,6 +337,8 @@ footer{padding:16px 12px}
   html.dark .jc-source.src-github{background:rgba(110,84,148,.2);color:#b09adb}
   html.dark .jc-source.src-youth{background:rgba(0,120,212,.2);color:#5aa8e0}
   html.dark .jc-source.src-community{background:rgba(232,105,162,.2);color:#f099c0}
+  html.dark .jc-source.src-linkedin{background:rgba(10,102,194,.2);color:#5ba4e0}
+  html.dark .jc-source.src-indeed{background:rgba(35,82,124,.2);color:#7aacda}
   </style>
 </head>
 <body>
@@ -682,6 +686,9 @@ function sourceBadge(source) {
     github:        { cls: 'src-github',     label: 'GitHub' },
     youth_portal:  { cls: 'src-youth',      label: 'Youth' },
     community:     { cls: 'src-community',  label: 'Community' },
+    linkedin:      { cls: 'src-linkedin',   label: 'LinkedIn' },
+    indeed:        { cls: 'src-indeed',     label: 'Indeed' },
+    jsearch:       { cls: 'src-linkedin',   label: 'LinkedIn' },
   };
   var info = map[source] || { cls: 'src-hh', label: source || '—' };
   return '<span class="jc-source ' + info.cls + '">' + info.label + '</span>';
