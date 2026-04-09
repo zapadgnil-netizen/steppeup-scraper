@@ -118,8 +118,6 @@ footer{padding:24px 16px}
 .detail-apply{padding:16px;margin-top:16px;margin-bottom:24px;flex-direction:column;gap:12px;border-radius:16px}
 .detail-salary{font-size:18px}
 .detail-salary span{font-size:11px}
-.cv-upload-widget{display:flex;flex-direction:column;align-items:center;justify-content:center}
-.cv-upload-widget:hover{background:rgba(170,255,69,.05);border-color:var(--lime)}
 
 .saved-wrap{padding:16px 14px;max-width:100%}
 .saved-title{font-size:22px;margin-bottom:4px}
@@ -998,20 +996,6 @@ function renderJobDetail(jobId) {
            'style="font-size:12px;color:var(--ink-50);text-decoration:underline">' +
           t('fallback_link') +
         '</a>' +
-      '</div>' : '') +
-
-    (job.source === 'partner' ?
-      '<div class="detail-body" style="border-top:1px solid var(--ink-10);padding-top:20px">' +
-        '<div class="detail-section-title">Загрузить резюме</div>' +
-        '<div id="cv-upload-area" class="cv-upload-widget" data-job-id="' + job.id + '" style="border:2px dashed var(--lime);border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:rgba(170,255,69,.02)">' +
-          '<input type="file" id="cv-file-input" accept=".pdf,.doc,.docx" style="display:none" onchange="handleCVUpload(event)">' +
-          '<div style="font-size:28px;margin-bottom:10px">📄</div>' +
-          '<div id="cv-status-' + job.id + '" style="font-size:12px;color:var(--ink-70)">' +
-            'Перетащите файл или <span style="color:var(--lime);text-decoration:underline;cursor:pointer" onclick="document.getElementById('cv-file-input').click()">нажмите здесь</span>' +
-          '</div>' +
-          '<div style="font-size:11px;color:var(--ink-40);margin-top:8px">PDF, DOC, DOCX (макс 10 МБ)</div>' +
-        '</div>' +
-        '<textarea id="cv-message-' + job.id + '" placeholder="Сообщение для работодателя (опционально)" style="width:100%;margin-top:12px;padding:10px;border:1px solid var(--ink-10);border-radius:4px;font-size:12px;font-family:var(--ff-body);resize:vertical;min-height:80px"></textarea>' +
       '</div>' : '');
 }
 
