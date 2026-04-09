@@ -118,6 +118,8 @@ footer{padding:24px 16px}
 .detail-apply{padding:16px;margin-top:16px;margin-bottom:24px;flex-direction:column;gap:12px;border-radius:16px}
 .detail-salary{font-size:18px}
 .detail-salary span{font-size:11px}
+.cv-upload-widget{display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cv-upload-widget:hover{background:rgba(170,255,69,.05);}
 
 .saved-wrap{padding:16px 14px;max-width:100%}
 .saved-title{font-size:22px;margin-bottom:4px}
@@ -900,6 +902,21 @@ function filterBrowse() {
 }
 
 // ── Job Detail ──────────────────────────────────────────────────────────────
+function cvUploadSection(job) {
+  var jid = job.id;
+  var s = [];
+  s.push('<div class="detail-body" style="border-top:1px solid var(--ink-10);padding-top:20px">');
+  s.push('<div class="detail-section-title">Загрузить резюме</div>');
+  s.push('<div id="cv-upload-area" class="cv-upload-widget" data-job-id="'+jid+'" style="border:2px dashed var(--lime);border-radius:8px;padding:20px;text-align:center;cursor:pointer;background:rgba(170,255,69,.02)">');
+  s.push('<input type="file" id="cv-file-input" accept=".pdf,.doc,.docx" style="display:none" onchange="handleCVUpload(event)">');
+  s.push('<div style="font-size:28px;margin-bottom:10px">📄</div>');
+  s.push('<div id="cv-status-'+jid+'" style="font-size:12px;color:var(--ink-70)">Перетащите файл или <span style="color:var(--lime);cursor:pointer" onclick="document.getElementById('cv-file-input').click()">нажмите здесь</span></div>');
+  s.push('<div style="font-size:11px;color:var(--ink-40);margin-top:8px">PDF, DOC, DOCX (макс 10 МБ)</div>');
+  s.push('</div>');
+  s.push('<textarea id="cv-message-'+jid+'" placeholder="Сообщение для работодателя (опционально)" style="width:100%;margin-top:12px;padding:10px;border:1px solid var(--ink-10);border-radius:4px;font-size:12px;font-family:var(--ff-body);resize:vertical;min-height:80px"></textarea>');
+  s.push('</div>');
+  return s.join("");
+}
 function renderJobDetail(jobId) {
   const job = ALL_JOBS.find(function(j) { return j.id == jobId; });
   if (!job) {
@@ -1108,7 +1125,64 @@ function doToggleSave(evt, jobId) {
   }
 }
 
-// ── Profile ──────────────────────────────────────────────────────────────────
+
+  function handleCVUpload(evt) {
+    var file = evt.target.files[0];
+    if (!file) return;
+    var validTypes = ['application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    if (validTypes.indexOf(file.type) === -1) { alert('PDF, DOC, DOCX только'); return; }
+    if (file.size > 10*1024*1024) { alert('Макс 10 МБ'); return; }
+    var jobId = document.getElementById('cv-upload-area').getAttribute('data-job-id');
+    var statusEl = document.getElementById('cv-status-' + jobId);
+    statusEl.innerHTML = '<div style="color:var(--lime)">⏳ Загрузка...</div>';
+    uploadCVFile(file, jobId, function(err, fileUrl) {
+      if (err) { statusEl.innerHTML = '<div style="color:#d13438">❌ Ошибка</div>'; return; }
+      var msg = document.getElementById('cv-message-' + jobId) ? document.getElementById('cv-message-' + jobId).value.trim() : '';
+      saveCVApplication(jobId, file.name, fileUrl, msg, function(dbErr) {
+        if (dbErr) { statusEl.innerHTML = '<div style="color:#d13438">❌ Ошибка сохранения</div>'; return; }
+        statusEl.innerHTML = '<div style="color:var(--lime);font-weight:600">✓ ' + file.name + '</div>';
+        evt.target.value = '';
+      });
+    });
+  }
+  function uploadCVFile(file, jobId, callback) {
+    var SB_URL='https://wiijdddhzddqgntfdbsx.supabase.co';
+    var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpaWpkZGRoemRkcWdudGZkYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1NDI0NjIsImV4cCI6MjA4NzExODQ2Mn0.rQyTBlIA1WVU-KfFyF8sXK8GVZUL9m9yFIHTydXPHe0';
+    var uid = localStorage.getItem('steppeup_user_id') || ('user_'+Date.now()+'_'+Math.random().toString(36).slice(7));
+    localStorage.setItem('steppeup_user_id', uid);
+    var path = 'applications/'+uid+'/'+jobId+'/'+Date.now()+'_'+file.name;
+    fetch(SB_URL+'/storage/v1/object/applications/'+path, {
+      method:'POST',
+      headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':file.type},
+      body:file
+    })
+    .then(function(r){return r.json().then(function(d){return{s:r.status,d:d};});})
+    .then(function(x){
+      if(x.s===200||x.s===201){callback(null,SB_URL+'/storage/v1/object/public/applications/'+path);}
+      else{callback(new Error('Storage error '+x.s+': '+JSON.stringify(x.d)));}
+    })
+    .catch(callback);
+  }
+  function saveCVApplication(jobId, filename, fileUrl, message, callback) {
+    var SB_URL='https://wiijdddhzddqgntfdbsx.supabase.co';
+    var SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpaWpkZGRoemRkcWdudGZkYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1NDI0NjIsImV4cCI6MjA4NzExODQ2Mn0.rQyTBlIA1WVU-KfFyF8sXK8GVZUL9m9yFIHTydXPHe0';
+    var uid = localStorage.getItem('steppeup_user_id') || ('user_'+Date.now()+'_'+Math.random().toString(36).slice(7));
+    localStorage.setItem('steppeup_user_id', uid);
+    fetch(SB_URL+'/rest/v1/applications', {
+      method:'POST',
+      headers:{
+        'apikey':SB_KEY,
+        'Authorization':'Bearer '+SB_KEY,
+        'Content-Type':'application/json',
+        'Prefer':'resolution=merge-duplicates,return=representation'
+      },
+      body:JSON.stringify({user_id:uid,job_id:parseInt(jobId),cv_url:fileUrl,cv_filename:filename,message:message||null})
+    })
+    .then(function(r){ callback(r.status===200||r.status===201||r.status===204 ? null : new Error(r.status)); })
+    .catch(callback);
+  }
+
+  // ── Profile ──────────────────────────────────────────────────────────────────
 function loadProfileForm() {
   if (!profile) profile = {};
   document.getElementById('p-name').value  = profile.name  || '';
