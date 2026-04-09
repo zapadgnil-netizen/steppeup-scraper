@@ -330,6 +330,8 @@ footer{padding:16px 12px}
   .jc-source.src-community{background:rgba(232,105,162,.12);color:#e869a2}
   .jc-source.src-linkedin{background:rgba(10,102,194,.12);color:#0a66c2}
   .jc-source.src-indeed{background:rgba(35,82,124,.12);color:#23527c}
+  .jc-source.src-partner{background:linear-gradient(135deg,rgba(1,105,111,.12),rgba(1,105,111,.22));color:#01696F;font-weight:700;letter-spacing:.4px;border:1px solid rgba(1,105,111,.25);padding:3px 9px}
+  .jc-source.src-partner::before{content:'\u2605 ';font-size:10px}
   html.dark .jc-source.src-hh{background:rgba(209,52,56,.2);color:#f07075}
   html.dark .jc-source.src-telegram{background:rgba(36,161,222,.2);color:#5cc1ee}
   html.dark .jc-source.src-kolesa{background:rgba(255,183,0,.2);color:#ffc94d}
@@ -339,6 +341,7 @@ footer{padding:16px 12px}
   html.dark .jc-source.src-community{background:rgba(232,105,162,.2);color:#f099c0}
   html.dark .jc-source.src-linkedin{background:rgba(10,102,194,.2);color:#5ba4e0}
   html.dark .jc-source.src-indeed{background:rgba(35,82,124,.2);color:#7aacda}
+  html.dark .jc-source.src-partner{background:linear-gradient(135deg,rgba(1,105,111,.25),rgba(1,105,111,.35));color:#3dd6d0;border-color:rgba(61,214,208,.3)}
   </style>
 </head>
 <body>
@@ -676,7 +679,7 @@ function stripeClass(job) {
   return '';
 }
 
-function sourceBadge(source) {
+function sourceBadge(source, job) {
   var map = {
     hh_kz:         { cls: 'src-hh',        label: 'hh.kz' },
     hh_ru:         { cls: 'src-hh',        label: 'hh.kz' },
@@ -690,6 +693,11 @@ function sourceBadge(source) {
     indeed:        { cls: 'src-indeed',     label: 'Indeed' },
     jsearch:       { cls: 'src-linkedin',   label: 'LinkedIn' },
   };
+  // Partner jobs get premium badge with agency name
+  if (source === 'partner') {
+    var pName = (job && job.partner_name) ? job.partner_name : 'партнёра';
+    return '<span class="jc-source src-partner">Эксклюзив от ' + pName + '</span>';
+  }
   var info = map[source] || { cls: 'src-hh', label: source || '—' };
   return '<span class="jc-source ' + info.cls + '">' + info.label + '</span>';
 }
@@ -743,7 +751,7 @@ function buildJobCard(job, score) {
       <div class="jc-inf">📍 ${job.city}</div>
       ${job.remote ? '<div class="jc-dot"></div><div class="jc-inf">' + t('tag_remote') + '</div>' : ''}
     </div>
-    <div class="jc-tags">${sourceBadge(job.source)}${tags.join('')}</div>
+    <div class="jc-tags">${sourceBadge(job.source, job)}${tags.join('')}</div>
     ${reasonHTML}
   </div>
   <div class="jc-foot">
@@ -950,7 +958,7 @@ function renderJobDetail(jobId) {
       '<div class="detail-logo">' + job.logo + '</div>' +
       '<div class="detail-title">' + job.title + '</div>' +
       '<div class="detail-co">' + job.company + '</div>' +
-      '<div class="detail-meta">' + sourceBadge(job.source) + tagsHTML + '</div>' +
+      '<div class="detail-meta">' + sourceBadge(job.source, job) + tagsHTML + '</div>' +
     '</div>' +
 
     '<div class="detail-body">' +
@@ -1443,7 +1451,8 @@ function mapSupabaseJob(j) {
     url:         (j.source_url  || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent((j.title || '') + ' ' + (j.company || ''))).replace('hh.ru', 'hh.kz'),
     logo:        logo,
     stripe:      stripe,
-    source:      j.source       || 'unknown',
+    source:       j.source       || 'unknown',
+    partner_name: (Array.isArray(j.tags) ? j.tags : []).reduce(function(a, t){ return t.indexOf('partner:') === 0 ? t.slice(8) : a; }, null),
   };
 }
 
