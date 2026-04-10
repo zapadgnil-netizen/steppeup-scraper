@@ -1571,7 +1571,7 @@ async function init() {
   // Populate landing page grid with REAL jobs (fallback to mock if none)
   const landingGrid = document.getElementById('landing-grid');
   if (landingGrid) {
-    const displayJobs = ALL_JOBS.length > 0 ? ALL_JOBS.slice(0, 6) : MOCK_JOBS.slice(0, 6);
+    const displayJobs = ALL_JOBS.length > 0 ? sortPartnersFirst(ALL_JOBS).slice(0, 6) : MOCK_JOBS.slice(0, 6);
     landingGrid.innerHTML = displayJobs.map(function(job) {
       return buildJobCard(job, calcMatch(job));
     }).join('');
