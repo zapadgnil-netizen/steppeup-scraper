@@ -698,13 +698,15 @@ function sourceBadge(source, job) {
   // Partner jobs get premium badge with agency name
   if (source === 'partner') {
     var pName = (job && job.partner_name) ? job.partner_name : 'партнёра';
-    return '<span class="jc-source src-partner">Эксклюзив от ' + pName + '</span>';
+    return '<span class="jc-source src-partner">Эксклюзив • Рекрутинговое агентство «' + pName + '»</span>';
   }
   var info = map[source] || { cls: 'src-hh', label: source || '—' };
   return '<span class="jc-source ' + info.cls + '">' + info.label + '</span>';
 }
 
-// ── Job Card HTML ───────────────────────────────────────────────────────────
+function sortPartnersFirst(jobs){return jobs.slice().sort(function(a,b){var ap=(a&&a.source==='partner')?1:0;var bp=(b&&b.source==='partner')?1:0;if(ap!==bp)return bp-ap;var as=(typeof a._score==='number')?a._score:0;var bs=(typeof b._score==='number')?b._score:0;return bs-as;});}
+
+// ── Job Card HTML ────────────────────────────────────────────────────────────────
 function buildJobCard(job, score) {
   const sc      = stripeClass(job);
   const color   = ringColor(score);
@@ -843,7 +845,7 @@ function renderFeed() {
   jobs = jobs.map(function(j) {
     return Object.assign({}, j, { _score: calcMatch(j) });
   });
-  jobs.sort(function(a, b) { return b._score - a._score; });
+  jobs = sortPartnersFirst(jobs);
 
   document.getElementById('feed-grid').innerHTML = jobs.map(function(j) {
     return buildJobCard(j, j._score);
@@ -896,8 +898,9 @@ function filterBrowse() {
   const countEl = document.getElementById('browse-count');
   if (countEl) countEl.textContent = t('found') + ' ' + jobs.length + ' ' + t('vacancies');
 
+  jobs = sortPartnersFirst(jobs.map(function(j){ return Object.assign({}, j, { _score: calcMatch(j) }); }));
   document.getElementById('browse-grid').innerHTML = jobs.map(function(j) {
-    return buildJobCard(j, calcMatch(j));
+    return buildJobCard(j, j._score);
   }).join('');
 }
 
@@ -1036,7 +1039,8 @@ function renderSaved() {
       '<p>' + t('saved_empty_p') + '</p>' +
     '</div>';
   } else {
-    gridEl.innerHTML = jobs.map(function(j) { return buildJobCard(j, calcMatch(j)); }).join('');
+    var _sj = sortPartnersFirst(jobs.map(function(j){ return Object.assign({}, j, { _score: calcMatch(j) }); }));
+    gridEl.innerHTML = _sj.map(function(j) { return buildJobCard(j, j._score); }).join('');
   }
 }
 
@@ -1255,7 +1259,7 @@ function saveProfile() {
     let jobs = getFilteredJobs(activeFilter).map(function(j) {
       return Object.assign({}, j, { _score: calcMatch(j) });
     });
-    jobs.sort(function(a, b) { return b._score - a._score; });
+    jobs = sortPartnersFirst(jobs);
     feedGrid.innerHTML = jobs.map(function(j) { return buildJobCard(j, j._score); }).join('');
     // Also update greeting
     if (profile.name) {
