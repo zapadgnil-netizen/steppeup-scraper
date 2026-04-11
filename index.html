@@ -344,7 +344,12 @@ footer{padding:16px 12px}
   html.dark .jc-source.src-linkedin{background:rgba(10,102,194,.2);color:#5ba4e0}
   html.dark .jc-source.src-indeed{background:rgba(35,82,124,.2);color:#7aacda}
   html.dark .jc-source.src-partner{background:linear-gradient(135deg,rgba(1,105,111,.25),rgba(1,105,111,.35));color:#3dd6d0;border-color:rgba(61,214,208,.3)}
-  </style>
+  
+  /* Mobile-nav fixes */
+  @media (min-width:769px){#mob-nav{display:none !important}}
+  .mob-nav-btn svg{width:22px !important;height:22px !important;stroke-width:1.8;flex-shrink:0;fill:none}
+  .mob-nav-btn{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px}
+</style>
 </head>
 <body>
   <div id="landing-page">
