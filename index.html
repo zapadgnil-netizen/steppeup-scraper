@@ -35,7 +35,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://wiijdddhzddqgntfdbsx.supabase.co" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <!-- Structured data for search engines -->
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebSite","name":"SteppeUp","url":"https://steppeup-scraper.vercel.app/","description":"Стажировки и работа для студентов Казахстана","inLanguage":["ru","kk","en"],"potentialAction":{"@type":"SearchAction","target":"https://steppeup-scraper.vercel.app/#/browse?q={search_term_string}","query-input":"required name=search_term_string"}}
@@ -670,6 +670,390 @@ html.dark #main-nav,html.dark .app-nav{background:rgba(20,17,14,.72);backdrop-fi
 }
 </style>
 
+<style id="design-refresh-v3">
+/* ============================================================
+   DESIGN REFRESH v3 — "Electric Editorial"
+   Goal: modern, confident, readable. Kill gradient-text on names,
+   tighten typography, swap palette to iris/lime/coral system,
+   enforce character limits, fix detail-hero contrast.
+   ============================================================ */
+
+/* ---------- 1. PALETTE OVERRIDE ---------- */
+:root{
+  --cream:#FAFAF7;
+  --sand:#F0EFEA;
+  --gold:#6D5BFF;           /* Iris — primary accent */
+  --gold-lt:#9389FF;
+  --gold-dk:#4B3BD1;
+  --ink:#0B0B10;
+  --ink-80:rgba(11,11,16,.78);
+  --ink-50:rgba(11,11,16,.54);
+  --ink-20:rgba(11,11,16,.11);
+  --ink-08:rgba(11,11,16,.05);
+  --sage:#5DB079;           /* Mint — positive / match */
+  --sage-lt:rgba(93,176,121,.12);
+  --rust:#F25F4C;           /* Coral — warm / warning */
+  --white:#FFFFFF;
+}
+html.dark{
+  --cream:#0A0A0D;
+  --sand:#17171C;
+  --white:#121218;
+  --ink:#F4F4F7;
+  --ink-80:rgba(244,244,247,.78);
+  --ink-50:rgba(244,244,247,.54);
+  --ink-20:rgba(244,244,247,.12);
+  --ink-08:rgba(244,244,247,.06);
+  --sage:#8FE07A;
+  --sage-lt:rgba(143,224,122,.15);
+  --rust:#FF7A66;
+  --gold:#9389FF;
+  --gold-lt:#C2BBFF;
+  --gold-dk:#C2BBFF;
+}
+
+/* ---------- 2. FONT SYSTEM ---------- */
+/* Body: Inter — the most readable sans for Cyrillic + Latin.
+   Display: Manrope — geometric, modern, distinctive headings. */
+html, body{
+  font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif !important;
+  font-feature-settings:'cv11','ss01','ss03';
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;
+}
+/* Override every place that used Playfair or DM Sans explicitly */
+.btn-ghost,.btn-solid,.btn-hero,.btn-submit-job,
+.chip,.app-nav-tab,
+.jc-title,.jc-co,.jc-info,.jc-tag,.jc-pct,.jc-word,.jc-btn,.jc-sal,.jc-inf,
+.form-input,.form-label,.search-input,
+.profile-email,.feed-sub,.hero-sub,.testi-text,.step-desc,
+.detail-desc,.detail-co,.detail-tag,
+.skill-bar-label,.skill-bar-pct,.skill-pill,.skill-type-input,
+.ob-input,.ob-select,.ob-int,.ob-field-label,.ob-step-label,
+.eyebrow,.proof-text,
+.ring-label,.testi-name,.testi-role,.testi-av,
+.profile-av,.app-nav-avatar,.proof-faces span,
+.nav-links a,.footer-col h3,.footer-col a,.fbot,
+.browse-count,.saved-sub,
+.detail-section-title,.detail-salary span,.sl,
+.jc-sal span,.submit-desc,.submit-status,
+.lang-btn,.dark-toggle,.mob-nav-btn,
+.ob-dropzone h4,.ob-dropzone p,.resume-upload-area h4,.resume-upload-area p,
+.profile-save-btn,.submit-send-btn,.ob-btn-next,.ob-btn-skip,
+.testi-rating,.jc-logo,.detail-logo{
+  font-family:'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+}
+/* Display family for all headings and display numerals */
+.logo,.app-nav-logo,
+.hero-content h1,.how-title,.section-title,.testi-title,.cta-title,
+.feed-greeting,.browse-title,.saved-title,.detail-title,
+.profile-name,.ob-title,.submit-modal-header h3,
+.sn,.step-num,.detail-salary{
+  font-family:'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+  letter-spacing:-.028em;
+  font-weight:800;
+}
+.logo,.app-nav-logo{letter-spacing:-.04em;font-weight:800}
+.hero-content h1{font-weight:800;letter-spacing:-.04em;line-height:1.05}
+.detail-title{font-weight:800;letter-spacing:-.025em;line-height:1.15}
+.feed-greeting{font-weight:800;letter-spacing:-.03em;line-height:1.1}
+.sn,.step-num{font-weight:800}
+
+/* ---------- 3. KILL the gradient-text + shimmer on names ---------- */
+/* This was the cause of unreadability AND the "sdfsdfsdf" overflow. */
+.feed-greeting em,
+.hero-content h1 em,
+.ob-title em{
+  background:none !important;
+  -webkit-background-clip:border-box !important;
+  background-clip:border-box !important;
+  -webkit-text-fill-color:currentColor !important;
+  color:var(--gold) !important;
+  animation:none !important;
+  font-style:italic;
+  font-weight:800;
+  background-size:auto !important;
+}
+
+/* ---------- 4. NAME OVERFLOW GUARD (critical fix) ---------- */
+/* The feed greeting now wraps cleanly and the name is hard-capped. */
+.feed-greeting{
+  display:flex;
+  align-items:baseline;
+  flex-wrap:wrap;
+  gap:.35em;
+  overflow:hidden;
+  max-width:100%;
+  word-break:break-word;
+}
+.feed-greeting em,
+#feed-name{
+  display:inline-block;
+  max-width:14ch;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  vertical-align:baseline;
+}
+@media (max-width:520px){
+  .feed-greeting em,
+  #feed-name{max-width:10ch}
+}
+/* Profile name display should also truncate gracefully */
+.profile-name{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  max-width:100%;
+}
+
+/* ---------- 5. JOB CARD TITLE — 2-LINE CLAMP ---------- */
+.jc-title{
+  display:-webkit-box !important;
+  -webkit-line-clamp:2;
+  -webkit-box-orient:vertical;
+  line-clamp:2;
+  white-space:normal !important;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  line-height:1.3;
+  min-height:2.6em;
+  font-weight:600;
+  letter-spacing:-.01em;
+}
+.jc-co{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  max-width:100%;
+}
+
+/* ---------- 6. DETAIL HERO — readable title on dark ---------- */
+.detail-hero{
+  background:linear-gradient(140deg,#0B0B10 0%,#17162A 55%,#241B4D 100%) !important;
+  box-shadow:0 16px 50px rgba(11,11,16,.25), inset 0 1px 0 rgba(147,137,255,.18);
+  border:1px solid rgba(147,137,255,.12);
+}
+.detail-hero::after{
+  top:-20% !important;
+  right:-20% !important;
+  width:260px !important;
+  height:260px !important;
+  opacity:.55 !important;
+  background:radial-gradient(circle, rgba(109,91,255,.32) 0%, transparent 70%) !important;
+  filter:blur(50px) !important;
+}
+.detail-title{
+  color:#FFFFFF !important;
+  text-shadow:0 2px 12px rgba(0,0,0,.28);
+  position:relative;
+  z-index:3;
+  font-size:clamp(24px, 4vw, 36px);
+}
+.detail-co{color:rgba(255,255,255,.68) !important; position:relative; z-index:3}
+.detail-tag{
+  border:1px solid rgba(255,255,255,.22) !important;
+  color:rgba(255,255,255,.82) !important;
+  background:rgba(255,255,255,.04);
+  backdrop-filter:blur(6px);
+  position:relative; z-index:3;
+}
+.detail-logo{
+  background:rgba(255,255,255,.06) !important;
+  border:1.5px solid rgba(147,137,255,.35) !important;
+  color:#C2BBFF !important;
+  position:relative; z-index:3;
+}
+
+/* ---------- 7. HERO — softer aurora, palette-aware ---------- */
+.hero::after{
+  opacity:.4 !important;
+  background:
+    radial-gradient(ellipse 40% 30% at 20% 30%, rgba(109,91,255,.18) 0%, transparent 55%),
+    radial-gradient(ellipse 30% 40% at 80% 60%, rgba(242,95,76,.10) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 30% at 50% 90%, rgba(93,176,121,.10) 0%, transparent 55%) !important;
+}
+.hero-glow{background:radial-gradient(ellipse 60% 80% at 80% 20%, rgba(109,91,255,.15) 0%, transparent 60%) !important}
+
+/* ---------- 8. BODY AMBIENT — new palette ---------- */
+body::before{
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 0%, rgba(109,91,255,.06) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 85% 100%, rgba(93,176,121,.04) 0%, transparent 50%) !important;
+}
+html.dark body::before{
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 0%, rgba(109,91,255,.14) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 85% 100%, rgba(143,224,122,.06) 0%, transparent 50%) !important;
+}
+
+/* ---------- 9. JOB CARD STRIPE — palette-aligned gradients ---------- */
+.jc-stripe{background:linear-gradient(120deg,#1C1B2E 0%,#2A264A 50%,#3A3166 100%) !important}
+.jc-stripe::before{background:linear-gradient(135deg, rgba(109,91,255,.42) 0%, transparent 70%) !important}
+.jc-stripe.sage{background:linear-gradient(120deg,#1B2A22 0%,#264033 50%,#30583F 100%) !important}
+.jc-stripe.sage::before{background:linear-gradient(135deg, rgba(143,224,122,.35) 0%, transparent 70%) !important}
+.jc-stripe.rust{background:linear-gradient(120deg,#2A1A17 0%,#452321 50%,#633128 100%) !important}
+.jc-stripe.rust::before{background:linear-gradient(135deg, rgba(242,95,76,.35) 0%, transparent 70%) !important}
+
+/* ---------- 10. BUTTONS — new palette ---------- */
+.btn-hero,.ob-btn-next{
+  background:linear-gradient(135deg, #6D5BFF 0%, #4B3BD1 100%) !important;
+  color:#FFFFFF !important;
+  box-shadow:0 8px 24px rgba(109,91,255,.32), inset 0 1px 0 rgba(255,255,255,.22) !important;
+  letter-spacing:-.005em;
+  font-weight:600;
+}
+.btn-hero:hover,.ob-btn-next:hover{
+  box-shadow:0 12px 32px rgba(109,91,255,.42), inset 0 1px 0 rgba(255,255,255,.25) !important;
+}
+.btn-solid,.profile-save-btn{
+  background:linear-gradient(135deg, var(--ink) 0%, #1A1A22 100%) !important;
+  box-shadow:0 6px 18px rgba(11,11,16,.22) !important;
+  font-weight:600;
+}
+.btn-submit-job{
+  background:linear-gradient(135deg, #5DB079 0%, #3E8A5B 100%) !important;
+  color:#FFFFFF !important;
+  font-weight:600;
+  letter-spacing:-.005em;
+}
+html.dark .btn-solid,html.dark .profile-save-btn{
+  background:linear-gradient(135deg, #9389FF 0%, #6D5BFF 100%) !important;
+  color:#FFFFFF !important;
+}
+
+/* ---------- 11. CHIPS — cleaner active state ---------- */
+.chip{
+  font-weight:500;
+  letter-spacing:-.005em;
+}
+.chip.active{
+  background:var(--ink) !important;
+  color:var(--cream) !important;
+  border-color:var(--ink) !important;
+}
+html.dark .chip.active{
+  background:linear-gradient(135deg, #9389FF 0%, #6D5BFF 100%) !important;
+  color:#FFFFFF !important;
+  border-color:transparent !important;
+}
+
+/* ---------- 12. LOGO / brand accents ---------- */
+.logo span,.app-nav-logo span{color:var(--gold) !important}
+.eyebrow{
+  color:var(--gold-dk) !important;
+  letter-spacing:.22em;
+  font-weight:600;
+  font-size:11px;
+  text-transform:uppercase;
+}
+.form-label,.ob-field-label,.detail-section-title{
+  color:var(--gold-dk) !important;
+  letter-spacing:.16em;
+  font-weight:600;
+}
+.see-all-link{color:var(--gold) !important}
+.see-all-link:hover{color:var(--gold-dk) !important}
+.jc-btn:hover{border-color:var(--gold) !important; color:var(--gold) !important}
+.search-input:focus{border-color:var(--gold) !important}
+.form-input:focus,.ob-input:focus,.ob-select:focus{border-color:var(--gold) !important}
+
+/* ---------- 13. STEP NUMBERS — updated gradient ---------- */
+.step-num{
+  background:linear-gradient(135deg, var(--gold) 0%, var(--rust) 100%) !important;
+  -webkit-background-clip:text;
+  background-clip:text;
+  -webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 2px 10px rgba(109,91,255,.28));
+}
+
+/* ---------- 14. SKILL BARS — new palette ---------- */
+.skill-bar-fill.match{background:linear-gradient(90deg, #5DB079 0%, #3E8A5B 100%) !important}
+.skill-bar-fill.partial{background:linear-gradient(90deg, var(--gold-lt) 0%, var(--gold) 100%) !important}
+
+/* ---------- 15. PROOF FACES avatar ---------- */
+.proof-faces span,.testi-av,.profile-av,.app-nav-avatar{
+  background:linear-gradient(135deg, var(--gold) 0%, var(--rust) 100%) !important;
+  color:#FFFFFF !important;
+}
+.profile-av,.app-nav-avatar{background:linear-gradient(135deg, var(--gold) 0%, var(--gold-dk) 100%) !important}
+.jc-logo{
+  background:rgba(255,255,255,.08) !important;
+  color:#C2BBFF !important;
+  border:1.5px solid rgba(255,255,255,.15) !important;
+}
+
+/* ---------- 16. INPUTS — refined ---------- */
+.form-input,.ob-input,.ob-select,.search-input{
+  font-weight:500;
+  letter-spacing:-.005em;
+}
+.skills-input-wrap:focus-within{border-color:var(--gold) !important}
+
+/* ---------- 17. FAVICON-ish logo visual ---------- */
+.logo{font-size:17px}
+
+/* ---------- 18. Nav glass ---------- */
+#main-nav,.app-nav{
+  background:rgba(250,250,247,.78) !important;
+  border-bottom:1px solid rgba(11,11,16,.06) !important;
+}
+html.dark #main-nav,html.dark .app-nav{
+  background:rgba(10,10,13,.78) !important;
+  border-bottom:1px solid rgba(244,244,247,.06) !important;
+}
+
+/* ---------- 19. Ring glow — less intense ---------- */
+.jc-ring{filter:none}
+.jc-ring::before{opacity:.25 !important}
+
+/* ---------- 20. Reduced motion ---------- */
+@media (prefers-reduced-motion:reduce){
+  .feed-greeting em,.hero-content h1 em{animation:none !important}
+  .btn-hero::before,.ob-btn-next::before,.btn-submit-job::before{display:none !important}
+}
+
+/* ---------- 21. Chip/filter color correction in dark mode ---------- */
+html.dark .chip{
+  background:rgba(23,23,28,.72) !important;
+  color:rgba(244,244,247,.7) !important;
+  border-color:rgba(244,244,247,.1) !important;
+}
+html.dark .chip:hover{border-color:var(--gold) !important; color:var(--gold-lt) !important}
+
+/* ---------- 22. Saved button hover color ---------- */
+.jc-save.saved{
+  background:rgba(109,91,255,.25) !important;
+  border-color:var(--gold-lt) !important;
+  color:var(--gold-lt) !important;
+}
+
+/* ---------- 23. Detail apply bar — palette-aligned ---------- */
+.detail-apply{border-color:rgba(109,91,255,.18) !important}
+
+/* ---------- 24. Feed header spacing ---------- */
+.feed-header{margin-bottom:28px}
+.feed-sub{color:var(--ink-50); font-weight:500}
+
+/* ---------- 25. Enhanced hero h1 em — italic but not gradient ---------- */
+.hero-content h1 em{
+  font-style:italic;
+  color:var(--gold) !important;
+  font-weight:800;
+  position:relative;
+  display:inline-block;
+}
+
+/* ---------- 26. Better tags (t-intern, t-part, t-remote) ---------- */
+.t-intern{background:rgba(109,91,255,.14) !important; color:var(--gold-dk) !important}
+.t-part{background:rgba(93,176,121,.14) !important; color:#3E8A5B !important}
+.t-remote{background:rgba(242,95,76,.14) !important; color:var(--rust) !important}
+html.dark .t-intern{background:rgba(147,137,255,.18) !important; color:var(--gold-lt) !important}
+html.dark .t-part{background:rgba(143,224,122,.18) !important; color:#A7EB92 !important}
+html.dark .t-remote{background:rgba(255,122,102,.18) !important; color:#FFA694 !important}
+</style>
+
 <script id="premium-interactions">
 /* Spotlight cursor tracking for job cards — lightweight */
 document.addEventListener('pointermove',function(e){
@@ -831,7 +1215,7 @@ document.addEventListener('DOMContentLoaded',function(){
       <div class="app-page" id="page-browse"><div class="browse-wrap"><div class="browse-top"><div class="browse-title" data-i18n="browse_title">Все вакансии</div><button class="btn-submit-job" onclick="openSubmitModal()" data-i18n="submit_job">Знаешь вакансию? Поделись!</button><div class="search-box"><span class="search-icon">⌕</span><input class="search-input" id="browse-search" data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." oninput="filterBrowse()"/></div></div><div class="browse-filters"><button class="chip active" data-bfilter="all" data-i18n="all">Все</button><button class="chip" data-bfilter="internship" data-i18n="f_internship">Стажировки</button><button class="chip" data-bfilter="part-time" data-i18n="f_parttime">Неполный день</button><button class="chip" data-bfilter="remote" data-i18n="f_remote">Удалённо</button><button class="chip" data-bfilter="no-exp" data-i18n="f_noexp">Без опыта</button><button class="chip" data-bfilter="flexible" data-i18n="f_flexible">Гибкий график</button><button class="chip" data-bfilter="paid-intern" data-i18n="f_paidintern">Оплачиваемая</button><button class="chip" data-bfilter="almaty" data-i18n="city_almaty">Алматы</button><button class="chip" data-bfilter="astana" data-i18n="city_astana">Астана</button><select class="cat-select" id="browse-cat" onchange="filterBrowse()"><option value="" data-i18n="cat_all">Все категории</option><option value="it" data-i18n="int_it">IT / Разработка</option><option value="finance" data-i18n="ind_finance">Финансы</option><option value="marketing" data-i18n="ind_marketing">Маркетинг</option><option value="design" data-i18n="ind_design">Дизайн</option><option value="hr">HR</option><option value="sales" data-i18n="ind_sales">Продажи</option></select></div><div class="browse-count" id="browse-count"></div><div class="browse-grid" id="browse-grid"></div></div></div>
       <div class="app-page" id="page-job"><div class="detail-wrap" id="detail-wrap"></div></div>
       <div class="app-page" id="page-saved"><div class="saved-wrap"><div class="saved-title" data-i18n="saved_title">Сохранённые</div><div class="saved-sub" id="saved-sub"></div><div class="saved-grid" id="saved-grid"></div></div></div>
-      <div class="app-page" id="page-profile"><div class="profile-wrap"><div class="profile-card"><div class="profile-header"><div class="profile-av" id="profile-av">С</div><div><div class="profile-name" id="profile-name-display" data-i18n="prof_name">Студент</div><div class="profile-email" id="profile-email-display">—</div></div></div><label class="form-label" data-i18n="lbl_name">Имя</label><input class="form-input" id="p-name" data-i18n-ph="ph_name" placeholder="Ваше имя"/><label class="form-label" data-i18n="lbl_email">Email</label><input class="form-input" id="p-email" placeholder="email@example.com" type="email"/><div class="form-row"><div><label class="form-label" data-i18n="lbl_city">Город</label><select class="form-input" id="p-city"><option value="" data-i18n="ph_city">Выберите город</option><option value="Алматы">Алматы</option><option value="Астана">Астана</option><option value="Шымкент">Шымкент</option><option value="Другой" data-i18n="city_other">Другой</option></select></div><div><label class="form-label" data-i18n="lbl_uni">Вуз</label><input class="form-input" id="p-uni" data-i18n-ph="ph_uni" placeholder="КазНУ, AITU..."/></div></div><label class="form-label" data-i18n="lbl_major">Специальность</label><input class="form-input" id="p-major" data-i18n-ph="ph_major" placeholder="Информационные технологии..."/><label class="form-label" data-i18n="lbl_skills">Навыки</label><div class="skills-input-wrap" id="skills-wrap" onclick="document.getElementById('skill-type').focus()"></div><button class="profile-save-btn" onclick="saveProfile()" data-i18n="save_profile">Сохранить профиль →</button></div><div class="profile-card"><div class="detail-section-title" data-i18n="lbl_resume">Резюме</div><div class="resume-upload-area" id="resume-upload-area" onclick="document.getElementById('resume-file').click()"><div style="font-size:32px;opacity:.4">📄</div><h4 data-i18n="upload_resume">Загрузить резюме</h4><p data-i18n="upload_hint">PDF или DOCX · перетащите или нажмите</p></div><input type="file" id="resume-file" accept=".pdf,.docx" style="display:none" onchange="handleResumeUpload(this)"/></div></div></div>
+      <div class="app-page" id="page-profile"><div class="profile-wrap"><div class="profile-card"><div class="profile-header"><div class="profile-av" id="profile-av">С</div><div><div class="profile-name" id="profile-name-display" data-i18n="prof_name">Студент</div><div class="profile-email" id="profile-email-display">—</div></div></div><label class="form-label" data-i18n="lbl_name">Имя</label><input class="form-input" id="p-name" maxlength="60" autocomplete="name" data-i18n-ph="ph_name" placeholder="Ваше имя"/><label class="form-label" data-i18n="lbl_email">Email</label><input class="form-input" id="p-email" placeholder="email@example.com" type="email"/><div class="form-row"><div><label class="form-label" data-i18n="lbl_city">Город</label><select class="form-input" id="p-city"><option value="" data-i18n="ph_city">Выберите город</option><option value="Алматы">Алматы</option><option value="Астана">Астана</option><option value="Шымкент">Шымкент</option><option value="Другой" data-i18n="city_other">Другой</option></select></div><div><label class="form-label" data-i18n="lbl_uni">Вуз</label><input class="form-input" id="p-uni" data-i18n-ph="ph_uni" placeholder="КазНУ, AITU..."/></div></div><label class="form-label" data-i18n="lbl_major">Специальность</label><input class="form-input" id="p-major" data-i18n-ph="ph_major" placeholder="Информационные технологии..."/><label class="form-label" data-i18n="lbl_skills">Навыки</label><div class="skills-input-wrap" id="skills-wrap" onclick="document.getElementById('skill-type').focus()"></div><button class="profile-save-btn" onclick="saveProfile()" data-i18n="save_profile">Сохранить профиль →</button></div><div class="profile-card"><div class="detail-section-title" data-i18n="lbl_resume">Резюме</div><div class="resume-upload-area" id="resume-upload-area" onclick="document.getElementById('resume-file').click()"><div style="font-size:32px;opacity:.4">📄</div><h4 data-i18n="upload_resume">Загрузить резюме</h4><p data-i18n="upload_hint">PDF или DOCX · перетащите или нажмите</p></div><input type="file" id="resume-file" accept=".pdf,.docx" style="display:none" onchange="handleResumeUpload(this)"/></div></div></div>
     </div>
     <!-- Submit Job Modal -->
     <div class="submit-modal-overlay" id="submit-modal" style="display:none" onclick="if(event.target===this)closeSubmitModal()">
@@ -1250,10 +1634,11 @@ function enterApp() {
 function renderFeed() {
   // Update greeting
   if (profile && profile.name) {
-    const firstName = profile.name.split(' ')[0];
+    let firstName = profile.name.split(' ')[0];
+    if (firstName.length > 18) firstName = firstName.slice(0, 18) + '…';
     document.getElementById('feed-name').textContent = firstName;
     const avatarEl = document.getElementById('nav-avatar');
-    if (avatarEl) avatarEl.textContent = firstName[0].toUpperCase();
+    if (avatarEl) avatarEl.textContent = (firstName[0] || 'S').toUpperCase();
   }
 
   // Filter + score + sort
@@ -1706,7 +2091,7 @@ function removeSkill(idx) {
 
 function saveProfile() {
   profile = {
-    name:  document.getElementById('p-name').value,
+    name:  (document.getElementById('p-name').value || '').toString().trim().slice(0, 60),
     email: document.getElementById('p-email').value,
     city:  document.getElementById('p-city').value,
     uni:   document.getElementById('p-uni').value,
@@ -1785,7 +2170,7 @@ const OB_STEPS = [
     },
     render: function() {
       return '<label class="ob-field-label">' + t('ob_lbl_name') + '</label>' +
-             '<input class="ob-input" id="ob-name" placeholder="' + t('ob_ph_name') + '" value="' + (obData.name||'') + '"/>' +
+             '<input class="ob-input" id="ob-name" maxlength="60" autocomplete="given-name" placeholder="' + t('ob_ph_name') + '" value="' + (obData.name||'') + '"/>' +
              '<label class="ob-field-label">Email</label>' +
              '<input class="ob-input" id="ob-email" type="email" placeholder="email@example.com" value="' + (obData.email||'') + '"/>';
     }
@@ -1950,7 +2335,7 @@ function finishOnboarding() {
   }
 
   profile = {
-    name:      obData.name      || '',
+    name:      (obData.name || '').toString().trim().slice(0, 60),
     email:     obData.email     || '',
     city:      obData.city      || '',
     uni:       obData.uni       || '',
@@ -2538,7 +2923,12 @@ function applyLang(lang) {
   if (greetEl) {
     var nameEl = document.getElementById('feed-name');
     var name = (nameEl ? nameEl.textContent : '') || dict.student;
-    greetEl.innerHTML = (dict.greet||'Привет,') + ' <em id="feed-name">' + name + '</em> 👋';
+    if (name && name.length > 18) name = name.slice(0, 18) + '…';
+    // Escape HTML to prevent injection from user-entered name
+    var safeName = String(name).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+    greetEl.innerHTML = (dict.greet||'Привет,') + ' <em id="feed-name">' + safeName + '</em> 👋';
   }
   // Lang buttons
   document.querySelectorAll('.lang-btn').forEach(function(btn) {
