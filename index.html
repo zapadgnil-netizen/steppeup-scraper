@@ -1997,6 +1997,8 @@ const MOCK_JOBS = [
 function loadPersistedData() {
   try { profile   = JSON.parse(localStorage.getItem('steppeup_profile') || 'null'); } catch(e) { profile = null; }
   try { savedJobs = JSON.parse(localStorage.getItem('steppeup_saved')   || '[]');   } catch(e) { savedJobs = []; }
+  // Migrate any legacy numeric ids to strings so indexOf checks are consistent
+  if (Array.isArray(savedJobs)) savedJobs = savedJobs.map(String);
 }
 
 // ── Match scoring ───────────────────────────────────────────────────────────
@@ -2152,7 +2154,7 @@ function buildJobCard(job, score) {
   const color   = ringColor(score);
   const circ    = 2 * Math.PI * 15; // 94.247...
   const offset  = (circ * (1 - score / 100)).toFixed(2);
-  const isSaved = savedJobs.indexOf(job.id) !== -1;
+  const isSaved = savedJobs.map(String).indexOf(String(job.id)) !== -1;
 
   const tags = [];
   if (job.type === 'internship') tags.push('<span class="jc-tag t-intern">' + t('tag_intern') + '</span>');
@@ -2177,7 +2179,7 @@ function buildJobCard(job, score) {
   <div class="jc-stripe ${sc}">
     <div class="jc-logo">${job.logo}</div>
     <div class="jc-stripe-name">${job.company}</div>
-    <div class="jc-save ${isSaved ? 'saved' : ''}" onclick="doToggleSave(event, '${job.id}')">${isSaved ? '♥' : '♡'}</div>
+    <div class="jc-save ${isSaved ? 'saved' : ''}" data-job-id="${job.id}" onclick="doToggleSave(event, '${job.id}')" role="button" aria-label="Сохранить" tabindex="0">${isSaved ? '♥' : '♡'}</div>
     <div class="jc-score" title="${score}% ${t('match_tooltip')}" aria-label="${score} percent match with your profile">
       <div class="jc-ring">
         <svg viewBox="0 0 40 40">
@@ -2227,18 +2229,29 @@ function navSearch() {
 }
 
 // ── Navigation ──────────────────────────────────────────────────────────────
+// Module-level flag: set by hash-driven routing so navigate() doesn't push a
+// new history entry while we're ALREADY handling a popstate from the back button.
+var _suppressHistory = false;
+
 function navigate(view, jobId) {
-  // Save previous view (for back button in job detail)
+  // Save previous view (for in-app back button in job detail)
   if (view !== 'job') prevView = currentView;
   currentView = view;
 
-  // Sync URL hash for deep linking (without firing hashchange loop)
+  // Sync URL hash for deep linking AND so browser back/forward actually
+  // navigates in-app instead of leaving the site.
   try {
     var desired = (view === 'landing') ? ''
                  : (view === 'job' && jobId) ? '#/job/' + encodeURIComponent(jobId)
                  : '#/' + view;
     if (location.hash !== desired) {
-      history.replaceState(null, '', desired || location.pathname);
+      if (_suppressHistory) {
+        // Called from handleHashRoute after popstate — the browser already
+        // updated the URL; don't push a new entry on top of it.
+        history.replaceState(null, '', desired || location.pathname);
+      } else {
+        history.pushState({ view: view, jobId: jobId || null }, '', desired || location.pathname);
+      }
     }
   } catch(_e) {}
 
@@ -2425,7 +2438,7 @@ function renderJobDetail(jobId) {
   }
 
   const score    = calcMatch(job);
-  const isSaved  = savedJobs.indexOf(job.id) !== -1;
+  const isSaved  = savedJobs.map(String).indexOf(String(job.id)) !== -1;
   const jobSkills = job.skills || [];
   const userSkills = (profile && profile.skills) ? profile.skills.map(function(s) { return s.toLowerCase(); }) : [];
   const hasProfile = userSkills.length > 0;
@@ -2534,7 +2547,8 @@ function renderJobDetail(jobId) {
 
 // ── Saved ────────────────────────────────────────────────────────────────────
 function renderSaved() {
-  const jobs = ALL_JOBS.filter(function(j) { return savedJobs.indexOf(j.id) !== -1; });
+  var savedStr = (savedJobs || []).map(String);
+  const jobs = ALL_JOBS.filter(function(j) { return savedStr.indexOf(String(j.id)) !== -1; });
   const countEl = document.getElementById('saved-sub');
   if (countEl) {
     const n = jobs.length;
@@ -2640,11 +2654,16 @@ function submitCommunityJob() {
 function doToggleSave(evt, jobId) {
   evt.stopPropagation();
   evt.preventDefault();
-  const idx = savedJobs.indexOf(jobId);
+  // Normalize everything to strings so Supabase numeric ids and template-literal
+  // string ids compare correctly (the root cause of "save doesn't work": pushed
+  // as string, checked against number -> indexOf returns -1 forever).
+  var key = String(jobId);
+  savedJobs = (savedJobs || []).map(String);
+  const idx = savedJobs.indexOf(key);
   if (idx !== -1) {
     savedJobs.splice(idx, 1);
   } else {
-    savedJobs.push(jobId);
+    savedJobs.push(key);
   }
   localStorage.setItem('steppeup_saved', JSON.stringify(savedJobs));
 
@@ -2653,14 +2672,24 @@ function doToggleSave(evt, jobId) {
   else if (currentView === 'home')   renderFeed();
   else if (currentView === 'browse') filterBrowse();
   else if (currentView === 'job') {
-    // Just update save button in detail
-    const saveBtn = document.querySelector('.detail-apply .jc-save');
-    if (saveBtn) {
-      const isSaved = savedJobs.indexOf(jobId) !== -1;
-      saveBtn.classList.toggle('saved', isSaved);
-      saveBtn.textContent = isSaved ? '♥' : '♡';
-    }
+    // Update every save button that matches this job on the detail screen
+    document.querySelectorAll('.jc-save[data-job-id="' + CSS.escape(key) + '"]').forEach(function(btn){
+      var isSaved = savedJobs.indexOf(key) !== -1;
+      btn.classList.toggle('saved', isSaved);
+      btn.textContent = isSaved ? '♥' : '♡';
+    });
   }
+
+  // Brief haptic-style flash on the save button for feedback
+  try {
+    var justClicked = evt.currentTarget || evt.target;
+    if (justClicked && justClicked.animate) {
+      justClicked.animate(
+        [{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],
+        {duration:220, easing:'cubic-bezier(.2,.8,.3,1)'}
+      );
+    }
+  } catch(_e){}
 }
 
 
@@ -3340,13 +3369,25 @@ async function init() {
 
 function handleHashRoute() {
   var hash = location.hash || '';
+  // Empty hash (e.g. after browser-back from #/home all the way out) means
+  // we should show the landing page, not the app shell.
+  if (!hash) {
+    _suppressHistory = true;
+    try { navigate('landing'); } finally { _suppressHistory = false; }
+    return;
+  }
   // Explicit app-shell routes
   var m = hash.match(/^#\/(home|browse|saved|profile|job)(?:\/([^?]+))?/);
   if (m) {
     var view = m[1];
     var param = m[2];
-    if (view === 'job' && param) navigate('job', decodeURIComponent(param));
-    else navigate(view);
+    _suppressHistory = true;
+    try {
+      if (view === 'job' && param) navigate('job', decodeURIComponent(param));
+      else navigate(view);
+    } finally {
+      _suppressHistory = false;
+    }
     return;
   }
   // Submit modal via deep link (stay on landing, open modal)
