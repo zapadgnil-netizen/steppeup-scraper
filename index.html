@@ -557,9 +557,28 @@ html.dark .jc:hover{box-shadow:0 18px 50px rgba(0,0,0,.5),0 0 0 1px rgba(201,168
 .ring-label{font-weight:800;letter-spacing:-.3px;font-size:11px;text-shadow:0 1px 2px rgba(0,0,0,.3)}
 
 /* Save button — refined glass */
-.jc-save{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:all .2s cubic-bezier(.2,.8,.3,1)}
+.jc-save{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .18s,border-color .18s,color .18s,transform .18s cubic-bezier(.2,.8,.3,1)}
 .jc-save:hover{transform:scale(1.12)}
-.jc-save.saved{background:linear-gradient(135deg,rgba(201,168,76,.4) 0%,rgba(228,201,122,.3) 100%);box-shadow:0 0 12px rgba(201,168,76,.3)}
+/* saved state — loud and unambiguous on any stripe color */
+.jc-save.saved{
+  background:#FF4A6E !important;
+  border-color:#FF4A6E !important;
+  color:#FFFFFF !important;
+  box-shadow:0 0 0 3px rgba(255,74,110,.22), 0 4px 12px rgba(255,74,110,.35) !important;
+  transform:scale(1.05);
+}
+.jc-save.saved:hover{
+  background:#FF335C !important;
+  border-color:#FF335C !important;
+  transform:scale(1.12);
+}
+@keyframes heartPulse{
+  0%{transform:scale(1)}
+  30%{transform:scale(1.35)}
+  55%{transform:scale(.92)}
+  100%{transform:scale(1.05)}
+}
+.jc-save.just-saved{animation:heartPulse .45s cubic-bezier(.2,.8,.3,1)}
 
 /* Company name styling */
 .jc-stripe-name{text-shadow:0 1px 3px rgba(0,0,0,.3);font-weight:600;letter-spacing:.01em}
@@ -980,26 +999,39 @@ html.dark .btn-solid,html.dark .profile-save-btn{
   color:#FFFFFF !important;
 }
 
-/* Ghost CTA — secondary to hero search */
+/* Ghost CTA — secondary to hero search (readable in both themes) */
 .btn-hero-ghost{
   display:inline-flex;align-items:center;gap:6px;
   background:transparent;
   color:var(--ink);
-  border:1.5px solid rgba(11,11,16,.14);
+  border:1.5px solid rgba(11,11,16,.28);
   padding:12px 22px;
   border-radius:100px;
   font:600 14px 'DM Sans',sans-serif;
   letter-spacing:-.005em;
   cursor:pointer;
-  transition:border-color .2s, background .2s, transform .15s;
+  transition:border-color .2s, background .2s, color .2s, transform .15s;
 }
 .btn-hero-ghost:hover{
   border-color:var(--gold);
-  background:rgba(201,168,76,.06);
+  background:rgba(201,168,76,.08);
+  color:var(--ink);
   transform:translateY(-1px);
 }
-html.dark .btn-hero-ghost{color:var(--white);border-color:rgba(254,252,247,.2)}
-html.dark .btn-hero-ghost:hover{border-color:var(--gold);background:rgba(201,168,76,.08)}
+.btn-hero-ghost:focus-visible{
+  outline:2px solid var(--gold);
+  outline-offset:3px;
+}
+html.dark .btn-hero-ghost{
+  color:var(--ink);
+  border-color:rgba(254,252,247,.45);
+  background:rgba(254,252,247,.04);
+}
+html.dark .btn-hero-ghost:hover{
+  border-color:var(--gold);
+  background:rgba(201,168,76,.12);
+  color:var(--ink);
+}
 
 /* Browse filter layout — one pinned row, chips + dropdowns grouped */
 .browse-filters{
@@ -1150,12 +1182,7 @@ html.dark .chip{
 }
 html.dark .chip:hover{border-color:var(--gold) !important; color:var(--gold-lt) !important}
 
-/* ---------- 22. Saved button hover color ---------- */
-.jc-save.saved{
-  background:rgba(109,91,255,.25) !important;
-  border-color:var(--gold-lt) !important;
-  color:var(--gold-lt) !important;
-}
+/* ---------- 22. (saved-state styling now lives in the .jc-save block above) ---------- */
 
 /* ---------- 23. Detail apply bar — palette-aligned ---------- */
 .detail-apply{border-color:rgba(109,91,255,.18) !important}
@@ -2680,15 +2707,17 @@ function doToggleSave(evt, jobId) {
     });
   }
 
-  // Brief haptic-style flash on the save button for feedback
+  // Heartbeat pulse on the clicked button (survives DOM re-render by re-applying
+  // to whatever heart now matches this job id).
   try {
-    var justClicked = evt.currentTarget || evt.target;
-    if (justClicked && justClicked.animate) {
-      justClicked.animate(
-        [{transform:'scale(1)'},{transform:'scale(1.25)'},{transform:'scale(1)'}],
-        {duration:220, easing:'cubic-bezier(.2,.8,.3,1)'}
-      );
-    }
+    var targets = document.querySelectorAll('.jc-save[data-job-id="' + CSS.escape(key) + '"]');
+    targets.forEach(function(btn){
+      btn.classList.remove('just-saved');
+      // force reflow so the animation restarts on rapid toggles
+      void btn.offsetWidth;
+      btn.classList.add('just-saved');
+      setTimeout(function(){ btn.classList.remove('just-saved'); }, 500);
+    });
   } catch(_e){}
 }
 
