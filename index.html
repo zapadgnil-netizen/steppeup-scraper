@@ -487,10 +487,11 @@ footer{padding:16px 12px}
   /* ── Category select + lang-sw styling (was unstyled) ─────────────────── */
   .cat-select{padding:11px 16px;border-radius:100px;border:1px solid var(--ink-20);background:var(--white);font:500 13px 'DM Sans',sans-serif;color:var(--ink);outline:0;cursor:pointer;transition:border-color .2s;min-width:160px}
   .cat-select:focus{border-color:var(--gold)}
-  .lang-sw{display:inline-flex;border:1px solid var(--ink-20);border-radius:100px;overflow:hidden;background:var(--white)}
-  .lang-btn{background:0;border:0;padding:6px 10px;font:600 11px 'DM Sans',sans-serif;color:var(--ink-50);cursor:pointer;transition:background .2s,color .2s}
+  .lang-sw{display:inline-flex;border:1px solid var(--ink-20);border-radius:100px;overflow:hidden;background:var(--white);padding:2px;gap:1px}
+  .lang-btn{background:0;border:0;padding:6px 12px;font:700 11px 'DM Sans',sans-serif;color:var(--ink-50);cursor:pointer;transition:background .2s,color .2s,transform .12s;border-radius:100px;letter-spacing:.04em}
   .lang-btn:hover{color:var(--ink)}
-  .lang-btn.active{background:var(--ink);color:var(--white)}
+  .lang-btn.active{background:var(--gold);color:#fff;box-shadow:0 2px 6px rgba(201,168,76,.35),inset 0 1px 0 rgba(255,255,255,.25);transform:translateY(-0.5px)}
+  html.dark .lang-btn.active{background:var(--gold);color:#0B0B10}
   .dark-toggle{background:0;border:1px solid var(--ink-20);border-radius:50%;width:34px;height:34px;padding:0;font-size:15px;cursor:pointer;transition:border-color .2s,transform .15s}
   .dark-toggle:hover{border-color:var(--gold);transform:rotate(15deg)}
   html.dark .lang-sw,html.dark .dark-toggle{background:rgba(254,252,247,.04);border-color:rgba(254,252,247,.15)}
@@ -806,7 +807,11 @@ html, body{
   letter-spacing:-.028em;
   font-weight:800;
 }
-.logo,.app-nav-logo{letter-spacing:-.04em;font-weight:800}
+.logo,.app-nav-logo{letter-spacing:-.04em;font-weight:800;cursor:pointer;transition:color .2s,transform .12s;user-select:none}
+.app-nav-logo:hover,.logo:hover{color:var(--gold)}
+.app-nav-logo:hover span,.logo:hover span{color:var(--ink) !important}
+html.dark .app-nav-logo:hover span,html.dark .logo:hover span{color:var(--white) !important}
+.app-nav-logo:focus-visible,.logo:focus-visible{outline:2px solid var(--gold);outline-offset:4px;border-radius:4px}
 .hero-content h1{font-weight:800;letter-spacing:-.04em;line-height:1.05}
 .detail-title{font-weight:800;letter-spacing:-.025em;line-height:1.15}
 .feed-greeting{font-weight:800;letter-spacing:-.03em;line-height:1.1}
@@ -974,6 +979,77 @@ html.dark .btn-solid,html.dark .profile-save-btn{
   background:linear-gradient(135deg, #9389FF 0%, #6D5BFF 100%) !important;
   color:#FFFFFF !important;
 }
+
+/* Ghost CTA — secondary to hero search */
+.btn-hero-ghost{
+  display:inline-flex;align-items:center;gap:6px;
+  background:transparent;
+  color:var(--ink);
+  border:1.5px solid rgba(11,11,16,.14);
+  padding:12px 22px;
+  border-radius:100px;
+  font:600 14px 'DM Sans',sans-serif;
+  letter-spacing:-.005em;
+  cursor:pointer;
+  transition:border-color .2s, background .2s, transform .15s;
+}
+.btn-hero-ghost:hover{
+  border-color:var(--gold);
+  background:rgba(201,168,76,.06);
+  transform:translateY(-1px);
+}
+html.dark .btn-hero-ghost{color:var(--white);border-color:rgba(254,252,247,.2)}
+html.dark .btn-hero-ghost:hover{border-color:var(--gold);background:rgba(201,168,76,.08)}
+
+/* Browse filter layout — one pinned row, chips + dropdowns grouped */
+.browse-filters{
+  display:flex;flex-wrap:wrap;gap:12px;align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid rgba(11,11,16,.06);
+}
+html.dark .browse-filters{border-bottom-color:rgba(254,252,247,.08)}
+.browse-chips{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 auto;min-width:0}
+.browse-dropdowns{display:flex;gap:8px;flex-wrap:wrap}
+.browse-dropdowns .cat-select{min-width:140px}
+
+/* Floating submit-job button (demoted from inline secondary) */
+.fab-submit{
+  position:fixed;bottom:28px;right:28px;z-index:200;
+  display:inline-flex;align-items:center;gap:8px;
+  background:linear-gradient(135deg, #5DB079 0%, #3E8A5B 100%);
+  color:#fff;border:0;
+  padding:14px 20px;border-radius:100px;
+  font:600 13px 'DM Sans',sans-serif;
+  box-shadow:0 10px 28px rgba(62,138,91,.32), 0 2px 6px rgba(11,11,16,.12);
+  cursor:pointer;letter-spacing:-.005em;
+  transition:transform .18s, box-shadow .18s;
+}
+.fab-submit:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(62,138,91,.42)}
+.fab-submit .fab-plus{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:22px;height:22px;border-radius:50%;
+  background:rgba(255,255,255,.22);font-weight:700;font-size:16px;line-height:1;
+}
+@media (max-width:640px){
+  .fab-submit{bottom:76px;right:16px;padding:12px 16px;font-size:12px}
+  .fab-submit .fab-label{display:none}
+  .fab-submit .fab-plus{width:24px;height:24px;font-size:18px}
+}
+/* FAB is a child of #page-browse, so it inherits display:none when the page
+   isn't .visible (via .app-page{display:none}). No extra CSS needed. */
+
+/* Feed → browse refine link (lives inside match-legend row) */
+.feed-refine-link{
+  margin-left:auto;
+  font:600 12px 'DM Sans',sans-serif;
+  color:var(--ink-50);
+  text-decoration:none;
+  letter-spacing:-.005em;
+  transition:color .2s;
+}
+.feed-refine-link:hover{color:var(--gold)}
+html.dark .feed-refine-link{color:rgba(254,252,247,.55)}
+html.dark .feed-refine-link:hover{color:var(--gold)}
 
 /* ---------- 11. CHIPS — cleaner active state ---------- */
 .chip{
@@ -1559,7 +1635,7 @@ document.addEventListener('DOMContentLoaded',function(){
           <button type="submit" class="hero-search-btn" data-i18n="search_btn">Найти</button>
         </form>
         <div class="hero-cta">
-          <button class="btn-hero" onclick="startOnboarding()" data-i18n="start_free">Начать бесплатно →</button>
+          <button class="btn-hero-ghost" onclick="startOnboarding()" data-i18n="start_free">Начать бесплатно →</button>
           <div class="proof">
             <div class="proof-faces"><span>А</span><span>М</span><span>К</span><span>Д</span></div>
             <div class="proof-text"><strong data-i18n="proof_strong">2 000+ студентов</strong><span data-i18n="proof_text">уже нашли место</span></div>
@@ -1574,7 +1650,7 @@ document.addEventListener('DOMContentLoaded',function(){
             <div class="trust-chip" title="Beeline">Beeline</div>
             <div class="trust-chip" title="Magnum">Magnum</div>
             <div class="trust-chip" title="Chocofamily">Choco</div>
-            <div class="trust-chip trust-chip-more">+47</div>
+            <button type="button" class="trust-chip trust-chip-more" onclick="enterApp('browse')" data-i18n-title="trust_more_tt" title="Посмотреть всех работодателей">+47</button>
           </div>
         </div>
       </div>
@@ -1719,13 +1795,13 @@ document.addEventListener('DOMContentLoaded',function(){
           </div>
           <div class="footer-col">
             <h3 data-i18n="ft_students">Для студентов</h3>
-            <a href="#" onclick="enterApp();return false;" data-i18n="ft_find">Найти вакансию</a>
-            <a href="#" onclick="startOnboarding();return false;" data-i18n="ft_courses">Создать профиль</a>
-            <a href="#vacancies" data-i18n="ft_community">Вакансии</a>
+            <a href="#/browse" onclick="enterApp();return false;" data-i18n="ft_find">Найти вакансию</a>
+            <a href="#/profile" onclick="startOnboarding();return false;" data-i18n="ft_courses">Создать профиль</a>
+            <a href="#/saved" onclick="enterApp('saved');return false;" data-i18n="ft_community">Сохранённые</a>
           </div>
           <div class="footer-col">
             <h3 data-i18n="ft_employers">Для работодателей</h3>
-            <a href="#" onclick="openSubmitModal();return false;" data-i18n="ft_post">Разместить вакансию</a>
+            <a href="#/submit" onclick="openSubmitModal();return false;" data-i18n="ft_post">Разместить вакансию</a>
             <a href="mailto:partners@steppeup.kz?subject=SteppeUp%20Pricing" data-i18n="ft_pricing">Цены</a>
             <a href="mailto:help@steppeup.kz" data-i18n="ft_help">Справка</a>
           </div>
@@ -1771,8 +1847,8 @@ document.addEventListener('DOMContentLoaded',function(){
       </div>
     </nav>
     <div class="app-content">
-      <div class="app-page" id="page-home"><div class="feed-wrap"><div class="feed-header"><div class="feed-greeting" data-i18n-html="feed_greeting">Привет, <em id="feed-name">студент</em> 👋</div><div class="feed-sub" data-i18n="greet_sub">Вот вакансии, подобранные специально для тебя</div></div><div class="filter-bar"><button class="chip active" data-filter="all" data-i18n="all">Все</button><button class="chip" data-filter="internship" data-i18n="f_internship">Стажировки</button><button class="chip" data-filter="part-time" data-i18n="f_parttime">Неполный день</button><button class="chip" data-filter="remote" data-i18n="f_remote">Удалённо</button><button class="chip" data-filter="no-exp" data-i18n="f_noexp">Без опыта</button><button class="chip" data-filter="flexible" data-i18n="f_flexible">Гибкий график</button><button class="chip" data-filter="paid-intern" data-i18n="f_paidintern">Оплачиваемая</button></div><div class="filter-meta" id="feed-filter-meta"><span class="filter-count">All jobs</span><button class="filter-clear" data-target="feed" data-i18n="filter_clear">Clear all</button></div><div class="match-legend" role="note" aria-label="Match score legend"><span class="match-legend-label" data-i18n="match_legend_label">Match score</span><span class="match-legend-item"><span class="match-legend-dot high"></span><span data-i18n="match_legend_high">80+ strong</span></span><span class="match-legend-item"><span class="match-legend-dot mid"></span><span data-i18n="match_legend_mid">60–79 partial</span></span><span class="match-legend-item"><span class="match-legend-dot low"></span><span data-i18n="match_legend_low">&lt;60 stretch</span></span></div><div class="feed-grid" id="feed-grid"></div></div></div>
-      <div class="app-page" id="page-browse"><div class="browse-wrap"><div class="browse-top"><div class="browse-title" data-i18n="browse_title">Все вакансии</div><button class="btn-submit-job" onclick="openSubmitModal()" data-i18n="submit_job">Знаешь вакансию? Поделись!</button><div class="search-box"><span class="search-icon">⌕</span><input class="search-input" id="browse-search" data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." oninput="filterBrowse()"/></div></div><div class="browse-filters"><button class="chip active" data-bfilter="all" data-i18n="all">Все</button><button class="chip" data-bfilter="internship" data-i18n="f_internship">Стажировки</button><button class="chip" data-bfilter="part-time" data-i18n="f_parttime">Неполный день</button><button class="chip" data-bfilter="remote" data-i18n="f_remote">Удалённо</button><button class="chip" data-bfilter="no-exp" data-i18n="f_noexp">Без опыта</button><button class="chip" data-bfilter="flexible" data-i18n="f_flexible">Гибкий график</button><button class="chip" data-bfilter="paid-intern" data-i18n="f_paidintern">Оплачиваемая</button><button class="chip" data-bfilter="almaty" data-i18n="city_almaty">Алматы</button><button class="chip" data-bfilter="astana" data-i18n="city_astana">Астана</button><select class="cat-select" id="browse-cat" onchange="filterBrowse()"><option value="" data-i18n="cat_all">Все категории</option><option value="it" data-i18n="int_it">IT / Разработка</option><option value="finance" data-i18n="ind_finance">Финансы</option><option value="marketing" data-i18n="ind_marketing">Маркетинг</option><option value="design" data-i18n="ind_design">Дизайн</option><option value="hr">HR</option><option value="sales" data-i18n="ind_sales">Продажи</option></select></div><div class="filter-meta" id="browse-filter-meta"><span class="filter-count">All jobs</span><button class="filter-clear" data-target="browse" data-i18n="filter_clear">Clear all</button></div><div class="browse-count" id="browse-count"></div><div class="browse-grid" id="browse-grid"></div></div></div>
+      <div class="app-page" id="page-home"><div class="feed-wrap"><div class="feed-header"><div class="feed-greeting" data-i18n-html="feed_greeting">Привет, <em id="feed-name">студент</em> 👋</div><div class="feed-sub" data-i18n="greet_sub">Вот вакансии, подобранные специально для тебя</div></div><div class="match-legend" role="note" aria-label="Match score legend"><span class="match-legend-label" data-i18n="match_legend_label">Match score</span><span class="match-legend-item"><span class="match-legend-dot high"></span><span data-i18n="match_legend_high">80+ strong</span></span><span class="match-legend-item"><span class="match-legend-dot mid"></span><span data-i18n="match_legend_mid">60–79 partial</span></span><span class="match-legend-item"><span class="match-legend-dot low"></span><span data-i18n="match_legend_low">&lt;60 stretch</span></span><a class="feed-refine-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="feed_refine">Нужно искать? → Все вакансии</a></div><div class="feed-grid" id="feed-grid"></div></div></div>
+      <div class="app-page" id="page-browse"><div class="browse-wrap"><div class="browse-top"><div class="browse-title" data-i18n="browse_title">Все вакансии</div><div class="search-box"><span class="search-icon">⌕</span><input class="search-input" id="browse-search" data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." oninput="filterBrowse()"/></div></div><div class="browse-filters" role="toolbar" aria-label="Фильтры"><div class="browse-chips"><button class="chip active" data-bfilter="all" data-i18n="all">Все</button><button class="chip" data-bfilter="internship" data-i18n="f_internship">Стажировки</button><button class="chip" data-bfilter="part-time" data-i18n="f_parttime">Неполный день</button><button class="chip" data-bfilter="remote" data-i18n="f_remote">Удалённо</button><button class="chip" data-bfilter="no-exp" data-i18n="f_noexp">Без опыта</button><button class="chip" data-bfilter="flexible" data-i18n="f_flexible">Гибкий график</button><button class="chip" data-bfilter="paid-intern" data-i18n="f_paidintern">Оплачиваемая</button></div><div class="browse-dropdowns"><select class="cat-select" id="browse-city" onchange="filterBrowse()" aria-label="Город"><option value="" data-i18n="city_all">Все города</option><option value="Алматы" data-i18n="city_almaty">Алматы</option><option value="Астана" data-i18n="city_astana">Астана</option><option value="Шымкент" data-i18n="city_shymkent">Шымкент</option></select><select class="cat-select" id="browse-cat" onchange="filterBrowse()" aria-label="Категория"><option value="" data-i18n="cat_all">Все категории</option><option value="it" data-i18n="int_it">IT / Разработка</option><option value="finance" data-i18n="ind_finance">Финансы</option><option value="marketing" data-i18n="ind_marketing">Маркетинг</option><option value="design" data-i18n="ind_design">Дизайн</option><option value="hr">HR</option><option value="sales" data-i18n="ind_sales">Продажи</option></select></div></div><div class="filter-meta" id="browse-filter-meta"><span class="filter-count">All jobs</span><button class="filter-clear" data-target="browse" data-i18n="filter_clear">Clear all</button></div><div class="browse-count" id="browse-count"></div><div class="browse-grid" id="browse-grid"></div></div><button class="fab-submit" onclick="openSubmitModal()" aria-label="Предложить вакансию" data-i18n-title="submit_job" title="Предложить вакансию"><span class="fab-plus" aria-hidden="true">+</span><span class="fab-label" data-i18n="fab_submit">Предложить</span></button></div>
       <div class="app-page" id="page-job"><div class="detail-wrap" id="detail-wrap"></div></div>
       <div class="app-page" id="page-saved"><div class="saved-wrap"><div class="saved-title" data-i18n="saved_title">Сохранённые</div><div class="saved-sub" id="saved-sub"></div><div class="saved-grid" id="saved-grid"></div></div></div>
       <div class="app-page" id="page-profile"><div class="profile-wrap"><div class="profile-card"><div class="profile-header"><div class="profile-av" id="profile-av">С</div><div><div class="profile-name" id="profile-name-display" data-i18n="prof_name">Студент</div><div class="profile-email" id="profile-email-display">—</div></div></div><label class="form-label" data-i18n="lbl_name">Имя</label><input class="form-input" id="p-name" maxlength="60" autocomplete="name" data-i18n-ph="ph_name" placeholder="Ваше имя"/><label class="form-label" data-i18n="lbl_email">Email</label><input class="form-input" id="p-email" placeholder="email@example.com" type="email"/><div class="form-row"><div><label class="form-label" data-i18n="lbl_city">Город</label><select class="form-input" id="p-city"><option value="" data-i18n="ph_city">Выберите город</option><option value="Алматы">Алматы</option><option value="Астана">Астана</option><option value="Шымкент">Шымкент</option><option value="Другой" data-i18n="city_other">Другой</option></select></div><div><label class="form-label" data-i18n="lbl_uni">Вуз</label><input class="form-input" id="p-uni" data-i18n-ph="ph_uni" placeholder="КазНУ, AITU..."/></div></div><label class="form-label" data-i18n="lbl_major">Специальность</label><input class="form-input" id="p-major" data-i18n-ph="ph_major" placeholder="Информационные технологии..."/><label class="form-label" data-i18n="lbl_skills">Навыки</label><div class="skills-input-wrap" id="skills-wrap" onclick="document.getElementById('skill-type').focus()"></div><button class="profile-save-btn" onclick="saveProfile()" data-i18n="save_profile">Сохранить профиль →</button></div><div class="profile-card"><div class="detail-section-title" data-i18n="lbl_resume">Резюме</div><div class="resume-upload-area" id="resume-upload-area" onclick="document.getElementById('resume-file').click()"><div style="font-size:32px;opacity:.4">📄</div><h4 data-i18n="upload_resume">Загрузить резюме</h4><p data-i18n="upload_hint">PDF или DOCX · перетащите или нажмите</p></div><input type="file" id="resume-file" accept=".pdf,.docx" style="display:none" onchange="handleResumeUpload(this)"/></div></div></div>
@@ -2182,6 +2258,10 @@ function navigate(view, jobId) {
     pg.classList.remove('visible');
   });
 
+  // Tag body with current route so CSS (e.g. .fab-submit) can scope itself
+  document.body.classList.remove('route-home','route-browse','route-saved','route-profile','route-job');
+  document.body.classList.add('route-' + view);
+
   // Update nav tabs (desktop)
   document.querySelectorAll('.app-nav-tab').forEach(function(tab) {
     tab.classList.toggle('active', tab.dataset.view === view);
@@ -2221,9 +2301,10 @@ function goToJob(jobId) {
   navigate('job', jobId);
 }
 
-function enterApp() {
+function enterApp(target) {
+  var dest = target && /^(home|browse|saved|profile)$/.test(target) ? target : 'home';
   if (localStorage.getItem('steppeup_onboarded')) {
-    navigate('home');
+    navigate(dest);
   } else {
     startOnboarding();
   }
@@ -2296,12 +2377,14 @@ function filterBrowse() {
       if (bf.has('no-exp')      && !isNoExp(j))             return false;
       if (bf.has('flexible')    && !isFlexible(j))          return false;
       if (bf.has('paid-intern') && !isPaidIntern(j))        return false;
-      if (bf.has('almaty')      && j.city !== 'Алматы')     return false;
-      if (bf.has('astana')      && j.city !== 'Астана')     return false;
       return true;
     });
   }
-  // Category filter
+  // City filter (dropdown)
+  var cityEl = document.getElementById('browse-city');
+  var city = cityEl ? cityEl.value : '';
+  if (city) jobs = jobs.filter(function(j) { return j.city === city; });
+  // Category filter (dropdown)
   var catEl = document.getElementById('browse-cat');
   var cat = catEl ? catEl.value : '';
   if (cat) jobs = jobs.filter(function(j) { return detectIndustry(j) === cat; });
@@ -2324,9 +2407,13 @@ function filterBrowse() {
   var browseEl = document.getElementById('browse-grid');
   if (!jobs.length) {
     browseEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🌾</div><h3>' + t('empty_browse_t') + '</h3><p>' + t('empty_browse_p') + '</p></div>';
-    return;
+  } else {
+    browseEl.innerHTML = jobs.map(function(j) { return buildJobCard(j, j._score); }).join('');
   }
-  browseEl.innerHTML = jobs.map(function(j) { return buildJobCard(j, j._score); }).join('');
+  // Refresh filter meta so dropdown selections are reflected in the count
+  if (typeof window._updateFilterMeta === 'function') {
+    window._updateFilterMeta(activeBrowseFilters, 'data-bfilter');
+  }
 }
 
 // ── Job Detail ──────────────────────────────────────────────────────────────
@@ -3161,10 +3248,20 @@ async function init() {
     var el = document.getElementById(metaId);
     if (!el) return;
     var count = set.has('all') ? 0 : set.size;
+    // For browse, also count dropdown selections (city + category)
+    if (attrName === 'data-bfilter') {
+      var cityEl = document.getElementById('browse-city');
+      var catEl  = document.getElementById('browse-cat');
+      if (cityEl && cityEl.value) count += 1;
+      if (catEl && catEl.value) count += 1;
+    }
     var label = count === 0
       ? (t('filter_all_hint') || 'All jobs')
       : (count + ' ' + (t('filter_active') || 'filters active'));
     el.querySelector('.filter-count').textContent = label;
+    // Reviewer NEW·02: show "Clear all" only when a filter is active
+    el.style.opacity = count > 0 ? '1' : '0';
+    el.style.pointerEvents = count > 0 ? 'auto' : 'none';
     el.querySelector('.filter-clear').style.visibility = count > 0 ? 'visible' : 'hidden';
   }
 
@@ -3204,11 +3301,18 @@ async function init() {
         document.querySelectorAll('.chip[data-bfilter]').forEach(function(c) {
           c.classList.toggle('active', c.getAttribute('data-bfilter') === 'all');
         });
+        // Reset dropdowns too
+        var _city = document.getElementById('browse-city'); if (_city) _city.value = '';
+        var _cat  = document.getElementById('browse-cat');  if (_cat)  _cat.value  = '';
+        var _srch = document.getElementById('browse-search'); if (_srch) _srch.value = '';
         updateFilterMeta(activeBrowseFilters, 'data-bfilter');
         if (currentView === 'browse') filterBrowse();
       }
     });
   });
+
+  // Expose for filterBrowse() so dropdown changes can refresh the meta
+  window._updateFilterMeta = updateFilterMeta;
 
   // Seed initial meta state
   updateFilterMeta(activeFilters, 'data-filter');
@@ -3236,12 +3340,20 @@ async function init() {
 
 function handleHashRoute() {
   var hash = location.hash || '';
+  // Explicit app-shell routes
   var m = hash.match(/^#\/(home|browse|saved|profile|job)(?:\/([^?]+))?/);
-  if (!m) return;
-  var view = m[1];
-  var param = m[2];
-  if (view === 'job' && param) navigate('job', decodeURIComponent(param));
-  else navigate(view);
+  if (m) {
+    var view = m[1];
+    var param = m[2];
+    if (view === 'job' && param) navigate('job', decodeURIComponent(param));
+    else navigate(view);
+    return;
+  }
+  // Submit modal via deep link (stay on landing, open modal)
+  if (hash === '#/submit') {
+    if (typeof openSubmitModal === 'function') openSubmitModal();
+    return;
+  }
 }
 
 // ── Match Explanation ─────────────────────────────────────────────────────────
@@ -3307,7 +3419,8 @@ var T = {
     all:'Все', f_internship:'Стажировки', f_parttime:'Неполный день',
     f_remote:'Удалённо', f_noexp:'Без опыта', f_flexible:'Гибкий график',
     f_paidintern:'Оплачиваемая', cat_all:'Все категории',
-    city_almaty:'Алматы', city_astana:'Астана',
+    city_all:'Все города', city_almaty:'Алматы', city_astana:'Астана', city_shymkent:'Шымкент',
+    feed_refine:'Нужно искать? → Все вакансии', fab_submit:'Предложить', trust_more_tt:'Посмотреть всех работодателей',
     // nav
     nav_home:'Главная', nav_browse:'Все вакансии', nav_saved:'Сохранённые',
     login:'Войти', start:'Начать →', start_free:'Начать бесплатно →', start_now:'Начать сейчас →',
@@ -3326,10 +3439,10 @@ var T = {
     popular:'Популярные вакансии', see_all:'Смотреть все →',
     testi_title:'Отзывы студентов',
     cta_title:'Готовы к переменам?', cta_sub:'Присоединяйтесь к 2000+ студентов, которые уже нашли свой путь на SteppeUp',
-    nav_how:'Как это работает', nav_vac:'Вакансии', nav_about:'О нас',
+    nav_how:'Как это работает', nav_vac:'Примеры', nav_about:'О нас',
     // footer
     ft_company:'Компания', ft_about:'О нас', ft_blog:'Блог', ft_contacts:'Контакты',
-    ft_students:'Для студентов', ft_find:'Найти вакансию', ft_courses:'Курсы', ft_community:'Сообщество',
+    ft_students:'Для студентов', ft_find:'Найти вакансию', ft_courses:'Создать профиль', ft_community:'Сохранённые',
     ft_employers:'Для работодателей', ft_post:'Разместить вакансию', ft_pricing:'Цены', ft_help:'Справка',
     ft_social:'Соцсети', ft_rights:'Все права защищены.',
     // feed
@@ -3427,7 +3540,8 @@ var T = {
     all:'Барлығы', f_internship:'Тағылымдамалар', f_parttime:'Жартылай жұмыс',
     f_remote:'Қашықтан', f_noexp:'Тәжірибесіз', f_flexible:'Икемді кесте',
     f_paidintern:'Ақылы тағылымдама', cat_all:'Барлық санаттар',
-    city_almaty:'Алматы', city_astana:'Астана',
+    city_all:'Барлық қалалар', city_almaty:'Алматы', city_astana:'Астана', city_shymkent:'Шымкент',
+    feed_refine:'Іздеу керек пе? → Барлық жұмыстар', fab_submit:'Ұсыну', trust_more_tt:'Барлық жұмыс берушілерді көру',
     nav_home:'Басты', nav_browse:'Барлық жұмыстар', nav_saved:'Сақталған',
     login:'Кіру', start:'Бастау →', start_free:'Тегін бастау →', start_now:'Қазір бастау →',
     eyebrow:'2 000+ студент біздің қатарда',
@@ -3444,9 +3558,9 @@ var T = {
     popular:'Танымал жұмыстар', see_all:'Барлығын көру →',
     testi_title:'Студент пікірлері',
     cta_title:'Өзгерістерге дайынсыз ба?', cta_sub:'SteppeUp арқылы жолын тапқан 2000+ студентке қосылыңыз',
-    nav_how:'Қалай жұмыс істейді', nav_vac:'Жұмыстар', nav_about:'Біз туралы',
+    nav_how:'Қалай жұмыс істейді', nav_vac:'Мысалдар', nav_about:'Біз туралы',
     ft_company:'Компания', ft_about:'Біз туралы', ft_blog:'Блог', ft_contacts:'Байланыс',
-    ft_students:'Студенттерге', ft_find:'Жұмыс табу', ft_courses:'Курстар', ft_community:'Қоғамдастық',
+    ft_students:'Студенттерге', ft_find:'Жұмыс табу', ft_courses:'Профиль жасау', ft_community:'Сақталғандар',
     ft_employers:'Жұмыс берушілерге', ft_post:'Жұмыс орналастыру', ft_pricing:'Бағалар', ft_help:'Көмек',
     ft_social:'Әлеуметтік желілер', ft_rights:'Барлық құқықтар қорғалған.',
     greet:'Сәлем,', greet_sub:'Сізге арнайы іріктелген жұмыстар', student:'студент',
@@ -3530,7 +3644,8 @@ var T = {
     all:'All', f_internship:'Internships', f_parttime:'Part-time',
     f_remote:'Remote', f_noexp:'No experience', f_flexible:'Flexible hours',
     f_paidintern:'Paid internship', cat_all:'All categories',
-    city_almaty:'Almaty', city_astana:'Astana',
+    city_all:'All cities', city_almaty:'Almaty', city_astana:'Astana', city_shymkent:'Shymkent',
+    feed_refine:'Need to search? → All jobs', fab_submit:'Suggest', trust_more_tt:'See all employers',
     nav_home:'Home', nav_browse:'All Jobs', nav_saved:'Saved',
     login:'Sign in', start:'Get started →', start_free:'Start free →', start_now:'Start now →',
     eyebrow:'2,000+ students already with us',
@@ -3547,9 +3662,9 @@ var T = {
     popular:'Popular Jobs', see_all:'See all →',
     testi_title:'Student Reviews',
     cta_title:'Ready for a change?', cta_sub:'Join 2,000+ students who already found their path on SteppeUp',
-    nav_how:'How it works', nav_vac:'Jobs', nav_about:'About',
+    nav_how:'How it works', nav_vac:'Examples', nav_about:'About',
     ft_company:'Company', ft_about:'About', ft_blog:'Blog', ft_contacts:'Contact',
-    ft_students:'For Students', ft_find:'Find a job', ft_courses:'Courses', ft_community:'Community',
+    ft_students:'For Students', ft_find:'Find a job', ft_courses:'Create profile', ft_community:'Saved jobs',
     ft_employers:'For Employers', ft_post:'Post a job', ft_pricing:'Pricing', ft_help:'Help',
     ft_social:'Social', ft_rights:'All rights reserved.',
     greet:'Hi,', greet_sub:'Jobs picked just for you', student:'student',
@@ -3655,6 +3770,11 @@ function applyLang(lang) {
   document.querySelectorAll('[data-i18n-ph]').forEach(function(el) {
     var key = el.getAttribute('data-i18n-ph');
     if (dict[key]) el.placeholder = dict[key];
+  });
+  // Update title attrs (for tooltips on buttons like +47)
+  document.querySelectorAll('[data-i18n-title]').forEach(function(el) {
+    var key = el.getAttribute('data-i18n-title');
+    if (dict[key]) el.setAttribute('title', dict[key]);
   });
   // Update nav tabs
   var tabs = [['home','nav_home'],['browse','nav_browse'],['saved','nav_saved']];
