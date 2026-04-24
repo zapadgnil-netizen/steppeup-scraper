@@ -631,7 +631,7 @@ html.dark .chip.active{background:linear-gradient(135deg,var(--gold) 0%,var(--go
 }
 
 /* ===== Dark mode refinements ===== */
-html.dark .jc{border-color:rgba(254,252,247,.08);background-color:rgba(42,36,32,.6);backdrop-filter:blur(10px)}
+html.dark .jc{border-color:rgba(254,252,247,.14);background-color:#2f2720;box-shadow:0 1px 0 rgba(255,255,255,.03) inset,0 6px 16px rgba(0,0,0,.25)}
 html.dark .chip{background:rgba(42,36,32,.6);border-color:rgba(254,252,247,.12);color:rgba(254,252,247,.6);backdrop-filter:blur(10px)}
 html.dark .chip:hover{color:var(--gold-lt);border-color:var(--gold)}
 html.dark .search-input{background:rgba(42,36,32,.6);backdrop-filter:blur(10px)}
@@ -1952,9 +1952,15 @@ const MAJOR_SKILL_MAP = {
 };
 
 function calcMatch(job) {
-  // Zero profile at all → deterministic hash scores (55-94)
-  if (!profile) {
-    // Use a simple hash that works with both numeric and string IDs
+  // Zero profile OR empty profile (onboarding not completed) → deterministic hash scores (55-94)
+  var _profileEmpty = !profile || (
+    !(profile.skills    && profile.skills.length) &&
+    !(profile.interests && profile.interests.length) &&
+    !profile.city &&
+    !profile.major
+  );
+  if (_profileEmpty) {
+    // Hash job.id so every card gets a different, stable score — never all 41%.
     var h = 0;
     var idStr = String(job.id);
     for (var i = 0; i < idStr.length; i++) h = ((h << 5) - h + idStr.charCodeAt(i)) | 0;
@@ -2960,6 +2966,63 @@ function finishOnboarding() {
 
 // ── Data Loading ─────────────────────────────────────────────────────────────
 
+// ── Input sanitizers (scraped Telegram data is dirty) ────────────────────────
+// Strip emoji clusters, bullet symbols, and inline salary blobs from a raw title
+// so cards show a clean, scannable job title.
+function cleanJobTitle(raw) {
+  if (!raw) return '';
+  var s = String(raw);
+  // Kill anything after "Зарплата:/Оклад:/Salary:/Pay:" up to a line break or end
+  s = s.replace(/[\s\|\-–—•·]*(зарплата|зп|з\/п|оклад|доход|salary|pay)\s*[:\-–—].*$/i, '');
+  // Kill common inline salary fragments like "от 800.000 тг", "до 500 000 ₸", "1200$ /mo"
+  s = s.replace(/[\s\|\-–—•·]*(?:от|до|from|up to)?\s*\d[\d\s.,]*\s*(?:₸|тг\b|kzt\b|руб\b|rub\b|\$|usd\b|€|eur\b)\s*(?:\/\s*(?:мес|month|mo))?/gi, '');
+  // Collapse trailing hashtags (often SEO spam on TG posts)
+  s = s.replace(/(?:\s*#[\p{L}\p{N}_]+)+\s*$/u, '');
+  // Strip leading/trailing emoji clusters and control chars (keep inner emojis as-is)
+  s = s.replace(/^[\p{Extended_Pictographic}\p{Emoji_Component}\s\|\-–—•·:]+/u, '');
+  s = s.replace(/[\p{Extended_Pictographic}\p{Emoji_Component}\s\|\-–—•·:]+$/u, '');
+  // Collapse whitespace
+  s = s.replace(/\s+/g, ' ').trim();
+  return s || String(raw).trim();
+}
+
+// Make sure a {min, max} pair is sane. Returns {min, max, drop:boolean}.
+// Rules: swap inverted ranges; drop values below a credible monthly floor;
+// drop the pair entirely if both numbers are implausible.
+function sanitizeSalary(min, max) {
+  var MIN_CREDIBLE = 20000; // ~half of KZ minimum wage / month
+  var m = (typeof min === 'number' && isFinite(min) && min > 0) ? min : null;
+  var M = (typeof max === 'number' && isFinite(max) && max > 0) ? max : null;
+  if (m && M && m > M) { var tmp = m; m = M; M = tmp; } // swap inverted range
+  if (m && m < MIN_CREDIBLE) m = null; // almost certainly a parse error
+  if (M && M < MIN_CREDIBLE) M = null;
+  return { min: m, max: M, drop: !m && !M };
+}
+
+// Turn scraped handles like "astana_job_bot" → "Astana Job", or fall back to
+// a generic "Telegram канал" when the handle is obviously machine-generated.
+function cleanEmployer(raw, source) {
+  if (!raw) return '';
+  var s = String(raw).trim();
+  // Drop leading @ and URL prefixes
+  s = s.replace(/^@+/, '').replace(/^https?:\/\/(?:t\.me|telegram\.me)\//i, '');
+  var looksLikeHandle = /^[a-z0-9][a-z0-9_]{2,}$/i.test(s) && s.indexOf('_') !== -1;
+  if (looksLikeHandle) {
+    // Title-case each underscore-separated token
+    var parts = s.split('_').filter(Boolean).map(function(p){
+      return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+    });
+    // Drop generic suffixes that add no information
+    var stripSuffixes = ['Bot','Job','Jobs','Channel','Chat','Kz','Ru','Kazakhstan'];
+    while (parts.length > 1 && stripSuffixes.indexOf(parts[parts.length-1]) !== -1) parts.pop();
+    s = parts.join(' ');
+  }
+  // Hard truncate for display so no card name blows up the layout
+  if (s.length > 36) s = s.slice(0, 33).trimEnd() + '…';
+  if (!s) s = source === 'telegram' ? 'Telegram канал' : 'Компания';
+  return s;
+}
+
 // Map a raw Supabase row → the shape the app expects
 function mapSupabaseJob(j) {
   const tags     = Array.isArray(j.tags) ? j.tags.map(function(t){ return t.toLowerCase(); }) : [];
@@ -2967,29 +3030,40 @@ function mapSupabaseJob(j) {
   const isPart   = tags.some(function(t){ return t.includes('частичн')   || t.includes('part-time') || t.includes('подработк'); });
   const isRemote = tags.some(function(t){ return t.includes('удалённо')  || t.includes('remote')    || t.includes('дистанц'); });
 
-  // Salary string
+  // Sanitized salary string — drop nonsense values (min>max, absurdly low)
+  var _sal = sanitizeSalary(j.salary_min, j.salary_max);
   var salary = '—';
-  if (j.salary_min && j.salary_max) salary = j.salary_min.toLocaleString('ru') + '–' + j.salary_max.toLocaleString('ru') + ' ₸';
-  else if (j.salary_min)            salary = 'от ' + j.salary_min.toLocaleString('ru') + ' ₸';
-  else if (j.salary_max)            salary = 'до ' + j.salary_max.toLocaleString('ru') + ' ₸';
+  if (_sal.min && _sal.max && _sal.min !== _sal.max) {
+    salary = _sal.min.toLocaleString('ru') + '–' + _sal.max.toLocaleString('ru') + ' ₸';
+  } else if (_sal.min && _sal.max && _sal.min === _sal.max) {
+    salary = _sal.min.toLocaleString('ru') + ' ₸';
+  } else if (_sal.min) {
+    salary = 'от ' + _sal.min.toLocaleString('ru') + ' ₸';
+  } else if (_sal.max) {
+    salary = 'до ' + _sal.max.toLocaleString('ru') + ' ₸';
+  }
 
   var type   = isIntern ? 'internship' : isPart ? 'part-time' : 'full-time';
   var stripe = isIntern ? 'sage'       : isPart ? 'rust'      : 'default';
 
-  var co   = (j.company || 'СТ').trim();
+  // Clean employer name (scraped handles → readable label)
+  var co = cleanEmployer(j.company, j.source) || 'Компания';
   var logo = co.split(' ').length > 1
     ? (co.split(' ')[0][0] + co.split(' ')[1][0]).toUpperCase()
     : co.substring(0, 2).toUpperCase();
 
+  // Clean job title (strip emoji clusters, "Зарплата:…" tails, SEO hashtags)
+  var cleanTitle = cleanJobTitle(j.title) || 'Без названия';
+
   return {
     id:          j.id,
-    title:       j.title       || 'Без названия',
-    company:     j.company     || 'Компания',
+    title:       cleanTitle,
+    company:     co,
     city:        j.location    || 'Казахстан',
     type:        type,
     remote:      isRemote,
     salary:      salary,
-    salary_min:  j.salary_min  || null,
+    salary_min:  _sal.min,
     skills:      [],
     description: j.description || '',
     tags:        Array.isArray(j.tags) ? j.tags : [],
