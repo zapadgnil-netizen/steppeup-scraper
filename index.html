@@ -579,6 +579,21 @@ html.dark .jc:hover{box-shadow:0 18px 50px rgba(0,0,0,.5),0 0 0 1px rgba(201,168
   100%{transform:scale(1.05)}
 }
 .jc-save.just-saved{animation:heartPulse .45s cubic-bezier(.2,.8,.3,1)}
+/* Detail-page variant: larger pill sitting on a light surface (not on a gradient stripe) */
+.jc-save-lg{
+  position:static;
+  width:44px;height:44px;
+  border-radius:50%;
+  font-size:20px;
+  border:1.5px solid var(--ink-20);
+  background:var(--white);
+  color:var(--ink-50);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;flex-shrink:0;
+}
+.jc-save-lg:hover{border-color:var(--ink);color:var(--ink);transform:scale(1.05)}
+html.dark .jc-save-lg{background:rgba(254,252,247,.04);border-color:rgba(254,252,247,.18);color:rgba(254,252,247,.6)}
+html.dark .jc-save-lg:hover{border-color:rgba(254,252,247,.5);color:var(--ink)}
 
 /* Company name styling */
 .jc-stripe-name{text-shadow:0 1px 3px rgba(0,0,0,.3);font-weight:600;letter-spacing:.01em}
@@ -1097,6 +1112,131 @@ html.dark .chip.active{
   background:linear-gradient(135deg, #9389FF 0%, #6D5BFF 100%) !important;
   color:#FFFFFF !important;
   border-color:transparent !important;
+}
+/* Active chips get an inline check — borrows the Handshake "✓ Internship" affordance */
+.chip.active::before{
+  content:"✓";
+  display:inline-block;
+  margin-right:6px;
+  font-weight:700;
+  letter-spacing:0;
+  opacity:.9;
+}
+
+/* ---------- FEED RAILS (categorized home feed, à la Handshake) ---------- */
+.feed-rail{margin-bottom:36px}
+.rail-head{
+  display:flex;align-items:flex-end;justify-content:space-between;
+  gap:12px;margin-bottom:14px;flex-wrap:wrap;
+}
+.rail-title{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(20px,2.4vw,26px);
+  font-weight:800;letter-spacing:-.5px;line-height:1.15;
+  color:var(--ink);margin:0;
+}
+.rail-sub{font-size:13px;color:var(--ink-50);margin-top:2px}
+.rail-link{
+  font:600 13px 'DM Sans',sans-serif;
+  color:var(--gold);text-decoration:none;white-space:nowrap;
+  transition:color .2s;
+}
+.rail-link:hover{color:var(--gold-dk)}
+.rail-grid{
+  display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;
+}
+.rail-empty{
+  padding:24px;border:1px dashed var(--ink-20);border-radius:16px;
+  color:var(--ink-50);font-size:13px;text-align:center;
+}
+html.dark .rail-empty{border-color:rgba(254,252,247,.14);color:rgba(254,252,247,.55)}
+
+/* Mobile rails: horizontal scroll (peek the next card) */
+@media (max-width:640px){
+  .rail-grid{
+    display:flex;gap:10px;overflow-x:auto;
+    scroll-snap-type:x mandatory;
+    -webkit-overflow-scrolling:touch;
+    padding:2px 14px 6px 0;margin-right:-14px;
+    scrollbar-width:none;
+  }
+  .rail-grid::-webkit-scrollbar{display:none}
+  .rail-grid > *{
+    flex:0 0 78%;max-width:78%;scroll-snap-align:start;
+  }
+  .feed-rail{margin-bottom:28px}
+  .rail-title{font-size:20px}
+}
+
+/* ---------- JOB ALERTS (Handshake "Get alerts for jobs like this") ---------- */
+.alert-banner{
+  display:flex;align-items:center;gap:14px;
+  background:linear-gradient(135deg, rgba(201,168,76,.08), rgba(176,90,40,.06));
+  border:1px solid rgba(201,168,76,.28);
+  border-radius:14px;
+  padding:12px 16px;margin:14px 0 10px;
+}
+html.dark .alert-banner{
+  background:linear-gradient(135deg, rgba(201,168,76,.10), rgba(109,91,255,.10));
+  border-color:rgba(228,201,122,.30);
+}
+.alert-banner[hidden]{display:none}
+.alert-banner-icon{font-size:22px;line-height:1;flex-shrink:0}
+.alert-banner-content{flex:1;min-width:0}
+.alert-banner-title{
+  font:600 14px 'DM Sans',sans-serif;color:var(--ink);
+  letter-spacing:-.01em;margin-bottom:2px;
+}
+.alert-banner-sub{
+  font-size:12px;color:var(--ink-50);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.alert-create-btn{
+  background:var(--ink);color:var(--white);border:0;
+  padding:9px 16px;border-radius:100px;
+  font:600 13px 'DM Sans',sans-serif;cursor:pointer;white-space:nowrap;
+  transition:transform .15s, box-shadow .2s;
+}
+.alert-create-btn:hover{transform:translateY(-1px);box-shadow:0 6px 18px rgba(11,11,16,.18)}
+html.dark .alert-create-btn{background:var(--gold);color:#1a1612}
+.alert-create-btn.saved{background:var(--sage);color:#fff}
+.alert-create-btn.saved::before{content:"✓ ";font-weight:700}
+
+.alerts-row{
+  display:flex;flex-wrap:wrap;gap:8px;
+  margin:4px 0 14px;
+}
+.alerts-row:empty{display:none}
+.alerts-row-label{
+  font:600 11px 'DM Sans',sans-serif;
+  text-transform:uppercase;letter-spacing:.14em;
+  color:var(--ink-50);align-self:center;margin-right:4px;
+}
+.alert-chip{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px 6px 12px;border-radius:100px;
+  background:var(--white);border:1px solid var(--ink-20);
+  font:500 12px 'DM Sans',sans-serif;color:var(--ink-80);
+  cursor:pointer;transition:all .18s;
+}
+.alert-chip:hover{border-color:var(--gold);color:var(--ink)}
+.alert-chip-dot{width:6px;height:6px;border-radius:50%;background:var(--gold)}
+.alert-chip-x{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:18px;height:18px;border-radius:50%;
+  background:var(--ink-08);color:var(--ink-50);
+  font-size:12px;line-height:1;
+  cursor:pointer;border:0;padding:0;margin-left:2px;
+  transition:background .15s, color .15s;
+}
+.alert-chip-x:hover{background:var(--rust);color:#fff}
+html.dark .alert-chip{background:rgba(254,252,247,.05);border-color:rgba(254,252,247,.14);color:rgba(254,252,247,.85)}
+html.dark .alert-chip-x{background:rgba(254,252,247,.08);color:rgba(254,252,247,.6)}
+
+@media (max-width:640px){
+  .alert-banner{flex-wrap:wrap;padding:10px 12px;gap:10px}
+  .alert-banner-sub{white-space:normal}
+  .alert-create-btn{width:100%}
 }
 
 /* ---------- 12. LOGO / brand accents ---------- */
@@ -1874,8 +2014,8 @@ document.addEventListener('DOMContentLoaded',function(){
       </div>
     </nav>
     <div class="app-content">
-      <div class="app-page" id="page-home"><div class="feed-wrap"><div class="feed-header"><div class="feed-greeting" data-i18n-html="feed_greeting">Привет, <em id="feed-name">студент</em> 👋</div><div class="feed-sub" data-i18n="greet_sub">Вот вакансии, подобранные специально для тебя</div></div><div class="match-legend" role="note" aria-label="Match score legend"><span class="match-legend-label" data-i18n="match_legend_label">Match score</span><span class="match-legend-item"><span class="match-legend-dot high"></span><span data-i18n="match_legend_high">80+ strong</span></span><span class="match-legend-item"><span class="match-legend-dot mid"></span><span data-i18n="match_legend_mid">60–79 partial</span></span><span class="match-legend-item"><span class="match-legend-dot low"></span><span data-i18n="match_legend_low">&lt;60 stretch</span></span><a class="feed-refine-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="feed_refine">Нужно искать? → Все вакансии</a></div><div class="feed-grid" id="feed-grid"></div></div></div>
-      <div class="app-page" id="page-browse"><div class="browse-wrap"><div class="browse-top"><div class="browse-title" data-i18n="browse_title">Все вакансии</div><div class="search-box"><span class="search-icon">⌕</span><input class="search-input" id="browse-search" data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." oninput="filterBrowse()"/></div></div><div class="browse-filters" role="toolbar" aria-label="Фильтры"><div class="browse-chips"><button class="chip active" data-bfilter="all" data-i18n="all">Все</button><button class="chip" data-bfilter="internship" data-i18n="f_internship">Стажировки</button><button class="chip" data-bfilter="part-time" data-i18n="f_parttime">Неполный день</button><button class="chip" data-bfilter="remote" data-i18n="f_remote">Удалённо</button><button class="chip" data-bfilter="no-exp" data-i18n="f_noexp">Без опыта</button><button class="chip" data-bfilter="flexible" data-i18n="f_flexible">Гибкий график</button><button class="chip" data-bfilter="paid-intern" data-i18n="f_paidintern">Оплачиваемая</button></div><div class="browse-dropdowns"><select class="cat-select" id="browse-city" onchange="filterBrowse()" aria-label="Город"><option value="" data-i18n="city_all">Все города</option><option value="Алматы" data-i18n="city_almaty">Алматы</option><option value="Астана" data-i18n="city_astana">Астана</option><option value="Шымкент" data-i18n="city_shymkent">Шымкент</option></select><select class="cat-select" id="browse-cat" onchange="filterBrowse()" aria-label="Категория"><option value="" data-i18n="cat_all">Все категории</option><option value="it" data-i18n="int_it">IT / Разработка</option><option value="finance" data-i18n="ind_finance">Финансы</option><option value="marketing" data-i18n="ind_marketing">Маркетинг</option><option value="design" data-i18n="ind_design">Дизайн</option><option value="hr">HR</option><option value="sales" data-i18n="ind_sales">Продажи</option></select></div></div><div class="filter-meta" id="browse-filter-meta"><span class="filter-count">All jobs</span><button class="filter-clear" data-target="browse" data-i18n="filter_clear">Clear all</button></div><div class="browse-count" id="browse-count"></div><div class="browse-grid" id="browse-grid"></div></div><button class="fab-submit" onclick="openSubmitModal()" aria-label="Предложить вакансию" data-i18n-title="submit_job" title="Предложить вакансию"><span class="fab-plus" aria-hidden="true">+</span><span class="fab-label" data-i18n="fab_submit">Предложить</span></button></div>
+      <div class="app-page" id="page-home"><div class="feed-wrap"><div class="feed-header"><div class="feed-greeting" data-i18n-html="feed_greeting">Привет, <em id="feed-name">студент</em> 👋</div><div class="feed-sub" data-i18n="greet_sub">Вот вакансии, подобранные специально для тебя</div></div><div class="alerts-row" id="home-alerts-row" role="region" aria-label="Saved job alerts"></div><div class="match-legend" role="note" aria-label="Match score legend"><span class="match-legend-label" data-i18n="match_legend_label">Match score</span><span class="match-legend-item"><span class="match-legend-dot high"></span><span data-i18n="match_legend_high">80+ strong</span></span><span class="match-legend-item"><span class="match-legend-dot mid"></span><span data-i18n="match_legend_mid">60–79 partial</span></span><span class="match-legend-item"><span class="match-legend-dot low"></span><span data-i18n="match_legend_low">&lt;60 stretch</span></span><a class="feed-refine-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="feed_refine">Нужно искать? → Все вакансии</a></div><section class="feed-rail" data-rail="top-matches"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_top_t">Топ совпадения для тебя</h2><div class="rail-sub" data-i18n="rail_top_s">Вакансии с высоким баллом совпадения</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-top-matches"></div></section><section class="feed-rail" data-rail="fresh"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_fresh_t">Новые на этой неделе</h2><div class="rail-sub" data-i18n="rail_fresh_s">Свежие вакансии от проверенных работодателей</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-fresh"></div></section><section class="feed-rail" data-rail="remote"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_remote_t">Можно работать удалённо</h2><div class="rail-sub" data-i18n="rail_remote_s">Гибкий график — можно совмещать с учёбой</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-remote"></div></section></div></div>
+      <div class="app-page" id="page-browse"><div class="browse-wrap"><div class="browse-top"><div class="browse-title" data-i18n="browse_title">Все вакансии</div><div class="search-box"><span class="search-icon">⌕</span><input class="search-input" id="browse-search" data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." oninput="filterBrowse()"/></div></div><div class="browse-filters" role="toolbar" aria-label="Фильтры"><div class="browse-chips"><button class="chip active" data-bfilter="all" data-i18n="all">Все</button><button class="chip" data-bfilter="internship" data-i18n="f_internship">Стажировки</button><button class="chip" data-bfilter="part-time" data-i18n="f_parttime">Неполный день</button><button class="chip" data-bfilter="remote" data-i18n="f_remote">Удалённо</button><button class="chip" data-bfilter="no-exp" data-i18n="f_noexp">Без опыта</button><button class="chip" data-bfilter="flexible" data-i18n="f_flexible">Гибкий график</button><button class="chip" data-bfilter="paid-intern" data-i18n="f_paidintern">Оплачиваемая</button></div><div class="browse-dropdowns"><select class="cat-select" id="browse-city" onchange="filterBrowse()" aria-label="Город"><option value="" data-i18n="city_all">Все города</option><option value="Алматы" data-i18n="city_almaty">Алматы</option><option value="Астана" data-i18n="city_astana">Астана</option><option value="Шымкент" data-i18n="city_shymkent">Шымкент</option></select><select class="cat-select" id="browse-cat" onchange="filterBrowse()" aria-label="Категория"><option value="" data-i18n="cat_all">Все категории</option><option value="it" data-i18n="int_it">IT / Разработка</option><option value="finance" data-i18n="ind_finance">Финансы</option><option value="marketing" data-i18n="ind_marketing">Маркетинг</option><option value="design" data-i18n="ind_design">Дизайн</option><option value="hr">HR</option><option value="sales" data-i18n="ind_sales">Продажи</option></select></div></div><div class="filter-meta" id="browse-filter-meta"><span class="filter-count">All jobs</span><button class="filter-clear" data-target="browse" data-i18n="filter_clear">Clear all</button></div><div class="alert-banner" id="browse-alert-banner" role="region" aria-label="Create job alert" hidden><div class="alert-banner-icon" aria-hidden="true">🔔</div><div class="alert-banner-content"><div class="alert-banner-title" data-i18n="alert_banner_t">Получать уведомления о таких вакансиях</div><div class="alert-banner-sub" id="alert-banner-sub"></div></div><button class="alert-create-btn" id="alert-create-btn" onclick="createJobAlert()" data-i18n="alert_create">Создать</button></div><div class="alerts-row" id="browse-alerts-row" role="region" aria-label="Saved job alerts"></div><div class="browse-count" id="browse-count"></div><div class="browse-grid" id="browse-grid"></div></div><button class="fab-submit" onclick="openSubmitModal()" aria-label="Предложить вакансию" data-i18n-title="submit_job" title="Предложить вакансию"><span class="fab-plus" aria-hidden="true">+</span><span class="fab-label" data-i18n="fab_submit">Предложить</span></button></div>
       <div class="app-page" id="page-job"><div class="detail-wrap" id="detail-wrap"></div></div>
       <div class="app-page" id="page-saved"><div class="saved-wrap"><div class="saved-title" data-i18n="saved_title">Сохранённые</div><div class="saved-sub" id="saved-sub"></div><div class="saved-grid" id="saved-grid"></div></div></div>
       <div class="app-page" id="page-profile"><div class="profile-wrap"><div class="profile-card"><div class="profile-header"><div class="profile-av" id="profile-av">С</div><div><div class="profile-name" id="profile-name-display" data-i18n="prof_name">Студент</div><div class="profile-email" id="profile-email-display">—</div></div></div><label class="form-label" data-i18n="lbl_name">Имя</label><input class="form-input" id="p-name" maxlength="60" autocomplete="name" data-i18n-ph="ph_name" placeholder="Ваше имя"/><label class="form-label" data-i18n="lbl_email">Email</label><input class="form-input" id="p-email" placeholder="email@example.com" type="email"/><div class="form-row"><div><label class="form-label" data-i18n="lbl_city">Город</label><select class="form-input" id="p-city"><option value="" data-i18n="ph_city">Выберите город</option><option value="Алматы">Алматы</option><option value="Астана">Астана</option><option value="Шымкент">Шымкент</option><option value="Другой" data-i18n="city_other">Другой</option></select></div><div><label class="form-label" data-i18n="lbl_uni">Вуз</label><input class="form-input" id="p-uni" data-i18n-ph="ph_uni" placeholder="КазНУ, AITU..."/></div></div><label class="form-label" data-i18n="lbl_major">Специальность</label><input class="form-input" id="p-major" data-i18n-ph="ph_major" placeholder="Информационные технологии..."/><label class="form-label" data-i18n="lbl_skills">Навыки</label><div class="skills-input-wrap" id="skills-wrap" onclick="document.getElementById('skill-type').focus()"></div><button class="profile-save-btn" onclick="saveProfile()" data-i18n="save_profile">Сохранить профиль →</button></div><div class="profile-card"><div class="detail-section-title" data-i18n="lbl_resume">Резюме</div><div class="resume-upload-area" id="resume-upload-area" onclick="document.getElementById('resume-file').click()"><div style="font-size:32px;opacity:.4">📄</div><h4 data-i18n="upload_resume">Загрузить резюме</h4><p data-i18n="upload_hint">PDF или DOCX · перетащите или нажмите</p></div><input type="file" id="resume-file" accept=".pdf,.docx" style="display:none" onchange="handleResumeUpload(this)"/></div></div></div>
@@ -2361,19 +2501,44 @@ function renderFeed() {
     if (avatarEl) avatarEl.textContent = (firstName[0] || 'S').toUpperCase();
   }
 
-  // Filter + score + sort
-  let jobs = getFilteredJobs(activeFilter);
-  jobs = jobs.map(function(j) {
+  // Score every job once so rails can filter/sort on the same signal
+  var scored = ALL_JOBS.map(function(j){
     return Object.assign({}, j, { _score: calcMatch(j) });
   });
-  jobs = sortPartnersFirst(jobs);
+  scored = sortPartnersFirst(scored);
 
-  var feedEl = document.getElementById('feed-grid');
-  if (!jobs.length) {
-    feedEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🔍</div><h3>' + t('empty_feed_t') + '</h3><p>' + t('empty_feed_p') + '</p></div>';
+  // Rail 1 — top matches: highest match scores (fallback: partners-first)
+  var topMatches = scored.slice().sort(function(a,b){ return b._score - a._score; }).slice(0, 8);
+
+  // Rail 2 — fresh: use posted_at / created_at if available, else reverse order
+  var fresh = scored.slice().sort(function(a,b){
+    var ad = a.posted_at || a.created_at || a.createdAt || 0;
+    var bd = b.posted_at || b.created_at || b.createdAt || 0;
+    return new Date(bd) - new Date(ad);
+  }).slice(0, 8);
+
+  // Rail 3 — remote / flexible (real filter; if empty, fall back to "no-exp" picks)
+  var remote = scored.filter(function(j){ return j.remote || isFlexible(j); }).slice(0, 8);
+  if (!remote.length) {
+    remote = scored.filter(function(j){ return isNoExp(j); }).slice(0, 8);
+  }
+
+  renderRail('rail-top-matches', topMatches, 'empty_rail_top');
+  renderRail('rail-fresh',       fresh,      'empty_rail_fresh');
+  renderRail('rail-remote',      remote,     'empty_rail_remote');
+
+  // Keep saved-alert chips in sync on home too
+  renderAlertsRow('home-alerts-row');
+}
+
+function renderRail(containerId, jobs, emptyKey) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  if (!jobs || !jobs.length) {
+    el.innerHTML = '<div class="rail-empty">' + t(emptyKey || 'empty_feed_p') + '</div>';
     return;
   }
-  feedEl.innerHTML = jobs.map(function(j) { return buildJobCard(j, j._score); }).join('');
+  el.innerHTML = jobs.map(function(j){ return buildJobCard(j, j._score); }).join('');
 }
 
 function getFilteredJobs(filter) {
@@ -2399,6 +2564,9 @@ function getFilteredJobs(filter) {
 // ── Browse ──────────────────────────────────────────────────────────────────
 function renderBrowse() {
   filterBrowse();
+  // Surface saved alerts + fresh banner state on every entry to /browse
+  renderAlertsRow('browse-alerts-row');
+  updateAlertBanner();
 }
 
 function filterBrowse() {
@@ -2454,6 +2622,162 @@ function filterBrowse() {
   if (typeof window._updateFilterMeta === 'function') {
     window._updateFilterMeta(activeBrowseFilters, 'data-bfilter');
   }
+  // Update alert banner + saved-alerts chip row in response to new filter state
+  updateAlertBanner();
+  renderAlertsRow('browse-alerts-row');
+}
+
+// ── Job Alerts ──────────────────────────────────────────────────────────────
+// Snapshot of the current browse filter combo, shape:
+//   { filters: ['internship','remote'], city:'Алматы', cat:'it', q:'design' }
+function getActiveAlertSpec() {
+  var set = activeBrowseFilters || new Set(['all']);
+  var filters = Array.from(set).filter(function(f){ return f !== 'all'; });
+  var cityEl = document.getElementById('browse-city');
+  var catEl  = document.getElementById('browse-cat');
+  var qEl    = document.getElementById('browse-search');
+  return {
+    filters: filters,
+    city: cityEl ? cityEl.value : '',
+    cat:  catEl  ? catEl.value  : '',
+    q:    qEl    ? qEl.value.trim() : ''
+  };
+}
+function alertIsActive(spec) {
+  return !!(spec && (spec.filters.length || spec.city || spec.cat || spec.q));
+}
+function alertSpecLabel(spec) {
+  var parts = [];
+  if (spec.q)        parts.push('"' + spec.q + '"');
+  if (spec.filters)  spec.filters.forEach(function(f){ parts.push(alertFilterLabel(f)); });
+  if (spec.city)     parts.push(spec.city);
+  if (spec.cat)      parts.push(alertCategoryLabel(spec.cat));
+  return parts.join(' · ');
+}
+function alertFilterLabel(f) {
+  var map = {
+    'internship':  t('f_internship'),
+    'part-time':   t('f_parttime'),
+    'remote':      t('f_remote'),
+    'no-exp':      t('f_noexp'),
+    'flexible':    t('f_flexible'),
+    'paid-intern': t('f_paidintern')
+  };
+  return map[f] || f;
+}
+function alertCategoryLabel(c) {
+  var map = {
+    'it':'IT', 'finance':t('ind_finance'), 'marketing':t('ind_marketing'),
+    'design':t('ind_design'), 'hr':'HR', 'sales':t('ind_sales')
+  };
+  return map[c] || c;
+}
+function alertSpecKey(spec) {
+  return JSON.stringify({
+    f: (spec.filters||[]).slice().sort(),
+    c: spec.city || '',
+    k: spec.cat  || '',
+    q: (spec.q   || '').toLowerCase()
+  });
+}
+function loadAlerts() {
+  try { return JSON.parse(localStorage.getItem('steppeup_alerts') || '[]'); }
+  catch(_e) { return []; }
+}
+function saveAlerts(arr) {
+  try { localStorage.setItem('steppeup_alerts', JSON.stringify(arr || [])); } catch(_e){}
+}
+function createJobAlert() {
+  var spec = getActiveAlertSpec();
+  if (!alertIsActive(spec)) return;
+  var alerts = loadAlerts();
+  var key = alertSpecKey(spec);
+  if (alerts.some(function(a){ return alertSpecKey(a) === key; })) {
+    // Already saved — show the "saved" state briefly
+    var btn = document.getElementById('alert-create-btn');
+    if (btn) {
+      var original = btn.textContent;
+      btn.textContent = t('alert_exists');
+      btn.classList.add('saved');
+      setTimeout(function(){ btn.textContent = original; btn.classList.remove('saved'); }, 1400);
+    }
+    return;
+  }
+  alerts.push(Object.assign({}, spec, { key: key, ts: Date.now() }));
+  saveAlerts(alerts);
+  toast(t('alert_saved'), 'success');
+  updateAlertBanner();
+  renderAlertsRow('browse-alerts-row');
+}
+function deleteJobAlert(key, evt) {
+  if (evt) { evt.stopPropagation(); evt.preventDefault(); }
+  var alerts = loadAlerts().filter(function(a){ return alertSpecKey(a) !== key; });
+  saveAlerts(alerts);
+  renderAlertsRow('browse-alerts-row');
+  renderAlertsRow('home-alerts-row');
+  updateAlertBanner();
+}
+function applyJobAlert(key) {
+  var a = loadAlerts().find(function(x){ return alertSpecKey(x) === key; });
+  if (!a) return;
+  // Reset filter state
+  activeBrowseFilters.clear();
+  if (a.filters && a.filters.length) {
+    a.filters.forEach(function(f){ activeBrowseFilters.add(f); });
+  } else {
+    activeBrowseFilters.add('all');
+  }
+  var cityEl = document.getElementById('browse-city');
+  var catEl  = document.getElementById('browse-cat');
+  var qEl    = document.getElementById('browse-search');
+  if (cityEl) cityEl.value = a.city || '';
+  if (catEl)  catEl.value  = a.cat  || '';
+  if (qEl)    qEl.value    = a.q    || '';
+  // Sync chip visuals
+  document.querySelectorAll('.chip[data-bfilter]').forEach(function(c){
+    c.classList.toggle('active', activeBrowseFilters.has(c.dataset.bfilter));
+  });
+  navigate('browse');
+  filterBrowse();
+}
+function updateAlertBanner() {
+  var banner = document.getElementById('browse-alert-banner');
+  var sub    = document.getElementById('alert-banner-sub');
+  var btn    = document.getElementById('alert-create-btn');
+  if (!banner) return;
+  var spec = getActiveAlertSpec();
+  if (!alertIsActive(spec)) { banner.hidden = true; return; }
+  banner.hidden = false;
+  var label = alertSpecLabel(spec);
+  if (sub) sub.textContent = label || t('alert_banner_sub_any');
+  var key = alertSpecKey(spec);
+  var exists = loadAlerts().some(function(a){ return alertSpecKey(a) === key; });
+  if (btn) {
+    btn.textContent = exists ? t('alert_exists') : t('alert_create');
+    btn.classList.toggle('saved', exists);
+  }
+}
+function renderAlertsRow(containerId) {
+  var el = document.getElementById(containerId);
+  if (!el) return;
+  var alerts = loadAlerts();
+  if (!alerts.length) { el.innerHTML = ''; return; }
+  var html = '<span class="alerts-row-label">' + t('alert_saved_label') + '</span>';
+  html += alerts.map(function(a){
+    var key = alertSpecKey(a);
+    var safeKey = key.replace(/"/g, '&quot;');
+    var label = alertSpecLabel(a) || t('alert_banner_sub_any');
+    return (
+      '<span class="alert-chip" onclick="applyJobAlert(\'' + safeKey.replace(/'/g, "\\'") + '\')" ' +
+            'role="button" tabindex="0">' +
+        '<span class="alert-chip-dot" aria-hidden="true"></span>' +
+        '<span>' + label + '</span>' +
+        '<button class="alert-chip-x" onclick="deleteJobAlert(\'' + safeKey.replace(/'/g, "\\'") + '\', event)" ' +
+                'aria-label="Удалить">✕</button>' +
+      '</span>'
+    );
+  }).join('');
+  el.innerHTML = html;
 }
 
 // ── Job Detail ──────────────────────────────────────────────────────────────
@@ -2533,10 +2857,9 @@ function renderJobDetail(jobId) {
         '<div style="font-size:12px;color:var(--ink-50);margin-top:4px">' + t('match_label') + ' ' + score + '%</div>' +
       '</div>' +
       '<div style="display:flex;gap:10px;align-items:center">' +
-        '<div class="jc-save ' + (isSaved ? 'saved' : '') + '" ' +
-             'style="position:static;width:40px;height:40px;border:1.5px solid var(--ink-20);' +
-                    'color:var(--ink-50);font-size:18px;border-radius:50%;background:var(--white);' +
-                    'display:flex;align-items:center;justify-content:center;cursor:pointer;" ' +
+        '<div class="jc-save jc-save-lg ' + (isSaved ? 'saved' : '') + '" ' +
+             'data-job-id="' + job.id + '" ' +
+             'role="button" aria-label="Сохранить" tabindex="0" ' +
              'onclick="doToggleSave(event,\'' + job.id + '\')">' +
           (isSaved ? '♥' : '♡') +
         '</div>' +
@@ -3603,6 +3926,22 @@ var T = {
     // Empty states
     empty_feed_t:'Ничего не нашлось', empty_feed_p:'Попробуйте другой фильтр или перейдите в «Все вакансии».',
     empty_browse_t:'Пока пусто', empty_browse_p:'Измените поиск или снимите фильтры — доступных вакансий очень много.',
+    // Rails
+    rail_top_t:'Топ совпадения для тебя', rail_top_s:'Вакансии с высоким баллом совпадения',
+    rail_fresh_t:'Новые на этой неделе', rail_fresh_s:'Свежие вакансии от проверенных работодателей',
+    rail_remote_t:'Можно работать удалённо', rail_remote_s:'Гибкий график — можно совмещать с учёбой',
+    rail_see_all:'Все вакансии →',
+    empty_rail_top:'Пока нет совпадений — заполни профиль, чтобы подобрать.',
+    empty_rail_fresh:'Новых вакансий пока нет. Заходи позже.',
+    empty_rail_remote:'Пока нет удалённых вакансий.',
+    // Alerts
+    alert_banner_t:'Получать уведомления о таких вакансиях',
+    alert_banner_sub_any:'Любые вакансии',
+    alert_create:'Создать',
+    alert_exists:'Уведомление уже создано',
+    alert_saved:'Уведомление сохранено. Найдём — напишем.',
+    alert_saved_label:'Мои уведомления',
+    save:'Сохранить',
     // Nav
     nav_profile:'Профиль'
   },
@@ -3708,6 +4047,20 @@ var T = {
     cv_err_save:'Файл жүкделді, бірақ жазба сақталған жоқ. Бізге жазыңыз.',
     empty_feed_t:'Ештеңе табылмады', empty_feed_p:'Басқа сүзгіні көріп көріңіз немесе «Барлық жұмыстарға» өтіңіз.',
     empty_browse_t:'Әзірге бос', empty_browse_p:'Іздеуді өзгертіңіз немесе сүзгілерді алып тастаңыз.',
+    rail_top_t:'Саған ең сәйкес келетіндер', rail_top_s:'Сәйкестік балы жоғары вакансиялар',
+    rail_fresh_t:'Осы аптада жаңа', rail_fresh_s:'Тексерілген жұмыс берушілерден жаңа вакансиялар',
+    rail_remote_t:'Қашықтан жұмыс істеуге болады', rail_remote_s:'Оқумен қатар жұмыс істеу үшін қолайлы',
+    rail_see_all:'Барлығы →',
+    empty_rail_top:'Әзірге сәйкес вакансия жоқ — профильді толтыр.',
+    empty_rail_fresh:'Әзірге жаңа вакансиялар жоқ. Кейінірек кір.',
+    empty_rail_remote:'Әзірге қашықтан жұмыс жоқ.',
+    alert_banner_t:'Осындай вакансиялар туралы хабарландыру алу',
+    alert_banner_sub_any:'Кез келген вакансиялар',
+    alert_create:'Жасау',
+    alert_exists:'Хабарландыру бұрыннан бар',
+    alert_saved:'Хабарландыру сақталды. Сәйкес вакансия табылса — жазамыз.',
+    alert_saved_label:'Менің хабарландыруларым',
+    save:'Сақтау',
     nav_profile:'Профиль'
   },
   en: {
@@ -3812,6 +4165,20 @@ var T = {
     cv_err_save:'File uploaded but record not saved. Please contact us.',
     empty_feed_t:'Nothing matches yet', empty_feed_p:'Try a different filter or browse all jobs.',
     empty_browse_t:'No jobs here', empty_browse_p:'Try tweaking your search or clearing filters.',
+    rail_top_t:'Top matches for you', rail_top_s:'Highest match-score roles from your profile',
+    rail_fresh_t:'New this week', rail_fresh_s:'Fresh postings from verified employers',
+    rail_remote_t:'Remote-friendly', rail_remote_s:'Flexible schedules — perfect for school',
+    rail_see_all:'See all →',
+    empty_rail_top:'No matches yet — finish your profile to see picks.',
+    empty_rail_fresh:'No new postings yet. Check back soon.',
+    empty_rail_remote:'No remote roles at the moment.',
+    alert_banner_t:'Get alerts for jobs like this',
+    alert_banner_sub_any:'Any jobs',
+    alert_create:'Create alert',
+    alert_exists:'Alert already saved',
+    alert_saved:'Alert saved. We\u2019ll let you know when matches come in.',
+    alert_saved_label:'My alerts',
+    save:'Save',
     nav_profile:'Profile'
   }
 };
