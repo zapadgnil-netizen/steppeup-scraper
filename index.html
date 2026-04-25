@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- BUILD: 2026-04-24-rails-alerts-heart-v2 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -3189,20 +3190,11 @@ function saveProfile() {
     if (av) av.textContent = profile.name[0].toUpperCase();
   }
 
-  // Re-render feed & browse in background so scores refresh when user switches back
-  // (pre-render into the hidden grids so switching tabs is instant)
-  const feedGrid = document.getElementById('feed-grid');
-  if (feedGrid) {
-    let jobs = getFilteredJobs(activeFilter).map(function(j) {
-      return Object.assign({}, j, { _score: calcMatch(j) });
-    });
-    jobs = sortPartnersFirst(jobs);
-    feedGrid.innerHTML = jobs.map(function(j) { return buildJobCard(j, j._score); }).join('');
-    // Also update greeting
-    if (profile.name) {
-      const nameEl = document.getElementById('feed-name');
-      if (nameEl) nameEl.textContent = profile.name.split(' ')[0];
-    }
+  // Re-render feed & browse in background so scores refresh when user switches back.
+  // Home now uses three rail grids (top-matches / fresh / remote) populated by renderFeed.
+  if (typeof renderFeed === 'function' &&
+      document.getElementById('rail-top-matches')) {
+    renderFeed();
   }
   const browseGrid = document.getElementById('browse-grid');
   if (browseGrid && browseGrid.children.length > 0) {
@@ -3552,10 +3544,18 @@ function skeletonCards(n) {
   return out;
 }
 function showSkeletons() {
-  var targets = ['landing-grid','feed-grid','browse-grid','saved-grid'];
+  // Home rails (3 separate grids), browse, saved, and the landing-page grid.
+  var targets = [
+    'landing-grid',
+    'rail-top-matches','rail-fresh','rail-remote',
+    'browse-grid','saved-grid'
+  ];
   targets.forEach(function(id) {
     var el = document.getElementById(id);
-    if (el && !el.innerHTML) el.innerHTML = skeletonCards(id === 'landing-grid' ? 6 : 8);
+    if (el && !el.innerHTML) {
+      var n = (id === 'landing-grid') ? 6 : (id.indexOf('rail-') === 0 ? 4 : 8);
+      el.innerHTML = skeletonCards(n);
+    }
   });
 }
 
