@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: 2026-04-24-rails-alerts-heart-v2 -->
+<!-- BUILD: 2026-04-24-bell-notifications-v4 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -1234,10 +1234,158 @@ html.dark .alert-create-btn{background:var(--gold);color:#1a1612}
 html.dark .alert-chip{background:rgba(254,252,247,.05);border-color:rgba(254,252,247,.14);color:rgba(254,252,247,.85)}
 html.dark .alert-chip-x{background:rgba(254,252,247,.08);color:rgba(254,252,247,.6)}
 
+/* "+N" new-match badge inside an alert chip */
+.alert-chip-new{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+  background:#FF4A6E;color:#fff;
+  font:700 10px 'DM Sans',sans-serif;
+  margin-left:2px;
+}
+
+/* ---------- BELL (in-app notification) ---------- */
+.nav-bell{
+  position:relative;
+  background:transparent;border:0;
+  font-size:18px;line-height:1;
+  padding:8px;cursor:pointer;border-radius:10px;
+  transition:background .18s, transform .18s;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.nav-bell:hover{background:var(--ink-08);transform:translateY(-1px)}
+.nav-bell-ico{display:inline-block;line-height:1}
+.nav-bell-badge{
+  position:absolute;top:2px;right:2px;
+  min-width:16px;height:16px;padding:0 4px;
+  background:#FF4A6E;color:#fff;
+  font:700 10px 'DM Sans',sans-serif;
+  border-radius:8px;
+  display:inline-flex;align-items:center;justify-content:center;
+  border:2px solid var(--white);
+  box-shadow:0 2px 6px rgba(255,74,110,.4);
+  animation:bellPop .35s cubic-bezier(.2,.8,.3,1);
+}
+.nav-bell-badge[hidden]{display:none}
+html.dark .nav-bell-badge{border-color:#1a1612}
+@keyframes bellPop{
+  0%{transform:scale(0)}
+  60%{transform:scale(1.25)}
+  100%{transform:scale(1)}
+}
+
+/* Bell panel — anchored under the nav, right-aligned with the bell */
+.alert-panel{
+  position:fixed;
+  top:64px;right:18px;
+  width:380px;max-width:calc(100vw - 24px);max-height:70vh;
+  background:var(--white);
+  border:1px solid var(--ink-12);
+  border-radius:18px;
+  box-shadow:0 14px 48px rgba(11,11,16,.18), 0 4px 14px rgba(11,11,16,.08);
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  z-index:1000;
+  animation:panelDrop .22s cubic-bezier(.2,.8,.3,1);
+}
+.alert-panel[hidden]{display:none}
+html.dark .alert-panel{
+  background:#1f1a14;
+  border-color:rgba(254,252,247,.12);
+  box-shadow:0 14px 48px rgba(0,0,0,.6), 0 4px 14px rgba(0,0,0,.4);
+}
+@keyframes panelDrop{
+  from{opacity:0;transform:translateY(-6px) scale(.98)}
+  to{opacity:1;transform:translateY(0) scale(1)}
+}
+.alert-panel-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid var(--ink-08);
+}
+html.dark .alert-panel-head{border-bottom-color:rgba(254,252,247,.08)}
+.alert-panel-head strong{
+  font:700 14px 'DM Sans',sans-serif;color:var(--ink);
+  letter-spacing:-.005em;
+}
+.alert-panel-close{
+  background:transparent;border:0;
+  font:600 12px/1 'Inter',sans-serif;
+  text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-50);cursor:pointer;
+  padding:6px 10px;border-radius:8px;
+  transition:background .15s, color .15s;
+}
+.alert-panel-close:hover{background:var(--ink-08);color:var(--ink)}
+.alert-panel-body{
+  flex:1;overflow-y:auto;padding:6px 0;
+}
+.alert-panel-empty{
+  padding:32px 22px;text-align:center;
+  font:500 13px 'DM Sans',sans-serif;color:var(--ink-50);
+  line-height:1.5;
+}
+.alert-panel-row{
+  display:block;cursor:pointer;
+  padding:14px 18px;border-bottom:1px solid var(--ink-04);
+  transition:background .15s;
+}
+.alert-panel-row:last-child{border-bottom:0}
+.alert-panel-row:hover{background:var(--ink-04)}
+html.dark .alert-panel-row{border-bottom-color:rgba(254,252,247,.05)}
+html.dark .alert-panel-row:hover{background:rgba(254,252,247,.04)}
+.alert-panel-row header{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;margin-bottom:8px;
+}
+.alert-panel-row header strong{
+  font:600 13px 'DM Sans',sans-serif;color:var(--ink);
+  flex:1;letter-spacing:-.005em;
+}
+.apr-count{
+  display:inline-flex;align-items:center;justify-content:center;
+  min-width:22px;height:20px;padding:0 6px;border-radius:10px;
+  background:#FF4A6E;color:#fff;
+  font:700 11px 'DM Sans',sans-serif;
+  flex-shrink:0;
+}
+.alert-panel-jobs{
+  list-style:none;padding:0;margin:0;
+}
+.alert-panel-job{
+  display:flex;flex-direction:column;gap:2px;
+  padding:6px 0;
+}
+.apj-title{
+  font:500 12px 'DM Sans',sans-serif;color:var(--ink-80);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.apj-co{
+  font:400 11px 'DM Sans',sans-serif;color:var(--ink-50);
+}
+.apr-more{
+  margin-top:6px;font:600 11px 'DM Sans',sans-serif;
+  color:var(--gold);
+}
+.alert-panel-foot{
+  padding:12px 18px;border-top:1px solid var(--ink-08);
+  background:var(--ink-04);
+}
+html.dark .alert-panel-foot{
+  background:rgba(254,252,247,.03);
+  border-top-color:rgba(254,252,247,.08);
+}
+.alert-panel-foot a{
+  font:600 12px 'DM Sans',sans-serif;color:var(--gold);
+  text-decoration:none;
+}
+.alert-panel-foot a:hover{color:var(--gold-dk)}
+
 @media (max-width:640px){
   .alert-banner{flex-wrap:wrap;padding:10px 12px;gap:10px}
   .alert-banner-sub{white-space:normal}
   .alert-create-btn{width:100%}
+  .alert-panel{
+    top:56px;right:8px;left:8px;width:auto;max-width:none;
+  }
 }
 
 /* ---------- 12. LOGO / brand accents ---------- */
@@ -1676,6 +1824,35 @@ html.dark .hero-sparkle-3{color:#8FE07A; filter:drop-shadow(0 0 10px rgba(143,22
 @keyframes sparkleRot{0%,100%{opacity:.65; transform:rotate(0deg) scale(1)} 50%{opacity:1; transform:rotate(180deg) scale(1.2)}}
 
 /* ============================================================
+   27b. HERO ALERT HOOK (introduces 🔔 to first-time visitors)
+   ============================================================ */
+.hero-alert-hook{
+  display:inline-flex; align-items:center; gap:10px;
+  margin-top:18px;
+  padding:10px 14px;
+  background:rgba(91,79,255,.06);
+  border:1px solid rgba(91,79,255,.16);
+  border-radius:999px;
+  font-family:'Inter', sans-serif;
+  font-size:13px; font-weight:500; line-height:1.3;
+  color:var(--ink);
+  cursor:pointer;
+  transition:background .15s ease, border-color .15s ease, transform .12s ease;
+}
+.hero-alert-hook:hover{ background:rgba(91,79,255,.10); border-color:rgba(91,79,255,.28) }
+.hero-alert-hook:active{ transform:translateY(1px) }
+.hero-alert-hook-ico{ font-size:14px; line-height:1 }
+.hero-alert-hook-text{ color:rgba(11,11,16,.78) }
+.hero-alert-hook-arrow{ color:var(--iris); font-weight:600 }
+html.dark .hero-alert-hook{ background:rgba(143,224,122,.08); border-color:rgba(143,224,122,.22) }
+html.dark .hero-alert-hook:hover{ background:rgba(143,224,122,.14); border-color:rgba(143,224,122,.36) }
+html.dark .hero-alert-hook-text{ color:rgba(255,255,255,.82) }
+html.dark .hero-alert-hook-arrow{ color:var(--lime, #8FE07A) }
+@media (max-width:640px){
+  .hero-alert-hook{ font-size:12px; padding:8px 12px }
+}
+
+/* ============================================================
    28. HERO LEFT-SIDE TRUST BAR
    ============================================================ */
 .hero-trust{margin-top:36px}
@@ -1809,6 +1986,12 @@ document.addEventListener('DOMContentLoaded',function(){
             <div class="proof-text"><strong data-i18n="proof_strong">2 000+ студентов</strong><span data-i18n="proof_text">уже нашли место</span></div>
           </div>
         </div>
+        <!-- Alert hook: introduces the bell to first-time visitors -->
+        <button type="button" class="hero-alert-hook" onclick="enterApp('browse')">
+          <span class="hero-alert-hook-ico" aria-hidden="true">🔔</span>
+          <span class="hero-alert-hook-text" data-i18n="hero_alert_hook">Получай уведомления о новых вакансиях по твоим фильтрам</span>
+          <span class="hero-alert-hook-arrow" aria-hidden="true">→</span>
+        </button>
         <!-- Trust bar: top employers -->
         <div class="hero-trust">
           <div class="hero-trust-label" data-i18n="trust_label">Топ работодатели</div>
@@ -2011,9 +2194,24 @@ document.addEventListener('DOMContentLoaded',function(){
           <button class="lang-btn" data-lang="en" onclick="applyLang('en')" aria-label="English">EN</button>
         </div>
         <button class="dark-toggle" onclick="toggleDarkMode()" title="Тёмная тема" aria-label="Toggle dark mode">🌙</button>
+        <button class="nav-bell" id="nav-bell" type="button" onclick="toggleAlertPanel()" data-i18n-title="bell_title" title="Уведомления" aria-label="Уведомления" aria-haspopup="dialog" aria-expanded="false">
+          <span class="nav-bell-ico" aria-hidden="true">🔔</span>
+          <span class="nav-bell-badge" id="nav-bell-badge" hidden>0</span>
+        </button>
         <div class="app-nav-avatar" onclick="navigate('profile')" id="nav-avatar" role="button" tabindex="0" aria-label="Profile" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();navigate('profile')}">Н</div>
       </div>
     </nav>
+    <!-- Bell notification panel (anchored to .nav-bell, position:fixed) -->
+    <div class="alert-panel" id="alert-panel" hidden role="dialog" aria-modal="false" aria-label="Уведомления">
+      <header class="alert-panel-head">
+        <strong data-i18n="bell_title">Уведомления</strong>
+        <button class="alert-panel-close" type="button" onclick="toggleAlertPanel(false)" data-i18n="bell_close">Закрыть</button>
+      </header>
+      <div class="alert-panel-body" id="alert-panel-body"></div>
+      <footer class="alert-panel-foot">
+        <a href="#/browse" onclick="toggleAlertPanel(false);navigate('browse');return false;" data-i18n="bell_manage">Управлять уведомлениями →</a>
+      </footer>
+    </div>
     <div class="app-content">
       <div class="app-page" id="page-home"><div class="feed-wrap"><div class="feed-header"><div class="feed-greeting" data-i18n-html="feed_greeting">Привет, <em id="feed-name">студент</em> 👋</div><div class="feed-sub" data-i18n="greet_sub">Вот вакансии, подобранные специально для тебя</div></div><div class="alerts-row" id="home-alerts-row" role="region" aria-label="Saved job alerts"></div><div class="match-legend" role="note" aria-label="Match score legend"><span class="match-legend-label" data-i18n="match_legend_label">Match score</span><span class="match-legend-item"><span class="match-legend-dot high"></span><span data-i18n="match_legend_high">80+ strong</span></span><span class="match-legend-item"><span class="match-legend-dot mid"></span><span data-i18n="match_legend_mid">60–79 partial</span></span><span class="match-legend-item"><span class="match-legend-dot low"></span><span data-i18n="match_legend_low">&lt;60 stretch</span></span><a class="feed-refine-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="feed_refine">Нужно искать? → Все вакансии</a></div><section class="feed-rail" data-rail="top-matches"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_top_t">Топ совпадения для тебя</h2><div class="rail-sub" data-i18n="rail_top_s">Вакансии с высоким баллом совпадения</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-top-matches"></div></section><section class="feed-rail" data-rail="fresh"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_fresh_t">Новые на этой неделе</h2><div class="rail-sub" data-i18n="rail_fresh_s">Свежие вакансии от проверенных работодателей</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-fresh"></div></section><section class="feed-rail" data-rail="remote"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_remote_t">Можно работать удалённо</h2><div class="rail-sub" data-i18n="rail_remote_s">Гибкий график — можно совмещать с учёбой</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-remote"></div></section></div></div>
       <div class="app-page" id="page-browse"><div class="browse-wrap"><div class="browse-top"><div class="browse-title" data-i18n="browse_title">Все вакансии</div><div class="search-box"><span class="search-icon">⌕</span><input class="search-input" id="browse-search" data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." oninput="filterBrowse()"/></div></div><div class="browse-filters" role="toolbar" aria-label="Фильтры"><div class="browse-chips"><button class="chip active" data-bfilter="all" data-i18n="all">Все</button><button class="chip" data-bfilter="internship" data-i18n="f_internship">Стажировки</button><button class="chip" data-bfilter="part-time" data-i18n="f_parttime">Неполный день</button><button class="chip" data-bfilter="remote" data-i18n="f_remote">Удалённо</button><button class="chip" data-bfilter="no-exp" data-i18n="f_noexp">Без опыта</button><button class="chip" data-bfilter="flexible" data-i18n="f_flexible">Гибкий график</button><button class="chip" data-bfilter="paid-intern" data-i18n="f_paidintern">Оплачиваемая</button></div><div class="browse-dropdowns"><select class="cat-select" id="browse-city" onchange="filterBrowse()" aria-label="Город"><option value="" data-i18n="city_all">Все города</option><option value="Алматы" data-i18n="city_almaty">Алматы</option><option value="Астана" data-i18n="city_astana">Астана</option><option value="Шымкент" data-i18n="city_shymkent">Шымкент</option></select><select class="cat-select" id="browse-cat" onchange="filterBrowse()" aria-label="Категория"><option value="" data-i18n="cat_all">Все категории</option><option value="it" data-i18n="int_it">IT / Разработка</option><option value="finance" data-i18n="ind_finance">Финансы</option><option value="marketing" data-i18n="ind_marketing">Маркетинг</option><option value="design" data-i18n="ind_design">Дизайн</option><option value="hr">HR</option><option value="sales" data-i18n="ind_sales">Продажи</option></select></div></div><div class="filter-meta" id="browse-filter-meta"><span class="filter-count">All jobs</span><button class="filter-clear" data-target="browse" data-i18n="filter_clear">Clear all</button></div><div class="alert-banner" id="browse-alert-banner" role="region" aria-label="Create job alert" hidden><div class="alert-banner-icon" aria-hidden="true">🔔</div><div class="alert-banner-content"><div class="alert-banner-title" data-i18n="alert_banner_t">Получать уведомления о таких вакансиях</div><div class="alert-banner-sub" id="alert-banner-sub"></div></div><button class="alert-create-btn" id="alert-create-btn" onclick="createJobAlert()" data-i18n="alert_create">Создать</button></div><div class="alerts-row" id="browse-alerts-row" role="region" aria-label="Saved job alerts"></div><div class="browse-count" id="browse-count"></div><div class="browse-grid" id="browse-grid"></div></div><button class="fab-submit" onclick="openSubmitModal()" aria-label="Предложить вакансию" data-i18n-title="submit_job" title="Предложить вакансию"><span class="fab-plus" aria-hidden="true">+</span><span class="fab-label" data-i18n="fab_submit">Предложить</span></button></div>
@@ -2682,19 +2880,86 @@ function alertSpecKey(spec) {
   });
 }
 function loadAlerts() {
-  try { return JSON.parse(localStorage.getItem('steppeup_alerts') || '[]'); }
-  catch(_e) { return []; }
+  try {
+    var arr = JSON.parse(localStorage.getItem('steppeup_alerts') || '[]');
+    // Backward-compat: ensure every alert has lastSeen + lastSeenIds.
+    // Lazy migration — fields are filled in on read; persisted by next save.
+    return arr.map(function(a){
+      if (typeof a.lastSeen   !== 'number') a.lastSeen   = a.ts || Date.now();
+      if (!Array.isArray(a.lastSeenIds))    a.lastSeenIds = [];
+      return a;
+    });
+  } catch(_e) { return []; }
 }
 function saveAlerts(arr) {
   try { localStorage.setItem('steppeup_alerts', JSON.stringify(arr || [])); } catch(_e){}
+}
+
+// ── Alert match engine ─────────────────────────────────────────────────────
+// Returns true if `job` satisfies the saved `spec` — uses the same predicates
+// as filterBrowse() so what the user sees in /browse == what an alert catches.
+function jobMatchesAlert(job, spec) {
+  if (!job || !spec) return false;
+  // Filter chips (AND across all selected)
+  var f = spec.filters || [];
+  for (var i = 0; i < f.length; i++) {
+    switch (f[i]) {
+      case 'internship':  if (job.type !== 'internship') return false; break;
+      case 'part-time':   if (job.type !== 'part-time')  return false; break;
+      case 'remote':      if (!job.remote)               return false; break;
+      case 'no-exp':      if (!isNoExp(job))             return false; break;
+      case 'flexible':    if (!isFlexible(job))          return false; break;
+      case 'paid-intern': if (!isPaidIntern(job))        return false; break;
+    }
+  }
+  // City — exact match (remote jobs do NOT bypass this; users selected a city for a reason)
+  if (spec.city && job.city !== spec.city) return false;
+  // Category
+  if (spec.cat && (typeof detectIndustry === 'function') && detectIndustry(job) !== spec.cat) return false;
+  // Free-text query — substring of title or company
+  if (spec.q) {
+    var hay = ((job.title || '') + ' ' + (job.company || '')).toLowerCase();
+    if (hay.indexOf(spec.q.toLowerCase()) === -1) return false;
+  }
+  return true;
+}
+
+// New matches = matches the user hasn't seen yet for this alert.
+// Snapshot semantics: "seen" advances when the user clicks into an alert
+// (see openAlertMatches and applyJobAlert below).
+function newMatchesFor(alert) {
+  if (!alert || !Array.isArray(ALL_JOBS) || !ALL_JOBS.length) return [];
+  var since = alert.lastSeen || alert.ts || 0;
+  var seen  = new Set((alert.lastSeenIds || []).map(String));
+  return ALL_JOBS.filter(function(j) {
+    if (seen.has(String(j.id))) return false;
+    if (!jobMatchesAlert(j, alert)) return false;
+    var posted = j.posted_at ? new Date(j.posted_at).getTime() : 0;
+    // If we don't have a timestamp, count it as new (better to over-notify than under).
+    if (!posted) return true;
+    return posted >= since;
+  });
+}
+
+// True if `child`'s facets are all covered by `parent` (same or stricter).
+// Used to suppress saving a duplicate-or-subset of an existing alert.
+function alertIsSubsetOf(child, parent) {
+  if (!child || !parent) return false;
+  var cf = (child.filters  || []).slice().sort();
+  var pf = new Set((parent.filters || []));
+  for (var i = 0; i < cf.length; i++) if (!pf.has(cf[i])) return false;
+  if ((child.city || '') !== (parent.city || '')) return false;
+  if ((child.cat  || '') !== (parent.cat  || '')) return false;
+  if ((child.q    || '').toLowerCase() !== (parent.q || '').toLowerCase()) return false;
+  return true;
 }
 function createJobAlert() {
   var spec = getActiveAlertSpec();
   if (!alertIsActive(spec)) return;
   var alerts = loadAlerts();
   var key = alertSpecKey(spec);
+  // Exact duplicate
   if (alerts.some(function(a){ return alertSpecKey(a) === key; })) {
-    // Already saved — show the "saved" state briefly
     var btn = document.getElementById('alert-create-btn');
     if (btn) {
       var original = btn.textContent;
@@ -2702,13 +2967,31 @@ function createJobAlert() {
       btn.classList.add('saved');
       setTimeout(function(){ btn.textContent = original; btn.classList.remove('saved'); }, 1400);
     }
+    toast(t('alert_exists'), 'info');
     return;
   }
-  alerts.push(Object.assign({}, spec, { key: key, ts: Date.now() }));
+  // Subset of an existing alert (e.g. "remote+intern" already covered by "no-exp+remote+intern")
+  var covered = alerts.find(function(a){ return alertIsSubsetOf(spec, a); });
+  if (covered) {
+    toast(t('alert_already_covered'), 'info');
+    return;
+  }
+  var now = Date.now();
+  // Seed lastSeen with current job ids so we don't immediately badge with the existing list.
+  var seedIds = (Array.isArray(ALL_JOBS) ? ALL_JOBS : [])
+    .filter(function(j){ return jobMatchesAlert(j, spec); })
+    .map(function(j){ return String(j.id); });
+  alerts.push(Object.assign({}, spec, {
+    key: key, ts: now,
+    lastSeen: now,
+    lastSeenIds: seedIds.slice(-200)
+  }));
   saveAlerts(alerts);
   toast(t('alert_saved'), 'success');
   updateAlertBanner();
   renderAlertsRow('browse-alerts-row');
+  renderAlertsRow('home-alerts-row');
+  refreshAlertBadge();
 }
 function deleteJobAlert(key, evt) {
   if (evt) { evt.stopPropagation(); evt.preventDefault(); }
@@ -2717,10 +3000,28 @@ function deleteJobAlert(key, evt) {
   renderAlertsRow('browse-alerts-row');
   renderAlertsRow('home-alerts-row');
   updateAlertBanner();
+  refreshAlertBadge();
+  // If the panel is open, keep it in sync
+  var panel = document.getElementById('alert-panel');
+  if (panel && !panel.hidden) renderAlertPanel();
 }
 function applyJobAlert(key) {
-  var a = loadAlerts().find(function(x){ return alertSpecKey(x) === key; });
-  if (!a) return;
+  var alerts = loadAlerts();
+  var idx = alerts.findIndex(function(x){ return alertSpecKey(x) === key; });
+  if (idx === -1) return;
+  var a = alerts[idx];
+  // Mark new matches as seen — tapping a chip is a "consume" gesture, same as the panel.
+  var matchIds = newMatchesFor(a).map(function(j){ return String(j.id); });
+  if (matchIds.length) {
+    var combined = (a.lastSeenIds || []).concat(matchIds);
+    if (combined.length > 200) combined = combined.slice(-200);
+    alerts[idx] = Object.assign({}, a, {
+      lastSeen: Date.now(),
+      lastSeenIds: combined
+    });
+    saveAlerts(alerts);
+    refreshAlertBadge();
+  }
   // Reset filter state
   activeBrowseFilters.clear();
   if (a.filters && a.filters.length) {
@@ -2766,19 +3067,130 @@ function renderAlertsRow(containerId) {
   var html = '<span class="alerts-row-label">' + t('alert_saved_label') + '</span>';
   html += alerts.map(function(a){
     var key = alertSpecKey(a);
-    var safeKey = key.replace(/"/g, '&quot;');
+    var safeKey = key.replace(/"/g, '&quot;').replace(/'/g, "\\'");
     var label = alertSpecLabel(a) || t('alert_banner_sub_any');
+    var nNew = newMatchesFor(a).length;
+    var newBadge = nNew ? '<span class="alert-chip-new" aria-label="' + nNew + ' new">+' + nNew + '</span>' : '';
     return (
-      '<span class="alert-chip" onclick="applyJobAlert(\'' + safeKey.replace(/'/g, "\\'") + '\')" ' +
+      '<span class="alert-chip" onclick="applyJobAlert(\'' + safeKey + '\')" ' +
             'role="button" tabindex="0">' +
         '<span class="alert-chip-dot" aria-hidden="true"></span>' +
         '<span>' + label + '</span>' +
-        '<button class="alert-chip-x" onclick="deleteJobAlert(\'' + safeKey.replace(/'/g, "\\'") + '\', event)" ' +
+        newBadge +
+        '<button class="alert-chip-x" onclick="deleteJobAlert(\'' + safeKey + '\', event)" ' +
                 'aria-label="Удалить">✕</button>' +
       '</span>'
     );
   }).join('');
   el.innerHTML = html;
+}
+
+// ── Bell badge + panel ──────────────────────────────────────────────────────
+function refreshAlertBadge() {
+  var badge = document.getElementById('nav-bell-badge');
+  if (!badge) return;
+  var total = loadAlerts().reduce(function(n, a){
+    return n + newMatchesFor(a).length;
+  }, 0);
+  if (total > 0) {
+    badge.hidden = false;
+    badge.textContent = total > 99 ? '99+' : String(total);
+  } else {
+    badge.hidden = true;
+    badge.textContent = '0';
+  }
+}
+
+function toggleAlertPanel(force) {
+  var panel = document.getElementById('alert-panel');
+  var bell  = document.getElementById('nav-bell');
+  if (!panel) return;
+  var open = (typeof force === 'boolean') ? force : panel.hidden;
+  panel.hidden = !open;
+  if (bell) bell.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) {
+    renderAlertPanel();
+    // Close on outside click — bind once per open
+    setTimeout(function(){
+      document.addEventListener('click', _alertPanelOutside, { once: true });
+    }, 0);
+  }
+}
+function _alertPanelOutside(e) {
+  var panel = document.getElementById('alert-panel');
+  var bell  = document.getElementById('nav-bell');
+  if (!panel || panel.hidden) return;
+  if (panel.contains(e.target) || (bell && bell.contains(e.target))) {
+    // Re-arm so a click inside the panel doesn't close it
+    document.addEventListener('click', _alertPanelOutside, { once: true });
+    return;
+  }
+  toggleAlertPanel(false);
+}
+
+function renderAlertPanel() {
+  var body = document.getElementById('alert-panel-body');
+  if (!body) return;
+  var alerts = loadAlerts();
+  if (!alerts.length) {
+    body.innerHTML = '<p class="alert-panel-empty" data-i18n="bell_no_alerts">' +
+      t('bell_no_alerts') + '</p>';
+    return;
+  }
+  var rows = alerts.map(function(a){
+    var matches = newMatchesFor(a);
+    if (!matches.length) return '';
+    var key = alertSpecKey(a);
+    var safeKey = key.replace(/"/g, '&quot;').replace(/'/g, "\\'");
+    var label = alertSpecLabel(a) || t('alert_banner_sub_any');
+    var sample = matches.slice(0, 3).map(function(j){
+      return '<li class="alert-panel-job">' +
+               '<span class="apj-title">' + escapeHtml(j.title) + '</span>' +
+               '<span class="apj-co">' + escapeHtml(j.company) + '</span>' +
+             '</li>';
+    }).join('');
+    var more = matches.length > 3
+      ? '<footer class="apr-more">+' + (matches.length - 3) + ' ' + t('bell_more') + '</footer>'
+      : '';
+    return (
+      '<section class="alert-panel-row" role="button" tabindex="0" ' +
+        'onclick="openAlertMatches(\'' + safeKey + '\')" ' +
+        'onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();openAlertMatches(\'' + safeKey + '\')}">' +
+        '<header><strong>' + escapeHtml(label) + '</strong>' +
+          '<span class="apr-count">' + matches.length + '</span></header>' +
+        '<ul class="alert-panel-jobs">' + sample + '</ul>' +
+        more +
+      '</section>'
+    );
+  }).filter(Boolean).join('');
+  body.innerHTML = rows || ('<p class="alert-panel-empty" data-i18n="bell_empty">' + t('bell_empty') + '</p>');
+}
+
+// Lightweight HTML escape — used for job titles/companies in the panel.
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+function openAlertMatches(key) {
+  var alerts = loadAlerts();
+  var idx = alerts.findIndex(function(a){ return alertSpecKey(a) === key; });
+  if (idx === -1) return;
+  var a = alerts[idx];
+  // Snapshot the ids the user is now seeing, then advance lastSeen.
+  var matchIds = newMatchesFor(a).map(function(j){ return String(j.id); });
+  var combined = (a.lastSeenIds || []).concat(matchIds);
+  // Bound the snapshot so localStorage stays small (~200 ids per alert).
+  if (combined.length > 200) combined = combined.slice(-200);
+  alerts[idx] = Object.assign({}, a, {
+    lastSeen: Date.now(),
+    lastSeenIds: combined
+  });
+  saveAlerts(alerts);
+  refreshAlertBadge();
+  toggleAlertPanel(false);
+  applyJobAlert(key);
 }
 
 // ── Job Detail ──────────────────────────────────────────────────────────────
@@ -3532,6 +3944,7 @@ function mapSupabaseJob(j) {
     stripe:      stripe,
     source:       j.source       || 'unknown',
     partner_name: (Array.isArray(j.tags) ? j.tags : []).reduce(function(a, t){ return t.indexOf('partner:') === 0 ? t.slice(8) : a; }, null),
+    posted_at:    j.posted_at    || j.created_at || null,
   };
 }
 
@@ -3593,6 +4006,22 @@ async function init() {
   showSkeletons();
 
   await loadJobs();
+
+  // Now that jobs are loaded, compute initial bell-badge state and listen
+  // for tab-focus so a user returning to the tab gets a fresh count. We also
+  // re-fetch the job list (throttled to once a minute) so the badge isn't
+  // computed against a stale ALL_JOBS on long-open tabs.
+  if (typeof refreshAlertBadge === 'function') refreshAlertBadge();
+  var __lastJobsFetch = Date.now();
+  window.addEventListener('focus', async function(){
+    try {
+      if (Date.now() - __lastJobsFetch > 60000) {
+        __lastJobsFetch = Date.now();
+        await loadJobs();
+      }
+    } catch(_e) { /* ignore — badge will fall back to last-known list */ }
+    if (typeof refreshAlertBadge === 'function') refreshAlertBadge();
+  });
 
   // Populate landing page grid with REAL jobs (fallback to mock if none)
   const landingGrid = document.getElementById('landing-grid');
@@ -3939,8 +4368,16 @@ var T = {
     alert_banner_sub_any:'Любые вакансии',
     alert_create:'Создать',
     alert_exists:'Уведомление уже создано',
-    alert_saved:'Уведомление сохранено. Найдём — напишем.',
+    alert_saved:'Готово. Откройте 🔔 наверху — там будут появляться новые подходящие.',
     alert_saved_label:'Мои уведомления',
+    alert_already_covered:'Похожее уведомление уже создано',
+    bell_title:'Уведомления',
+    bell_empty:'Пока новых вакансий нет — мы дадим знать, как только появятся.',
+    bell_no_alerts:'Создайте уведомление в «Все вакансии» — мы будем отслеживать новые подходящие вакансии.',
+    bell_more:'ещё',
+    bell_manage:'Управлять уведомлениями →',
+    bell_close:'Закрыть',
+    hero_alert_hook:'Получай уведомления о новых вакансиях по твоим фильтрам',
     save:'Сохранить',
     // Nav
     nav_profile:'Профиль'
@@ -4058,8 +4495,16 @@ var T = {
     alert_banner_sub_any:'Кез келген вакансиялар',
     alert_create:'Жасау',
     alert_exists:'Хабарландыру бұрыннан бар',
-    alert_saved:'Хабарландыру сақталды. Сәйкес вакансия табылса — жазамыз.',
+    alert_saved:'Дайын. Жоғарыдағы 🔔 батырмасын ашыңыз — жаңа сәйкес вакансиялар сонда шығады.',
     alert_saved_label:'Менің хабарландыруларым',
+    alert_already_covered:'Ұқсас хабарландыру бұрыннан жасалған',
+    bell_title:'Хабарландырулар',
+    bell_empty:'Әзірге жаңа вакансиялар жоқ — пайда болғанда хабарлаймыз.',
+    bell_no_alerts:'«Барлық вакансиялар» бөлімінде хабарландыру жасаңыз — біз сәйкес жаңа вакансияларды бақылаймыз.',
+    bell_more:'тағы',
+    bell_manage:'Хабарландыруларды басқару →',
+    bell_close:'Жабу',
+    hero_alert_hook:'Сүзгілеріңе сай жаңа вакансиялар туралы хабарлама ал',
     save:'Сақтау',
     nav_profile:'Профиль'
   },
@@ -4176,8 +4621,16 @@ var T = {
     alert_banner_sub_any:'Any jobs',
     alert_create:'Create alert',
     alert_exists:'Alert already saved',
-    alert_saved:'Alert saved. We\u2019ll let you know when matches come in.',
+    alert_saved:'Done. Open 🔔 in the nav — new matches will land there.',
     alert_saved_label:'My alerts',
+    alert_already_covered:'A similar alert is already saved',
+    bell_title:'Notifications',
+    bell_empty:'No new matches yet — we\u2019ll ping you the moment something fits.',
+    bell_no_alerts:'Save an alert in Browse — we\u2019ll watch for new matching roles.',
+    bell_more:'more',
+    bell_manage:'Manage alerts →',
+    bell_close:'Close',
+    hero_alert_hook:'Get notified when new jobs match your filters',
     save:'Save',
     nav_profile:'Profile'
   }
