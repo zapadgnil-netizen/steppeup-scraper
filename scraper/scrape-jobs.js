@@ -21,6 +21,7 @@
 const fetch = require('node-fetch');
 const cheerio = require('cheerio');
 const { createClient } = require('@supabase/supabase-js');
+const WebSocket = require('ws'); // explicit transport so realtime-js doesn't crash on Node without native WebSocket
 
 // ── Config ────────────────────────────────────────────────────
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -34,7 +35,7 @@ if (!DRY_RUN && (!SUPABASE_URL || !SUPABASE_KEY)) {
   process.exit(1);
 }
 
-const db = DRY_RUN ? null : createClient(SUPABASE_URL, SUPABASE_KEY);
+const db = DRY_RUN ? null : createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: false, autoRefreshToken: false }, realtime: { transport: WebSocket } });
 
 // Student-friendly keywords (RU + EN)
 const STUDENT_KEYWORDS_RU = [
