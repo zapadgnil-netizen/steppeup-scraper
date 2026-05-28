@@ -1274,17 +1274,6 @@ async function main() {
   console.log(`  JSearch:  ${JSEARCH_API_KEY ? 'ENABLED (LinkedIn/Indeed/Glassdoor)' : 'DISABLED (add JSEARCH_API_KEY secret to enable)'}`);
   console.log('═══════════════════════════════════════════════════\n');
 
-  // ── HEALTH GATE ─────────────────────────────────────────────
-  // Fail the run if the overall job count drops below a sane floor.
-  // Silent source regressions (DOM changes, IP bans, deprecated APIs) used
-  // to drift unnoticed because the workflow stayed green. Now a low count
-  // triggers the same failure email any other broken run would.
-  if (allJobs.length < 25) {
-    console.error('[health-gate] FAIL: only ' + allJobs.length + ' jobs scraped (threshold 25). Check per-source totals above for the regressed source(s).');
-    process.exit(1);
-  }
-
-
   // Remove seed/placeholder jobs
   if (db) {
     try {
@@ -1351,6 +1340,16 @@ async function main() {
   console.log('\n── Done ─────────────────────────────────────────');
   console.log(`  New/updated: ${allJobs.length}`);
   console.log(`  Stale removed: ${cleanup.removed}`);
+
+  // ── HEALTH GATE ─────────────────────────────────────────────
+  // Fail the run if the overall job count drops below a sane floor.
+  // Silent source regressions (DOM changes, IP bans, deprecated APIs) used
+  // to drift unnoticed because the workflow stayed green. Now a low count
+  // triggers the same failure email any other broken run would.
+  if (allJobs.length < 25) {
+    console.error('[health-gate] FAIL: only ' + allJobs.length + ' jobs scraped (threshold 25). Check per-source totals above for the regressed source(s).');
+    process.exit(1);
+  }
   console.log('═══════════════════════════════════════════════════\n');
 
   // Log scraping run
