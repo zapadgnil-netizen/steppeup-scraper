@@ -208,7 +208,7 @@ async function scrapeHH() {
     try {
       const url = `https://api.hh.ru/vacancies?area=40&text=${encodeURIComponent(query)}&per_page=50&order_by=publication_time&period=3`;
       const res = await fetch(url, {
-        headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
       });
 
       if (!res.ok) {
@@ -221,7 +221,7 @@ async function scrapeHH() {
         let description = v.snippet?.responsibility || v.snippet?.requirement || '';
         try {
           const detailRes = await fetch(`https://api.hh.ru/vacancies/${v.id}`, {
-            headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
           });
           if (detailRes.ok) {
             const detail = await detailRes.json();
@@ -294,7 +294,7 @@ async function scrapeEnbek() {
         const timeout = setTimeout(() => controller.abort(), 15000);
         const res = await fetch(url, {
           headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'text/html,application/xhtml+xml',
             'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8'
           },
@@ -389,7 +389,7 @@ async function scrapeGitHubJobs() {
         const url = `https://api.github.com/search/issues?q=${encodeURIComponent(query + ' is:open')}&sort=created&order=desc&per_page=20`;
         const res = await fetch(url, {
           headers: {
-            'User-Agent': 'SteppeUp-Bot/1.0',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept': 'application/vnd.github.v3+json'
           }
         });
@@ -451,7 +451,7 @@ async function scrapeKolesa() {
     // Fetch all open vacancies for Kolesa Group from hh.kz API
     const url = `https://api.hh.ru/vacancies?employer_id=${KOLESA_EMPLOYER_ID}&area=40&per_page=100&order_by=publication_time`;
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
     });
 
     if (!res.ok) {
@@ -467,7 +467,7 @@ async function scrapeKolesa() {
       let description = v.snippet?.responsibility || v.snippet?.requirement || '';
       try {
         const detailRes = await fetch(`https://api.hh.ru/vacancies/${v.id}`, {
-          headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
         });
         if (detailRes.ok) {
           const detail = await detailRes.json();
@@ -520,7 +520,7 @@ async function scrapeYouthPortal() {
   try {
     const url = `https://api.hh.ru/vacancies?area=40&text=${encodeURIComponent('Жас маман OR zhasproject OR молодой специалист OR первое рабочее место')}&per_page=30&order_by=publication_time&period=7`;
     const res = await fetch(url, {
-      headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
+      headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
     });
 
     if (res.ok) {
@@ -591,7 +591,7 @@ async function scrapeTelegram() {
       const webUrl = `https://t.me/s/${channelName}`;
       const webRes = await fetch(webUrl, {
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
           'Accept': 'text/html',
           'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8'
         }
@@ -943,7 +943,7 @@ async function processCommunitySubmissions() {
         if (hasUrl && enrichedDescription.length < 50) {
           try {
             const pageRes = await fetch(sub.source_url, {
-              headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)' },
+              headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
               redirect: 'follow'
             });
             if (pageRes.ok) {
@@ -1171,7 +1171,7 @@ async function cleanupStaleJobs() {
       if (job.source === 'hh_kz' && job.source_id?.startsWith('hh_')) {
         const hhId = job.source_id.replace('hh_', '');
         const res = await fetch(`https://api.hh.ru/vacancies/${hhId}`, {
-          headers: { 'User-Agent': 'SteppeUp-Bot/1.0' }
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' }
         });
 
         if (res.status === 404 || res.status === 403) {
@@ -1208,7 +1208,7 @@ async function cleanupStaleJobs() {
         try {
           const res = await fetch(job.source_url, {
             method: 'HEAD',
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)' },
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36' },
             redirect: 'follow',
             timeout: 5000
           });
@@ -1273,6 +1273,17 @@ async function main() {
   console.log(`  Telegram: ENABLED (${TELEGRAM_CHANNELS.length} channels via web preview)`);
   console.log(`  JSearch:  ${JSEARCH_API_KEY ? 'ENABLED (LinkedIn/Indeed/Glassdoor)' : 'DISABLED (add JSEARCH_API_KEY secret to enable)'}`);
   console.log('═══════════════════════════════════════════════════\n');
+
+  // ── HEALTH GATE ─────────────────────────────────────────────
+  // Fail the run if the overall job count drops below a sane floor.
+  // Silent source regressions (DOM changes, IP bans, deprecated APIs) used
+  // to drift unnoticed because the workflow stayed green. Now a low count
+  // triggers the same failure email any other broken run would.
+  if (allJobs.length < 25) {
+    console.error('[health-gate] FAIL: only ' + allJobs.length + ' jobs scraped (threshold 25). Check per-source totals above for the regressed source(s).');
+    process.exit(1);
+  }
+
 
   // Remove seed/placeholder jobs
   if (db) {
