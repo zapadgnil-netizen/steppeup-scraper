@@ -1059,6 +1059,11 @@ html.dark .browse-filters{border-bottom-color:rgba(254,252,247,.08)}
 .browse-chips{display:flex;flex-wrap:wrap;gap:8px;flex:1 1 auto;min-width:0}
 .browse-dropdowns{display:flex;gap:8px;flex-wrap:wrap}
 .browse-dropdowns .cat-select{min-width:140px}
+.sort-match-btn{padding:7px 16px;border-radius:100px;border:1px solid var(--ink-20);background:var(--white);font:600 13px 'DM Sans',sans-serif;color:var(--ink-50);cursor:pointer;outline:0;transition:all .2s;white-space:nowrap;flex-shrink:0;display:inline-flex;align-items:center;gap:6px}
+.sort-match-btn:hover{border-color:var(--gold);color:var(--gold)}
+.sort-match-btn.active{background:var(--sage);border-color:var(--sage);color:var(--white)}
+html.dark .sort-match-btn{background:#1a1612;color:rgba(254,252,247,.6);border-color:rgba(254,252,247,.15)}
+html.dark .sort-match-btn.active{background:var(--sage);color:#fff;border-color:var(--sage)}
 
 /* Floating submit-job button (demoted from inline secondary) */
 .fab-submit{
@@ -1942,6 +1947,16 @@ document.addEventListener('DOMContentLoaded',function(){
   mo.observe(document.body,{childList:true,subtree:true});
 });
 </script>
+<!-- Free, client-side resume parsing libs (no server, no AI, $0). pdf.js → PDF text, mammoth → DOCX text -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script>
+  // Point pdf.js at its worker (same version) so extraction runs off the main thread.
+  if (window.pdfjsLib) {
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+</script>
 </head>
 <body>
   <div id="landing-page">
@@ -2214,7 +2229,7 @@ document.addEventListener('DOMContentLoaded',function(){
     </div>
     <div class="app-content">
       <div class="app-page" id="page-home"><div class="feed-wrap"><div class="feed-header"><div class="feed-greeting" data-i18n-html="feed_greeting">Привет, <em id="feed-name">студент</em> 👋</div><div class="feed-sub" data-i18n="greet_sub">Вот вакансии, подобранные специально для тебя</div></div><div class="alerts-row" id="home-alerts-row" role="region" aria-label="Saved job alerts"></div><div class="match-legend" role="note" aria-label="Match score legend"><span class="match-legend-label" data-i18n="match_legend_label">Match score</span><span class="match-legend-item"><span class="match-legend-dot high"></span><span data-i18n="match_legend_high">80+ strong</span></span><span class="match-legend-item"><span class="match-legend-dot mid"></span><span data-i18n="match_legend_mid">60–79 partial</span></span><span class="match-legend-item"><span class="match-legend-dot low"></span><span data-i18n="match_legend_low">&lt;60 stretch</span></span><a class="feed-refine-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="feed_refine">Нужно искать? → Все вакансии</a></div><section class="feed-rail" data-rail="top-matches"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_top_t">Топ совпадения для тебя</h2><div class="rail-sub" data-i18n="rail_top_s">Вакансии с высоким баллом совпадения</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-top-matches"></div></section><section class="feed-rail" data-rail="fresh"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_fresh_t">Новые на этой неделе</h2><div class="rail-sub" data-i18n="rail_fresh_s">Свежие вакансии от проверенных работодателей</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-fresh"></div></section><section class="feed-rail" data-rail="remote"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_remote_t">Можно работать удалённо</h2><div class="rail-sub" data-i18n="rail_remote_s">Гибкий график — можно совмещать с учёбой</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-remote"></div></section></div></div>
-      <div class="app-page" id="page-browse"><div class="browse-wrap"><div class="browse-top"><div class="browse-title" data-i18n="browse_title">Все вакансии</div><div class="search-box"><span class="search-icon">⌕</span><input class="search-input" id="browse-search" data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." oninput="filterBrowse()"/></div></div><div class="browse-filters" role="toolbar" aria-label="Фильтры"><div class="browse-chips"><button class="chip active" data-bfilter="all" data-i18n="all">Все</button><button class="chip" data-bfilter="internship" data-i18n="f_internship">Стажировки</button><button class="chip" data-bfilter="part-time" data-i18n="f_parttime">Неполный день</button><button class="chip" data-bfilter="remote" data-i18n="f_remote">Удалённо</button><button class="chip" data-bfilter="no-exp" data-i18n="f_noexp">Без опыта</button><button class="chip" data-bfilter="flexible" data-i18n="f_flexible">Гибкий график</button><button class="chip" data-bfilter="paid-intern" data-i18n="f_paidintern">Оплачиваемая</button></div><div class="browse-dropdowns"><select class="cat-select" id="browse-city" onchange="filterBrowse()" aria-label="Город"><option value="" data-i18n="city_all">Все города</option><option value="Алматы" data-i18n="city_almaty">Алматы</option><option value="Астана" data-i18n="city_astana">Астана</option><option value="Шымкент" data-i18n="city_shymkent">Шымкент</option></select><select class="cat-select" id="browse-cat" onchange="filterBrowse()" aria-label="Категория"><option value="" data-i18n="cat_all">Все категории</option><option value="it" data-i18n="int_it">IT / Разработка</option><option value="finance" data-i18n="ind_finance">Финансы</option><option value="marketing" data-i18n="ind_marketing">Маркетинг</option><option value="design" data-i18n="ind_design">Дизайн</option><option value="hr">HR</option><option value="sales" data-i18n="ind_sales">Продажи</option></select></div></div><div class="filter-meta" id="browse-filter-meta"><span class="filter-count">All jobs</span><button class="filter-clear" data-target="browse" data-i18n="filter_clear">Clear all</button></div><div class="alert-banner" id="browse-alert-banner" role="region" aria-label="Create job alert" hidden><div class="alert-banner-icon" aria-hidden="true">🔔</div><div class="alert-banner-content"><div class="alert-banner-title" data-i18n="alert_banner_t">Получать уведомления о таких вакансиях</div><div class="alert-banner-sub" id="alert-banner-sub"></div></div><button class="alert-create-btn" id="alert-create-btn" onclick="createJobAlert()" data-i18n="alert_create">Создать</button></div><div class="alerts-row" id="browse-alerts-row" role="region" aria-label="Saved job alerts"></div><div class="browse-count" id="browse-count"></div><div class="browse-grid" id="browse-grid"></div></div><button class="fab-submit" onclick="openSubmitModal()" aria-label="Предложить вакансию" data-i18n-title="submit_job" title="Предложить вакансию"><span class="fab-plus" aria-hidden="true">+</span><span class="fab-label" data-i18n="fab_submit">Предложить</span></button></div>
+      <div class="app-page" id="page-browse"><div class="browse-wrap"><div class="browse-top"><div class="browse-title" data-i18n="browse_title">Все вакансии</div><div class="search-box"><span class="search-icon">⌕</span><input class="search-input" id="browse-search" data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." oninput="filterBrowse()"/></div></div><div class="browse-filters" role="toolbar" aria-label="Фильтры"><div class="browse-chips"><button class="chip active" data-bfilter="all" data-i18n="all">Все</button><button class="chip" data-bfilter="internship" data-i18n="f_internship">Стажировки</button><button class="chip" data-bfilter="part-time" data-i18n="f_parttime">Неполный день</button><button class="chip" data-bfilter="remote" data-i18n="f_remote">Удалённо</button><button class="chip" data-bfilter="no-exp" data-i18n="f_noexp">Без опыта</button><button class="chip" data-bfilter="flexible" data-i18n="f_flexible">Гибкий график</button><button class="chip" data-bfilter="paid-intern" data-i18n="f_paidintern">Оплачиваемая</button></div><div class="browse-dropdowns"><select class="cat-select" id="browse-city" onchange="filterBrowse()" aria-label="Город"><option value="" data-i18n="city_all">Все города</option><option value="Алматы" data-i18n="city_almaty">Алматы</option><option value="Астана" data-i18n="city_astana">Астана</option><option value="Шымкент" data-i18n="city_shymkent">Шымкент</option></select><select class="cat-select" id="browse-cat" onchange="filterBrowse()" aria-label="Категория"><option value="" data-i18n="cat_all">Все категории</option><option value="it" data-i18n="int_it">IT / Разработка</option><option value="finance" data-i18n="ind_finance">Финансы</option><option value="marketing" data-i18n="ind_marketing">Маркетинг</option><option value="design" data-i18n="ind_design">Дизайн</option><option value="hr">HR</option><option value="sales" data-i18n="ind_sales">Продажи</option></select><button class="sort-match-btn" id="sort-match-btn" onclick="toggleMatchSort()" aria-pressed="false" data-i18n="sort_match">⇅ По совпадению</button></div></div><div class="filter-meta" id="browse-filter-meta"><span class="filter-count">All jobs</span><button class="filter-clear" data-target="browse" data-i18n="filter_clear">Clear all</button></div><div class="alert-banner" id="browse-alert-banner" role="region" aria-label="Create job alert" hidden><div class="alert-banner-icon" aria-hidden="true">🔔</div><div class="alert-banner-content"><div class="alert-banner-title" data-i18n="alert_banner_t">Получать уведомления о таких вакансиях</div><div class="alert-banner-sub" id="alert-banner-sub"></div></div><button class="alert-create-btn" id="alert-create-btn" onclick="createJobAlert()" data-i18n="alert_create">Создать</button></div><div class="alerts-row" id="browse-alerts-row" role="region" aria-label="Saved job alerts"></div><div class="browse-count" id="browse-count"></div><div class="browse-grid" id="browse-grid"></div></div><button class="fab-submit" onclick="openSubmitModal()" aria-label="Предложить вакансию" data-i18n-title="submit_job" title="Предложить вакансию"><span class="fab-plus" aria-hidden="true">+</span><span class="fab-label" data-i18n="fab_submit">Предложить</span></button></div>
       <div class="app-page" id="page-job"><div class="detail-wrap" id="detail-wrap"></div></div>
       <div class="app-page" id="page-saved"><div class="saved-wrap"><div class="saved-title" data-i18n="saved_title">Сохранённые</div><div class="saved-sub" id="saved-sub"></div><div class="saved-grid" id="saved-grid"></div></div></div>
       <div class="app-page" id="page-profile"><div class="profile-wrap"><div class="profile-card"><div class="profile-header"><div class="profile-av" id="profile-av">С</div><div><div class="profile-name" id="profile-name-display" data-i18n="prof_name">Студент</div><div class="profile-email" id="profile-email-display">—</div></div></div><label class="form-label" data-i18n="lbl_name">Имя</label><input class="form-input" id="p-name" maxlength="60" autocomplete="name" data-i18n-ph="ph_name" placeholder="Ваше имя"/><label class="form-label" data-i18n="lbl_email">Email</label><input class="form-input" id="p-email" placeholder="email@example.com" type="email"/><div class="form-row"><div><label class="form-label" data-i18n="lbl_city">Город</label><select class="form-input" id="p-city"><option value="" data-i18n="ph_city">Выберите город</option><option value="Алматы">Алматы</option><option value="Астана">Астана</option><option value="Шымкент">Шымкент</option><option value="Другой" data-i18n="city_other">Другой</option></select></div><div><label class="form-label" data-i18n="lbl_uni">Вуз</label><input class="form-input" id="p-uni" data-i18n-ph="ph_uni" placeholder="КазНУ, AITU..."/></div></div><label class="form-label" data-i18n="lbl_major">Специальность</label><input class="form-input" id="p-major" data-i18n-ph="ph_major" placeholder="Информационные технологии..."/><label class="form-label" data-i18n="lbl_skills">Навыки</label><div class="skills-input-wrap" id="skills-wrap" onclick="document.getElementById('skill-type').focus()"></div><button class="profile-save-btn" onclick="saveProfile()" data-i18n="save_profile">Сохранить профиль →</button></div><div class="profile-card"><div class="detail-section-title" data-i18n="lbl_resume">Резюме</div><div class="resume-upload-area" id="resume-upload-area" onclick="document.getElementById('resume-file').click()"><div style="font-size:32px;opacity:.4">📄</div><h4 data-i18n="upload_resume">Загрузить резюме</h4><p data-i18n="upload_hint">PDF или DOCX · перетащите или нажмите</p></div><input type="file" id="resume-file" accept=".pdf,.docx" style="display:none" onchange="handleResumeUpload(this)"/></div></div></div>
@@ -2381,6 +2396,159 @@ function getInterestKeywords() {
   map[t('int_sales')]     = ['продаж','sales','менеджер','manager'];
   map[t('int_law')]       = ['юрист','legal','law','право'];
   return map;
+}
+
+// ── Resume parsing (client-side, free, no AI) ───────────────────────────────
+// Skill dictionary. Each entry: canonical label + the lowercase strings that,
+// if found in the resume text, count as a hit. Covers EN/RU/KZ spellings so a
+// Kazakhstani student's CV in any language still parses.
+const RESUME_SKILLS = [
+  ['Python', ['python', 'питон', 'пайтон']],
+  ['JavaScript', ['javascript', 'js', 'джаваскрипт']],
+  ['TypeScript', ['typescript', 'ts']],
+  ['Java', ['java', 'джава']],
+  ['C++', ['c++', 'cpp', 'с++']],
+  ['C#', ['c#', 'c sharp', 'csharp']],
+  ['Go', ['golang']],
+  ['PHP', ['php']],
+  ['Ruby', ['ruby']],
+  ['React', ['react', 'реакт']],
+  ['React Native', ['react native']],
+  ['Vue', ['vue', 'vue.js', 'vuejs']],
+  ['Angular', ['angular']],
+  ['Next.js', ['next.js', 'nextjs']],
+  ['Node.js', ['node.js', 'nodejs', 'node js']],
+  ['Flutter', ['flutter']],
+  ['Kotlin', ['kotlin']],
+  ['Swift', ['swift']],
+  ['HTML', ['html']],
+  ['CSS', ['css', 'scss', 'sass']],
+  ['SQL', ['sql']],
+  ['PostgreSQL', ['postgresql', 'postgres']],
+  ['MongoDB', ['mongodb', 'mongo']],
+  ['Redis', ['redis']],
+  ['GraphQL', ['graphql']],
+  ['Docker', ['docker', 'докер']],
+  ['Kubernetes', ['kubernetes', 'k8s']],
+  ['Git', ['git', 'github', 'gitlab']],
+  ['Linux', ['linux', 'линукс']],
+  ['AWS', ['aws', 'amazon web services']],
+  ['Azure', ['azure']],
+  ['Excel', ['excel', 'эксель', 'эксел']],
+  ['Power BI', ['power bi', 'powerbi']],
+  ['Tableau', ['tableau']],
+  ['Pandas', ['pandas']],
+  ['NumPy', ['numpy']],
+  ['TensorFlow', ['tensorflow']],
+  ['PyTorch', ['pytorch']],
+  ['Machine Learning', ['machine learning', 'машинное обучение', 'ml']],
+  ['Data Science', ['data science', 'data analysis', 'анализ данных', 'data analytics']],
+  ['Figma', ['figma', 'фигма']],
+  ['Photoshop', ['photoshop', 'фотошоп']],
+  ['Illustrator', ['illustrator', 'иллюстратор']],
+  ['Canva', ['canva', 'канва']],
+  ['UX Research', ['ux research', 'ui/ux', 'ux/ui', 'ux', 'ui design']],
+  ['WordPress', ['wordpress']],
+  ['SEO', ['seo']],
+  ['SMM', ['smm', 'social media']],
+  ['Google Analytics', ['google analytics']],
+  ['1C', ['1c', '1с']],
+  ['SAP', ['sap']],
+  ['CRM', ['crm']],
+  ['Jira', ['jira']],
+  ['Postman', ['postman']],
+  ['Agile', ['agile', 'аджайл']],
+  ['Scrum', ['scrum', 'скрам']],
+  ['Finance', ['finance', 'финансы', 'қаржы']],
+  ['Accounting', ['accounting', 'бухгалтер', 'бухучет']],
+  ['Marketing', ['marketing', 'маркетинг']],
+  ['Sales', ['sales', 'продажи', 'сату']],
+  ['Management', ['management', 'менеджмент', 'управление']],
+  ['Leadership', ['leadership', 'лидерство']],
+  ['Communications', ['communication', 'коммуникации']],
+  ['Research', ['research', 'исследования']],
+  ['Copywriting', ['copywriting', 'копирайтинг']],
+  ['English', ['english', 'английский', 'ielts', 'toefl']],
+];
+
+const RESUME_CITIES = ['Алматы','Астана','Нур-Султан','Шымкент','Караганда','Қарағанды','Актобе','Атырау','Тараз','Павлодар','Усть-Каменогорск','Костанай','Almaty','Astana','Shymkent'];
+const RESUME_UNI_KEYWORDS = ['University','Университет','Университеті','Institute','Институт','College','Колледж','КазНУ','AITU','НУ','Nazarbayev','KBTU','SDU','KIMEP','Satbayev','Сатпаев','Narxoz','Нархоз','School'];
+
+// Extract plain text from a PDF or DOCX file entirely in the browser.
+async function extractResumeText(file) {
+  var name = (file.name || '').toLowerCase();
+  var buf = await file.arrayBuffer();
+  if (name.endsWith('.pdf') && window.pdfjsLib) {
+    var pdf = await window.pdfjsLib.getDocument({ data: buf }).promise;
+    var out = '';
+    var maxPages = Math.min(pdf.numPages, 8); // resumes are short; cap for speed
+    for (var p = 1; p <= maxPages; p++) {
+      var page = await pdf.getPage(p);
+      var content = await page.getTextContent();
+      // Reconstruct lines by vertical position — pdf.js returns positioned text
+      // runs, not lines, so we group runs that share a Y baseline. This keeps the
+      // name on its own line for the name/university heuristics.
+      var lastY = null, cur = [];
+      content.items.forEach(function (it) {
+        var y = it.transform ? it.transform[5] : null;
+        if (lastY !== null && y !== null && Math.abs(y - lastY) > 3) {
+          out += cur.join(' ') + '\n'; cur = [];
+        }
+        cur.push(it.str);
+        if (y !== null) lastY = y;
+      });
+      if (cur.length) out += cur.join(' ') + '\n';
+    }
+    return out;
+  }
+  if ((name.endsWith('.docx') || name.endsWith('.doc')) && window.mammoth) {
+    var result = await window.mammoth.extractRawText({ arrayBuffer: buf });
+    return result.value || '';
+  }
+  throw new Error('Unsupported file type');
+}
+
+// Turn resume text into structured fields using keyword + regex matching.
+function parseResumeText(text) {
+  var low = (text || '').toLowerCase();
+  var lines = (text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+
+  // Match a keyword against the text. Pure-ASCII tokens use word boundaries so
+  // "java" doesn't fire on "javascript" and "go"/"ts" don't fire mid-word.
+  // Tokens with spaces or symbols (c++, node.js, 1с, Cyrillic) fall back to substring.
+  var kwMatch = function (kw) {
+    if (/^[a-z0-9]+$/.test(kw)) return new RegExp('\\b' + kw + '\\b').test(low);
+    return low.indexOf(kw) !== -1;
+  };
+  var skills = RESUME_SKILLS
+    .filter(function (entry) { return entry[1].some(kwMatch); })
+    .map(function (entry) { return entry[0]; });
+
+  var emailMatch = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
+  var phoneMatch = text.match(/[\+]?[0-9][\d\s\-\(\)]{8,14}/);
+  var city = RESUME_CITIES.find(function (c) { return text.indexOf(c) !== -1; }) || '';
+  var uniLine = lines.find(function (l) {
+    return RESUME_UNI_KEYWORDS.some(function (k) { return l.indexOf(k) !== -1; }) && l.length < 90;
+  }) || '';
+  // Name heuristic: first short line that looks like a person's name (starts with a capital,
+  // no digits, no @, not the filename).
+  var name = lines.find(function (l) {
+    return l.length > 2 && l.length < 50 && l.indexOf('@') === -1 &&
+           !/\d/.test(l) && /^[A-ZА-ЯӘІҢҒҮҰҚӨҺ]/.test(l) && l.split(' ').length <= 4;
+  }) || '';
+  var linkedin = (text.match(/linkedin\.com\/in\/[\w-]+/) || [])[0] || '';
+  var github = (text.match(/github\.com\/[\w-]+/) || [])[0] || '';
+
+  return {
+    name: name,
+    email: emailMatch ? emailMatch[0] : '',
+    phone: phoneMatch ? phoneMatch[0].trim() : '',
+    city: city,
+    uni: uniLine,
+    skills: skills,
+    linkedin: linkedin ? 'https://' + linkedin : '',
+    github: github ? 'https://' + github : '',
+  };
 }
 
 // Map major keywords to skills for bonus matching
@@ -2761,6 +2929,26 @@ function getFilteredJobs(filter) {
 }
 
 // ── Browse ──────────────────────────────────────────────────────────────────
+// When true, the browse list is sorted purely by profile-match score (highest first).
+var browseSortByMatch = false;
+
+function toggleMatchSort() {
+  browseSortByMatch = !browseSortByMatch;
+  var btn = document.getElementById('sort-match-btn');
+  if (btn) {
+    btn.classList.toggle('active', browseSortByMatch);
+    btn.setAttribute('aria-pressed', browseSortByMatch ? 'true' : 'false');
+    btn.textContent = (browseSortByMatch ? '✓ ' : '⇅ ') + t('sort_match_label');
+  }
+  // Nudge the student to fill their profile if they sort by match with nothing set.
+  if (browseSortByMatch && typeof toast === 'function') {
+    var empty = !profile || (!(profile.skills && profile.skills.length) &&
+                !(profile.interests && profile.interests.length) && !profile.city && !profile.major);
+    if (empty) toast(t('sort_match_hint'), 'info', 3500);
+  }
+  filterBrowse();
+}
+
 function renderBrowse() {
   filterBrowse();
   // Surface saved alerts + fresh banner state on every entry to /browse
@@ -2810,7 +2998,14 @@ function filterBrowse() {
     countEl.textContent = t('found') + ' ' + jobs.length.toLocaleString(LANG === 'en' ? 'en' : 'ru') + ' ' + vacWord;
   }
 
-  jobs = sortPartnersFirst(jobs.map(function(j){ return Object.assign({}, j, { _score: calcMatch(j) }); }));
+  var scored = jobs.map(function(j){ return Object.assign({}, j, { _score: calcMatch(j) }); });
+  // "Best match" sort = pure match score, highest first. Default = recommended
+  // (partners first, then score), which is the existing behaviour.
+  if (browseSortByMatch) {
+    jobs = scored.sort(function(a, b){ return b._score - a._score; });
+  } else {
+    jobs = sortPartnersFirst(scored);
+  }
   var browseEl = document.getElementById('browse-grid');
   if (!jobs.length) {
     browseEl.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🌾</div><h3>' + t('empty_browse_t') + '</h3><p>' + t('empty_browse_p') + '</p></div>';
@@ -3624,15 +3819,60 @@ function saveProfile() {
   }
 }
 
-function handleResumeUpload(input) {
+async function handleResumeUpload(input) {
   const file = input.files[0];
   if (!file) return;
   const area = document.getElementById('resume-upload-area');
   if (area) {
-    area.innerHTML = '<div style="font-size:32px">📄</div>' +
+    area.innerHTML = '<div style="font-size:32px">⏳</div>' +
                      '<h4>' + file.name + '</h4>' +
-                     '<p style="color:var(--sage)">✓ ' + t('ob_dz_done') + '</p>';
+                     '<div class="scan-bar"><div class="scan-fill"></div></div>' +
+                     '<p style="color:var(--sage)">' + t('ob_extracting') + '</p>';
     area.style.borderColor = 'var(--sage)';
+  }
+  try {
+    const text = await extractResumeText(file);
+    const parsed = parseResumeText(text);
+
+    // Fill any empty form fields from the resume (don't clobber what the user typed).
+    const setIfEmpty = function (id, val) {
+      const el = document.getElementById(id);
+      if (el && !el.value && val) el.value = val;
+    };
+    setIfEmpty('p-name', parsed.name);
+    setIfEmpty('p-email', parsed.email);
+    setIfEmpty('p-uni', parsed.uni);
+    const cityEl = document.getElementById('p-city');
+    if (cityEl && !cityEl.value && parsed.city) cityEl.value = parsed.city;
+
+    // Merge new skills into the existing pill list (dedup, case-insensitive).
+    if (parsed.skills.length > 0) {
+      const have = (currentSkills || []).map(function (s) { return s.toLowerCase(); });
+      const merged = (currentSkills || []).slice();
+      parsed.skills.forEach(function (s) {
+        if (have.indexOf(s.toLowerCase()) === -1) merged.push(s);
+      });
+      renderSkillPills(merged);
+    }
+
+    if (area) {
+      const shown = (parsed.skills || []).slice(0, 6);
+      area.innerHTML = '<div style="font-size:32px">✓</div>' +
+                       '<h4>' + file.name + '</h4>' +
+                       (shown.length
+                         ? '<p style="color:var(--sage)">' + t('ob_skills_label') + ' ' + shown.join(', ') + '</p>'
+                         : '<p style="color:var(--ink-50)">✓ ' + t('ob_dz_done') + '</p>');
+    }
+    if (typeof toast === 'function' && parsed.skills.length) {
+      toast(t('ob_skills_label') + ' ' + parsed.skills.length, 'success', 2500);
+    }
+  } catch (err) {
+    console.warn('[RESUME] parse failed:', err && err.message);
+    if (area) {
+      area.innerHTML = '<div style="font-size:32px">📄</div>' +
+                       '<h4>' + file.name + '</h4>' +
+                       '<p style="color:var(--ink-50)">✓ ' + t('ob_dz_done') + '</p>';
+    }
   }
 }
 
@@ -3773,23 +4013,47 @@ function obSkip() {
   }
 }
 
-function obResumeUpload(input) {
+async function obResumeUpload(input) {
   const file = input.files[0];
   if (!file) return;
   obData.resumeFile = file.name;
   const dz = document.getElementById('ob-dz');
-  dz.innerHTML = '<div class="ob-dropzone-icon">⏳</div>' +
-                 '<h4>' + t('ob_scanning') + '</h4>' +
-                 '<div class="scan-bar"><div class="scan-fill"></div></div>' +
-                 '<p style="color:var(--sage)">' + t('ob_extracting') + '</p>';
-  dz.classList.add('success');
-  setTimeout(function() {
-    const mockSkills = ['JavaScript','React','CSS','Figma','Excel'];
-    if (!obData.skills) obData.skills = mockSkills.slice(0, 3);
-    dz.innerHTML = '<div class="ob-dropzone-icon">✓</div>' +
-                   '<h4>' + file.name + '</h4>' +
-                   '<p style="color:var(--sage)">' + t('ob_skills_label') + ' ' + obData.skills.join(', ') + '</p>';
-  }, 1500);
+  if (dz) {
+    dz.innerHTML = '<div class="ob-dropzone-icon">⏳</div>' +
+                   '<h4>' + t('ob_scanning') + '</h4>' +
+                   '<div class="scan-bar"><div class="scan-fill"></div></div>' +
+                   '<p style="color:var(--sage)">' + t('ob_extracting') + '</p>';
+    dz.classList.add('success');
+  }
+  try {
+    const text = await extractResumeText(file);
+    const parsed = parseResumeText(text);
+    // Real skills win; if the CV had none we recognise, fall back to interests later.
+    if (parsed.skills.length > 0) obData.skills = parsed.skills;
+    // Backfill profile fields the student hasn't typed yet.
+    if (!obData.name  && parsed.name)  obData.name  = parsed.name;
+    if (!obData.email && parsed.email) obData.email = parsed.email;
+    if (!obData.city  && parsed.city)  obData.city  = parsed.city;
+    if (!obData.uni   && parsed.uni)   obData.uni   = parsed.uni;
+    obData.linkedin = parsed.linkedin || obData.linkedin;
+    obData.github   = parsed.github   || obData.github;
+
+    if (dz) {
+      const shown = (obData.skills || []).slice(0, 6);
+      dz.innerHTML = '<div class="ob-dropzone-icon">✓</div>' +
+                     '<h4>' + file.name + '</h4>' +
+                     (shown.length
+                       ? '<p style="color:var(--sage)">' + t('ob_skills_label') + ' ' + shown.join(', ') + '</p>'
+                       : '<p style="color:var(--ink-50)">' + t('ob_dz_done') + '</p>');
+    }
+  } catch (err) {
+    console.warn('[RESUME] parse failed, using fallback:', err && err.message);
+    if (dz) {
+      dz.innerHTML = '<div class="ob-dropzone-icon">✓</div>' +
+                     '<h4>' + file.name + '</h4>' +
+                     '<p style="color:var(--ink-50)">' + t('ob_dz_done') + '</p>';
+    }
+  }
 }
 
 function startOnboarding() {
@@ -4296,6 +4560,7 @@ var T = {
     lbl_skills:'Навыки', ph_skill:'Введите навык + Enter',
     save_profile:'Сохранить профиль →', profile_saved:'✓ Профиль сохранён — подборка обновлена!',
     lbl_resume:'Резюме', upload_resume:'Загрузить резюме', upload_hint:'PDF или DOCX · перетащите или нажмите',
+    sort_match:'⇅ По совпадению', sort_match_label:'По совпадению', sort_match_hint:'Заполните профиль, чтобы видеть точные совпадения',
     // onboarding
     ob_s1:'Шаг 1 из 5', ob_s2:'Шаг 2 из 5', ob_s3:'Шаг 3 из 5', ob_s4:'Шаг 4 из 5', ob_s5:'Шаг 5 из 5',
     ob_welcome:'Добро пожаловать<br/>в <em>SteppeUp</em>',
@@ -4431,6 +4696,7 @@ var T = {
     lbl_skills:'Дағдылар', ph_skill:'Дағды + Enter енгізіңіз',
     save_profile:'Профильді сақтау →', profile_saved:'✓ Профиль сақталды — таңдау жаңартылды!',
     lbl_resume:'Түйіндеме', upload_resume:'Түйіндеме жүктеу', upload_hint:'PDF немесе DOCX · сүйреңіз немесе басыңыз',
+    sort_match:'⇅ Сәйкестік бойынша', sort_match_label:'Сәйкестік бойынша', sort_match_hint:'Дәл сәйкестікті көру үшін профильді толтырыңыз',
     ob_s1:'1-қадам / 5', ob_s2:'2-қадам / 5', ob_s3:'3-қадам / 5', ob_s4:'4-қадам / 5', ob_s5:'5-қадам / 5',
     ob_welcome:'<em>SteppeUp</em>-қа<br/>қош келдіңіз',
     ob_welcome_p:'2 минутта тағылымдама немесе жұмыс табыңыз. «5 жыл тәжірибе» талаптары жоқ. Тек сізге сай жұмыстар.',
@@ -4557,6 +4823,7 @@ var T = {
     lbl_skills:'Skills', ph_skill:'Type skill + Enter',
     save_profile:'Save profile →', profile_saved:'✓ Profile saved — matches updated!',
     lbl_resume:'Resume', upload_resume:'Upload resume', upload_hint:'PDF or DOCX · drag or click',
+    sort_match:'⇅ Best match', sort_match_label:'Best match', sort_match_hint:'Fill in your profile to see accurate matches',
     ob_s1:'Step 1 of 5', ob_s2:'Step 2 of 5', ob_s3:'Step 3 of 5', ob_s4:'Step 4 of 5', ob_s5:'Step 5 of 5',
     ob_welcome:'Welcome to<br/><em>SteppeUp</em>',
     ob_welcome_p:'Find an internship or job in 2 minutes. No "5 years experience" requirements. Only jobs that fit you.',
