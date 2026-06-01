@@ -2462,7 +2462,9 @@ const RESUME_SKILLS = [
   ['Finance', ['finance', 'финансы', 'қаржы']],
   ['Accounting', ['accounting', 'бухгалтер', 'бухучет']],
   ['Marketing', ['marketing', 'маркетинг']],
-  ['Sales', ['sales', 'продажи', 'сату']],
+  ['Sales', ['sales', 'продажи', 'продаж', 'продавец', 'сату', 'сатушы', 'retail', 'ритейл']],
+  ['Customer Service', ['customer service', 'обслуживание клиентов', 'колл-центр', 'call center', 'оператор', 'консультант']],
+  ['Teaching', ['репетитор', 'tutor', 'tutoring', 'преподаватель', 'оқытушы', 'педагог']],
   ['Management', ['management', 'менеджмент', 'управление']],
   ['Leadership', ['leadership', 'лидерство']],
   ['Communications', ['communication', 'коммуникации']],
@@ -2508,21 +2510,39 @@ async function extractResumeText(file) {
   throw new Error('Unsupported file type');
 }
 
-// Turn resume text into structured fields using keyword + regex matching.
-function parseResumeText(text) {
+// Extract a list of canonical skill labels from ANY text (resume OR job posting),
+// using the shared RESUME_SKILLS dictionary. Pure-ASCII tokens use word boundaries
+// so "java" doesn't fire on "javascript" and "go"/"ts" don't fire mid-word.
+// Tokens with spaces or symbols (c++, node.js, 1с, Cyrillic) fall back to substring.
+// This is the single source of truth for both resume parsing and job normalization,
+// which guarantees student skills and job skills come from the same vocabulary —
+// the precondition for the two are actually comparable.
+function extractSkillsFromText(text) {
   var low = (text || '').toLowerCase();
-  var lines = (text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
-
-  // Match a keyword against the text. Pure-ASCII tokens use word boundaries so
-  // "java" doesn't fire on "javascript" and "go"/"ts" don't fire mid-word.
-  // Tokens with spaces or symbols (c++, node.js, 1с, Cyrillic) fall back to substring.
   var kwMatch = function (kw) {
     if (/^[a-z0-9]+$/.test(kw)) return new RegExp('\\b' + kw + '\\b').test(low);
     return low.indexOf(kw) !== -1;
   };
-  var skills = RESUME_SKILLS
+  return RESUME_SKILLS
     .filter(function (entry) { return entry[1].some(kwMatch); })
     .map(function (entry) { return entry[0]; });
+}
+
+// Infer seniority from a job's title/description so students can be matched to
+// entry-level roles. Trilingual (EN/RU/KZ).
+function detectSeniority(job) {
+  var t = ((job.title || '') + ' ' + (job.description || '')).toLowerCase();
+  if (/junior|стажёр|стажер|intern|trainee|без\s*опыта|начинающ|студент|младш|тәжірибес/.test(t)) return 'junior';
+  if (/\bsenior\b|ведущ|\blead\b|старш|тимлид|team\s*lead|аға/.test(t)) return 'senior';
+  if (/\bmiddle\b|\bmid\b|средн/.test(t)) return 'mid';
+  return null;
+}
+
+// Turn resume text into structured fields using keyword + regex matching.
+function parseResumeText(text) {
+  var lines = (text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+
+  var skills = extractSkillsFromText(text);
 
   var emailMatch = text.match(/[\w.+-]+@[\w-]+\.[\w.-]+/);
   var phoneMatch = text.match(/[\+]?[0-9][\d\s\-\(\)]{8,14}/);
@@ -2579,61 +2599,84 @@ function calcMatch(job) {
     return 55 + (Math.abs(h) % 40);
   }
 
+  // Two-way weighted matcher. We compare the STUDENT side (skills, city, major,
+  // interests) against the JOB side (skills, category, seniority, location, text).
+  // Both sides' skills come from the same RESUME_SKILLS vocabulary, so overlap is
+  // real rather than coincidental string collisions.
+  //   skills      0–50  (exact extracted-skill overlap weighted highest)
+  //   field/major 0–25  (major↔category, interest↔category/keywords)
+  //   city        0–15
+  //   eligibility 0–10  (entry-level / student-friendly signals)
+  // Floored at 25 so every card stays visually alive; capped at 98.
   const userSkills  = (profile.skills || []).map(s => s.toLowerCase());
   const jobSkills   = (job.skills || []).map(s => s.toLowerCase());
-  const jobTitleLow = (job.title + ' ' + job.company).toLowerCase();
+  const jobCat      = (typeof job.category === 'string' && job.category)
+                        ? job.category
+                        : ((typeof detectIndustry === 'function') ? detectIndustry(job) : null);
+  const jobText     = (job.title + ' ' + job.company + ' ' + (job.description || '') + ' ' +
+                       (Array.isArray(job.tags) ? job.tags.join(' ') : '')).toLowerCase();
 
   // ── 1. Skill match: 0–50 pts ─────────────────────────────────────────────
+  // Direct overlap with the job's extracted skills is the strongest signal.
+  // A skill that only appears loose in the job text (not extracted) counts less.
   let skillScore = 0;
-  if (userSkills.length > 0 && jobSkills.length > 0) {
-    let hits = 0;
-    for (const js of jobSkills) {
-      if (userSkills.some(us => us.includes(js) || js.includes(us))) hits++;
+  if (userSkills.length > 0) {
+    let directHits = 0, textHits = 0;
+    for (const us of userSkills) {
+      const direct = jobSkills.some(js => js === us || js.includes(us) || us.includes(js));
+      if (direct) { directHits++; }
+      else if (us.length >= 3 && jobText.indexOf(us) !== -1) { textHits++; }
     }
-    skillScore = Math.round((hits / jobSkills.length) * 50);
-  } else if (userSkills.length === 0) {
-    skillScore = 20; // neutral base — user hasn't listed skills yet
+    // 16 pts per exact skill match, 6 per loose text match, saturating at 50.
+    skillScore = Math.min(50, directHits * 16 + textHits * 6);
+  } else {
+    skillScore = 18; // neutral base — user hasn't listed skills yet
   }
 
-  // ── 2. City match: +12 pts ───────────────────────────────────────────────
-  const cityScore = (profile.city && job.city && profile.city === job.city) ? 12 : 0;
-
-  // ── 3. Interest match: +10 pts ───────────────────────────────────────────
-  let interestScore = 0;
-  if (profile.interests && profile.interests.length > 0) {
-    var ikMap2 = getInterestKeywords();
-    for (const interest of profile.interests) {
-      const kws = ikMap2[interest] || [];
-      if (kws.some(kw => jobTitleLow.includes(kw))) {
-        interestScore = 10;
-        break;
-      }
-    }
-  }
-
-  // ── 4. Major/specialty match: +8 pts ─────────────────────────────────────
-  let majorScore = 0;
+  // ── 2. Field / major / interest match: 0–25 pts ──────────────────────────
+  let fieldScore = 0;
+  // 2a. Major ↔ job category / related skills (+12)
   if (profile.major) {
     const majorLow = profile.major.toLowerCase();
     for (const [majorKw, relatedSkills] of Object.entries(MAJOR_SKILL_MAP)) {
       if (majorLow.includes(majorKw)) {
-        // Does job require any skill related to this major?
-        if (relatedSkills.some(rs => jobSkills.includes(rs) || jobTitleLow.includes(rs))) {
-          majorScore = 8;
+        if (relatedSkills.some(rs => jobSkills.includes(rs) || jobText.indexOf(rs) !== -1)) {
+          fieldScore += 12;
           break;
         }
       }
     }
   }
+  // 2b. Interest ↔ job category / keywords (+13)
+  if (profile.interests && profile.interests.length > 0) {
+    var ikMap2 = getInterestKeywords();
+    for (const interest of profile.interests) {
+      const kws = ikMap2[interest] || [];
+      if (kws.some(kw => jobText.indexOf(kw) !== -1)) { fieldScore += 13; break; }
+    }
+  }
+  fieldScore = Math.min(25, fieldScore);
 
-  // ── 5. Small per-job jitter so scores don't all look the same: ±3 ────────
+  // ── 3. City match: 0–15 pts ──────────────────────────────────────────────
+  // Exact city is best; a remote job is a partial win for any located student.
+  let cityScore = 0;
+  if (profile.city && job.city && profile.city === job.city) cityScore = 15;
+  else if (profile.city && job.remote) cityScore = 8;
+
+  // ── 4. Eligibility: 0–10 pts ─────────────────────────────────────────────
+  // Students benefit from entry-level/flexible roles, so reward those.
+  let eligScore = 0;
+  if (job.seniority === 'junior' || (typeof isNoExp === 'function' && isNoExp(job)) ||
+      job.type === 'internship') eligScore = 10;
+  else if (job.type === 'part-time' || job.remote) eligScore = 5;
+  if (job.seniority === 'senior') eligScore = Math.max(0, eligScore - 5); // gentle penalty
+
+  // ── 5. Tiny deterministic tiebreaker so equal scores still order stably ──
   var jh = 0; var jidStr = String(job.id);
   for (var ji = 0; ji < jidStr.length; ji++) jh = ((jh << 5) - jh + jidStr.charCodeAt(ji)) | 0;
-  const jitter = (Math.abs(jh) % 7) - 3;
+  const tiebreak = (Math.abs(jh) % 5) - 2; // ±2
 
-  // ── Total ─────────────────────────────────────────────────────────────────
-  // Base 18 + skill(0-50) + city(0-12) + interest(0-10) + major(0-8) + jitter(±3) = 18–101
-  const raw = 18 + skillScore + cityScore + interestScore + majorScore + jitter;
+  const raw = skillScore + fieldScore + cityScore + eligScore + tiebreak;
   return Math.min(98, Math.max(25, raw));
 }
 
@@ -4191,6 +4234,18 @@ function mapSupabaseJob(j) {
   // Clean job title (strip emoji clusters, "Зарплата:…" tails, SEO hashtags)
   var cleanTitle = cleanJobTitle(j.title) || 'Без названия';
 
+  // ── Normalize the job side so listings carry structured, matchable fields ──
+  // Scraped jobs arrive with only free text (title + description) and source
+  // tags — no skills, category, or seniority. We infer all three from the text
+  // using the SAME vocabulary the resume parser uses, so student skills and job
+  // skills are directly comparable. This is what makes calcMatch meaningful.
+  var _matchText = cleanTitle + ' ' + (j.description || '') + ' ' +
+                   (Array.isArray(j.tags) ? j.tags.join(' ') : '');
+  var jobSkills  = extractSkillsFromText(_matchText);
+  var jobObjForMeta = { title: cleanTitle, description: j.description || '', tags: Array.isArray(j.tags) ? j.tags : [] };
+  var jobCategory  = (typeof detectIndustry === 'function') ? detectIndustry(jobObjForMeta) : null;
+  var jobSeniority = (typeof detectSeniority === 'function') ? detectSeniority(jobObjForMeta) : null;
+
   return {
     id:          j.id,
     title:       cleanTitle,
@@ -4200,7 +4255,9 @@ function mapSupabaseJob(j) {
     remote:      isRemote,
     salary:      salary,
     salary_min:  _sal.min,
-    skills:      [],
+    skills:      jobSkills,
+    category:    jobCategory,
+    seniority:   jobSeniority,
     description: j.description || '',
     tags:        Array.isArray(j.tags) ? j.tags : [],
     url:         (j.source_url  || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent((j.title || '') + ' ' + (j.company || ''))).replace('hh.ru', 'hh.kz'),
