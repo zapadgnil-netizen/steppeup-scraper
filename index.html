@@ -2724,6 +2724,11 @@ function sourceBadge(source, job) {
 }
 
 function sortPartnersFirst(jobs){return jobs.slice().sort(function(a,b){var ap=(a&&a.source==='partner')?1:0;var bp=(b&&b.source==='partner')?1:0;if(ap!==bp)return bp-ap;var as=(typeof a._score==='number')?a._score:0;var bs=(typeof b._score==='number')?b._score:0;return bs-as;});}
+// Default browse order: partners first, then newest. We deliberately do NOT sort
+// by match score here — otherwise the "Best match" button would be a no-op (the
+// list would already be score-sorted) and look broken. Keeping the default by
+// recency makes toggling the button visibly re-rank by the student's profile.
+function sortPartnersThenRecency(jobs){return jobs.slice().sort(function(a,b){var ap=(a&&a.source==='partner')?1:0;var bp=(b&&b.source==='partner')?1:0;if(ap!==bp)return bp-ap;var at=a&&a.posted_at?Date.parse(a.posted_at):0;var bt=b&&b.posted_at?Date.parse(b.posted_at):0;if(isNaN(at))at=0;if(isNaN(bt))bt=0;return bt-at;});}
 
 // ── Job Card HTML ────────────────────────────────────────────────────────────────
 function buildJobCard(job, score) {
@@ -3047,7 +3052,7 @@ function filterBrowse() {
   if (browseSortByMatch) {
     jobs = scored.sort(function(a, b){ return b._score - a._score; });
   } else {
-    jobs = sortPartnersFirst(scored);
+    jobs = sortPartnersThenRecency(scored);
   }
   var browseEl = document.getElementById('browse-grid');
   if (!jobs.length) {
