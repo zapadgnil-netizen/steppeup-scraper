@@ -4208,6 +4208,44 @@ function cleanEmployer(raw, source) {
 }
 
 // Map a raw Supabase row → the shape the app expects
+// ── Student-suitability gate ────────────────────────────────────────────────
+// SteppeUp is an ENTRY-LEVEL board for students. Scraped sources (especially
+// Telegram digests) leak jobs that require experience, exclude students outright,
+// impose age/gender limits, or cram several vacancies into one post. This gate
+// rejects all of those so they never reach the UI. The SAME logic lives in the
+// scraper (scrape-jobs.js) so bad jobs are blocked at ingestion too — this client
+// copy is the safety net for sources that bypass the scraper (e.g. Telegram).
+// Returns { ok, reason }. Trilingual-aware (RU dominates the scraped data).
+function isStudentSuitable(title, description, tags) {
+  var titleLow = (title || '').toLowerCase();
+  var t = (titleLow + ' ' + (description || '') + ' ' + (Array.isArray(tags) ? tags.join(' ') : '')).toLowerCase();
+
+  // 1. Explicitly excludes students ("студентов просьба не беспокоить")
+  if (/студент\w*[^.]{0,25}(не\s*беспоко|не\s*обраща|не\s*подход|не\s*рассматр)|без\s*студент|не\s*для\s*студент/.test(t))
+    return { ok: false, reason: 'excludes-students' };
+
+  // 2. Senior / management role by title
+  if (/\b(senior|сень[ое]р|синьор|middle|мидл|lead\b|тимлид|руководител|начальник|директор|главный|глава|head\s*of|заведующ|управляющ)/.test(titleLow))
+    return { ok: false, reason: 'senior-title' };
+
+  // 3. Requires prior experience (unless it also welcomes no-experience)
+  var requiresExp = /опыт\s*работы|с\s*опытом|опыт\s*от|обязателен\s*опыт|требуется\s*опыт|опыт\s*не\s*менее|стаж\s*(работы|от)|experience\s*(required|of)|years?\s*of\s*experience|опыт\s*в\s*(сфере|продаж|данной)/.test(t);
+  var welcomesNoExp = /без\s*опыта|опыт\s*не\s*требуется|опыта\s*не\s*требуется|можно\s*без\s*опыта|no\s*experience|обучение\s*с\s*нуля|обучаем/.test(t);
+  if (requiresExp && !welcomesNoExp)
+    return { ok: false, reason: 'requires-experience' };
+
+  // 4. Age / gender restriction (discriminatory; usually not student roles)
+  if (/(женщин\w*|мужчин\w*|девушк\w*|парн\w*|парень|жен\.|муж\.)\s*(от|до)?\s*\d{2}/.test(t))
+    return { ok: false, reason: 'age-gender-restricted' };
+
+  // 5. Multi-job digest (several vacancies mashed into one post)
+  var c = function (re) { return (t.match(re) || []).length; };
+  if (c(/зарплата/g) >= 2 || c(/обязанности/g) >= 2 || c(/требовани[ея]/g) >= 3)
+    return { ok: false, reason: 'multi-job-digest' };
+
+  return { ok: true, reason: '' };
+}
+
 function mapSupabaseJob(j) {
   const tags     = Array.isArray(j.tags) ? j.tags.map(function(t){ return t.toLowerCase(); }) : [];
   const isIntern = tags.some(function(t){ return t.includes('стажировк') || t.includes('intern') || t.includes('trainee'); });
@@ -4307,8 +4345,13 @@ async function loadJobs() {
     if (res.ok) {
       var data = await res.json();
       if (data && data.length > 0) {
-        ALL_JOBS = data.map(mapSupabaseJob);
-        console.log('[SteppeUp] Loaded ' + ALL_JOBS.length + ' live jobs from Supabase');
+        var mapped = data.map(mapSupabaseJob);
+        var beforeCount = mapped.length;
+        // Drop jobs that aren't entry-level / student-appropriate (experience
+        // required, student-excluded, age/gender limits, multi-job digests).
+        ALL_JOBS = mapped.filter(function (j) { return isStudentSuitable(j.title, j.description, j.tags).ok; });
+        console.log('[SteppeUp] Loaded ' + ALL_JOBS.length + ' student-suitable jobs (' +
+                    (beforeCount - ALL_JOBS.length) + ' filtered out of ' + beforeCount + ')');
         return;
       }
     }
