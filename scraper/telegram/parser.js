@@ -177,6 +177,13 @@ function parsePost(rawPost) {
 
   const { apply_url, source_type } = pickApplyUrl(links, postUrl);
   const salary = detectSalary(text);
+  const jobType = detectType(text);
+  // Fold the detected type into tags so the frontend's tag-based type detection
+  // (mapSupabaseJob) picks it up — the jobs table has no dedicated `type` column.
+  const typeTag = jobType === 'internship' ? 'стажировка'
+    : jobType === 'part-time' ? 'part-time'
+    : jobType === 'remote' ? 'remote' : null;
+  const tags = ['telegram_career', `ch:${channel}`].concat(typeTag ? [typeTag] : []);
 
   return {
     source: 'telegram_career',
@@ -188,12 +195,12 @@ function parsePost(rawPost) {
     title: detectTitle(text),
     company: detectCompany(text),
     location: detectCity(text),
-    type: detectType(text),
     salary_min: salary.min,
     salary_max: salary.max,
     currency: 'KZT',
     skills: detectSkills(text),
-    tags: ['telegram_career', `ch:${channel}`],
+    tags: tags,
+    type: jobType,
     description: text.slice(0, 5000),
     raw_text: text,
     posted_at: dateISO || new Date().toISOString(),

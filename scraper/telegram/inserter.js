@@ -47,12 +47,26 @@ async function dedupe(db, jobs) {
   });
 }
 
+// Only these keys are real columns on the `jobs` table. The parser emits extra
+// fields (type, skills) that are useful in-memory but would make PostgREST reject
+// the whole upsert ("column does not exist"), so we strip to the whitelist here.
+const JOB_COLUMNS = [
+  'source', 'source_id', 'source_url', 'apply_url', 'source_type', 'source_channel',
+  'title', 'company', 'company_logo', 'location', 'description', 'raw_text',
+  'salary_min', 'salary_max', 'currency', 'tags', 'status', 'posted_at',
+];
+function toRow(job) {
+  const row = {};
+  for (const k of JOB_COLUMNS) if (job[k] !== undefined) row[k] = job[k];
+  return row;
+}
+
 async function upsertJobs(db, jobs) {
   if (!db || !jobs.length) return { inserted: 0, errors: 0 };
   let inserted = 0, errors = 0;
   const batchSize = 50;
   for (let i = 0; i < jobs.length; i += batchSize) {
-    const batch = jobs.slice(i, i + batchSize);
+    const batch = jobs.slice(i, i + batchSize).map(toRow);
     const { error } = await db.from('jobs').upsert(batch, { onConflict: 'source_id', ignoreDuplicates: false });
     if (error) { console.log(`[inserter] batch error: ${error.message}`); errors += batch.length; }
     else inserted += batch.length;
