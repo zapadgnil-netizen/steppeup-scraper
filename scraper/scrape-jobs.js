@@ -82,7 +82,8 @@ function studentRejectReason(title, description, tags = []) {
     return 'excludes-students';
 
   // 2. Senior / management role by title
-  if (/\b(senior|сень[ое]р|синьор|middle|мидл|lead\b|тимлид|руководител|начальник|директор|главный|глава|head\s*of|заведующ|управляющ|ведущий|эксперт)/.test(titleText))
+  // NB: \b doesn't work before Cyrillic in JS regex, so Cyrillic terms are plain substrings.
+  if (/\b(senior|middle|lead|head)\b|сень[оё]р|синьор|мидл|тимлид|руководител|начальник|директор|главн(ый|ого|ая)|заведующ|управляющ|ведущий\s+специалист|эксперт/.test(titleText))
     return 'senior-title';
 
   // 3. Requires prior experience (unless it also welcomes no-experience)
