@@ -2719,6 +2719,11 @@ function sourceBadge(source, job) {
     var pName = (job && job.partner_name) ? job.partner_name : 'партнёра';
     return '<span class="jc-source src-partner">Эксклюзив • Рекрутинговое агентство «' + pName + '»</span>';
   }
+  // Telegram career-channel jobs show which channel they came from.
+  if (source === 'telegram_career') {
+    var ch = (job && job.source_channel) ? job.source_channel : null;
+    return '<span class="jc-source src-telegram">✈ ' + (ch ? 'via @' + ch : 'Telegram') + '</span>';
+  }
   var info = map[source] || { cls: 'src-hh', label: source || '—' };
   return '<span class="jc-source ' + info.cls + '">' + info.label + '</span>';
 }
@@ -4225,7 +4230,8 @@ function isStudentSuitable(title, description, tags) {
     return { ok: false, reason: 'excludes-students' };
 
   // 2. Senior / management role by title
-  if (/\b(senior|сень[ое]р|синьор|middle|мидл|lead\b|тимлид|руководител|начальник|директор|главный|глава|head\s*of|заведующ|управляющ)/.test(titleLow))
+  // NB: \b doesn't work before Cyrillic in JS regex, so Cyrillic terms are plain substrings.
+  if (/\b(senior|middle|lead|head)\b|сень[оё]р|синьор|мидл|тимлид|руководител|начальник|директор|главн(ый|ого|ая)|заведующ|управляющ|ведущий\s+специалист|эксперт/.test(titleLow))
     return { ok: false, reason: 'senior-title' };
 
   // 3. Requires prior experience (unless it also welcomes no-experience)
@@ -4303,7 +4309,12 @@ function mapSupabaseJob(j) {
     seniority:   jobSeniority,
     description: j.description || '',
     tags:        Array.isArray(j.tags) ? j.tags : [],
-    url:         (j.source_url  || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent((j.title || '') + ' ' + (j.company || ''))).replace('hh.ru', 'hh.kz'),
+    // Prefer the external application link (apply_url) when the scraper found one;
+    // fall back to the source/post URL, then an hh.kz search.
+    url:         (j.apply_url || j.source_url || 'https://hh.kz/search/vacancy?text=' + encodeURIComponent((j.title || '') + ' ' + (j.company || ''))).replace('hh.ru', 'hh.kz'),
+    apply_url:    j.apply_url || null,
+    source_type:  j.source_type || null,
+    source_channel: j.source_channel || null,
     logo:        logo,
     stripe:      stripe,
     source:       j.source       || 'unknown',
