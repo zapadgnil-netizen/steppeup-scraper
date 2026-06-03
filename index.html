@@ -548,6 +548,12 @@ html.dark .jc:hover{box-shadow:0 18px 50px rgba(0,0,0,.5),0 0 0 1px rgba(201,168
 .jc-stripe.sage::before{background:linear-gradient(135deg, rgba(124,228,142,.35) 0%, transparent 70%)}
 .jc-stripe.rust{background:linear-gradient(120deg,#2a1f1a 0%,#3d2a21 45%,#5a3a28 100%) !important}
 .jc-stripe.rust::before{background:linear-gradient(135deg, rgba(232,132,86,.35) 0%, transparent 70%)}
+/* Partner / exclusive listings keep a premium deep-gold stripe regardless of industry */
+.jc-stripe.partner{background:linear-gradient(120deg,#3a2c12 0%,#5a4418 45%,#7a5e1f 100%) !important}
+.jc-stripe.partner::before{background:linear-gradient(135deg, rgba(212,175,55,.6) 0%, transparent 65%);opacity:.9}
+.detail-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:64px 20px;color:var(--ink-50);font:500 14px 'DM Sans',sans-serif}
+.detail-spinner{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--ink-20);border-top-color:var(--gold);animation:detail-spin .7s linear infinite}
+@keyframes detail-spin{to{transform:rotate(360deg)}}
 
 /* Elevated logo */
 .jc-logo{box-shadow:0 2px 8px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.15);border:1.5px solid rgba(255,255,255,.2)}
@@ -987,6 +993,8 @@ html.dark body::before{
 .jc-stripe.sage::before{background:linear-gradient(135deg, rgba(143,224,122,.35) 0%, transparent 70%) !important}
 .jc-stripe.rust{background:linear-gradient(120deg,#2A1A17 0%,#452321 50%,#633128 100%) !important}
 .jc-stripe.rust::before{background:linear-gradient(135deg, rgba(242,95,76,.35) 0%, transparent 70%) !important}
+html.dark .jc-stripe.partner{background:linear-gradient(120deg,#33270F 0%,#574212 50%,#7E631C 100%) !important}
+html.dark .jc-stripe.partner::before{background:linear-gradient(135deg, rgba(212,175,55,.55) 0%, transparent 65%) !important}
 
 /* ---------- 10. BUTTONS — new palette ---------- */
 .btn-hero,.ob-btn-next{
@@ -2694,6 +2702,9 @@ function ringColor(score) {
 // upstream — visually random and confusing to users (felt like
 // "featured vs not" with no legend).
 function stripeClass(job) {
+  // Partner / exclusive listings always keep their premium gold stripe — industry
+  // colors must never override the paid-placement look.
+  if (job && job.source === 'partner') return 'partner';
   var ind = (typeof detectIndustry === 'function') ? detectIndustry(job) : null;
   if (ind === 'finance' || ind === 'hr') return 'sage';
   if (ind === 'marketing' || ind === 'sales') return 'rust';
@@ -3442,8 +3453,30 @@ function openAlertMatches(key) {
 }
 
 // ── Job Detail ──────────────────────────────────────────────────────────────
-function renderJobDetail(jobId) {
-  const job = ALL_JOBS.find(function(j) { return j.id == jobId; });
+async function renderJobDetail(jobId) {
+  let job = ALL_JOBS.find(function(j) { return j.id == jobId; });
+
+  // Deep-link fallback: a shared link (e.g. #/job/4824) may point to a job that
+  // isn't in the local cache — it can be older than the top-500 feed, or removed
+  // by the student-suitability filter. Fetch it directly from Supabase by id so
+  // direct links never dead-end on "not found".
+  if (!job) {
+    var _wrap0 = document.getElementById('detail-wrap');
+    if (_wrap0) _wrap0.innerHTML =
+      '<div class="detail-loading"><span class="detail-spinner" aria-hidden="true"></span>' +
+      '<span>' + t('loading_job') + '</span></div>';
+    try {
+      var res = await fetch(
+        SB_URL + '/rest/v1/jobs?select=*&id=eq.' + encodeURIComponent(jobId) + '&limit=1',
+        { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
+      );
+      if (res.ok) {
+        var data = await res.json();
+        if (data && data.length) job = mapSupabaseJob(data[0]);
+      }
+    } catch (e) { console.warn('[SteppeUp] deep-link job fetch failed:', e && e.message); }
+  }
+
   if (!job) {
     document.getElementById('detail-wrap').innerHTML = '<p style="padding:40px;text-align:center;color:var(--ink-50)">' + t('not_found') + '</p>';
     return;
@@ -4667,7 +4700,7 @@ var T = {
     desc_extra:'Это отличная возможность для студента получить реальный опыт работы в динамичной команде.',
     skills_match:'Соответствие навыков', per_month_long:'/\u00a0месяц', match_label:'Совпадение:',
     apply:'Откликнуться →', fallback_link:'Не открывается? Найти на hh.kz →',
-    not_found:'Вакансия не найдена',
+    not_found:'Вакансия не найдена', loading_job:'Загрузка вакансии…',
     // profile
     prof_name:'Студент', lbl_name:'Имя', ph_name:'Ваше имя',
     lbl_email:'Email', lbl_city:'Город', ph_city:'Выберите город',
@@ -4804,7 +4837,7 @@ var T = {
     desc_extra:'Бұл студент үшін серпінді команданда нақты тәжірибе алуға тамаша мүмкіндік.',
     skills_match:'Дағдылар сәйкестігі', per_month_long:'/\u00a0ай', match_label:'Сәйкестік:',
     apply:'Жауап беру →', fallback_link:'Ашылмады ма? hh.kz-де табу →',
-    not_found:'Жұмыс табылмады',
+    not_found:'Жұмыс табылмады', loading_job:'Вакансия жүктелуде…',
     prof_name:'Студент', lbl_name:'Аты', ph_name:'Сіздің атыңыз',
     lbl_email:'Email', lbl_city:'Қала', ph_city:'Қаланы таңдаңыз',
     city_other:'Басқа', lbl_uni:'ЖОО', ph_uni:'КазҰУ, AITU...',
@@ -4931,7 +4964,7 @@ var T = {
     desc_extra:'A great opportunity for a student to gain real experience in a dynamic team.',
     skills_match:'Skills Match', per_month_long:'/\u00a0month', match_label:'Match:',
     apply:'Apply →', fallback_link:'Not working? Find on hh.kz →',
-    not_found:'Job not found',
+    not_found:'Job not found', loading_job:'Loading job…',
     prof_name:'Student', lbl_name:'Name', ph_name:'Your name',
     lbl_email:'Email', lbl_city:'City', ph_city:'Select city',
     city_other:'Other', lbl_uni:'University', ph_uni:'Nazarbayev U, AITU...',
