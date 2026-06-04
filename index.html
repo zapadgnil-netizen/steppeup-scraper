@@ -3467,7 +3467,7 @@ async function renderJobDetail(jobId) {
       '<span>' + t('loading_job') + '</span></div>';
     try {
       var res = await fetch(
-        SB_URL + '/rest/v1/jobs?select=*&id=eq.' + encodeURIComponent(jobId) + '&limit=1',
+        SB_URL + '/rest/v1/jobs?select=*&id=eq.' + encodeURIComponent(jobId) + '&status=eq.active&limit=1',
         { headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY } }
       );
       if (res.ok) {
