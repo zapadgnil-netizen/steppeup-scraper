@@ -1,16 +1,19 @@
-name: SteppeUp Daily Job Scraper v2
+name: SteppeUp Daily Job Scraper
+
+# Scrapes fresh student jobs (hh.kz via HTML+JSON, enbek, etc.) into Supabase.
+# Must live at the repo root (.github/workflows/) — GitHub Actions ignores
+# workflows under subdirectories, which is why the old scraper/.github copy
+# never ran. Pairs with cleanup-jobs.yml (removes stale) for a self-maintaining board.
 
 on:
   schedule:
-    # Runs every day at 00:00 UTC = 06:00 Almaty time
-    - cron: '0 0 * * *'
-  workflow_dispatch: # Manual trigger
+    - cron: '0 1 * * *'    # daily at 01:00 UTC (~06:00 Almaty), before the 02:30 cleanup
+  workflow_dispatch: {}      # manual trigger from the Actions tab
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    timeout-minutes: 20
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
@@ -21,14 +24,14 @@ jobs:
           node-version: '22'
 
       - name: Install dependencies
-        working-directory: ./scraper
-        run: npm install
+        run: cd scraper && npm install
 
       - name: Run scraper
-        working-directory: ./scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          JSEARCH_API_KEY: ${{ secrets.JSEARCH_API_KEY }}
-        run: npm run scrape
+        run: cd scraper && node scrape-jobs.js
+
+      - name: Log result
+        if: always()
+        run: echo "Scraper finished at $(date -u)"
