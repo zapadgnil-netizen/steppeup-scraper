@@ -137,6 +137,22 @@ const log = (src, msg) => console.log(`[${src}] ${msg}`);
 // ── Source 1: HeadHunter (hh.kz) ─────────────────────────────
 // Public API: https://api.hh.ru/vacancies — works for .kz too
 // Area 40 = Kazakhstan
+// NOTE: api.hh.ru is IP-blocked (403) from datacenter/CI ranges. The public
+// HTML search page (hh.kz/search/vacancy) is NOT blocked and embeds the full
+// result set as JSON in a <template id="HH-Lux-InitialState">. We parse that —
+// far more robust than DOM scraping, and it survives the API block.
+const HH_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+const HH_EXP_LABEL = {
+  noExperience: 'Без опыта', between1And3: 'Опыт 1–3 года',
+  between3And6: 'Опыт 3–6 лет', moreThan6: 'Опыт более 6 лет',
+};
+
+function extractHhState(html) {
+  const m = html.match(/<template[^>]*id="HH-Lux-InitialState"[^>]*>([\s\S]*?)<\/template>/);
+  if (!m) return null;
+  try { return JSON.parse(m[1]); } catch (e) { return null; }
+}
+
 async function scrapeHH() {
   const jobs = [];
   const queries = [
@@ -146,64 +162,57 @@ async function scrapeHH() {
 
   for (const query of queries) {
     try {
-      const url = `https://api.hh.ru/vacancies?area=40&text=${encodeURIComponent(query)}&per_page=50&order_by=publication_time&period=3`;
+      const url = `https://hh.kz/search/vacancy?text=${encodeURIComponent(query)}` +
+        `&area=40&items_on_page=50&order_by=publication_time`;
       const res = await fetch(url, {
-        headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
+        headers: { 'User-Agent': HH_UA, 'Accept': 'text/html', 'Accept-Language': 'ru-RU,ru;q=0.9' },
       });
+      if (!res.ok) { log('hh.kz', `Query "${query}" failed: ${res.status}`); await sleep(800); continue; }
 
-      if (!res.ok) {
-        log('hh.kz', `Query "${query}" failed: ${res.status}`);
-        continue;
-      }
+      const state = extractHhState(await res.text());
+      const vacs = (state && state.vacancySearchResult && state.vacancySearchResult.vacancies) || [];
 
-      const data = await res.json();
-      for (const v of (data.items || [])) {
-        // Fetch full vacancy for description
-        let description = v.snippet?.responsibility || v.snippet?.requirement || '';
-        try {
-          const detailRes = await fetch(`https://api.hh.ru/vacancies/${v.id}`, {
-            headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
-          });
-          if (detailRes.ok) {
-            const detail = await detailRes.json();
-            description = cleanHtml(detail.description) || description;
-          }
-        } catch (e) { /* use snippet */ }
+      for (const v of vacs) {
+        // Structured entry-level gate: keep only no-experience roles or internships.
+        const isEntry = v.workExperience === 'noExperience' || v.internship === true;
+        if (!isEntry) continue;
 
-        const salary = extractSalary(v.salary);
+        const empType = v.employment && v.employment['@type'];     // FULL | PART
+        const sched = v['@workSchedule'];                          // remote | fullDay | ...
         const tags = [
-          v.schedule?.name,
-          v.experience?.name,
-          v.employment?.name,
-          ...(v.professional_roles || []).map(r => r.name)
+          HH_EXP_LABEL[v.workExperience] || '',
+          v.internship ? 'Стажировка' : '',
+          empType === 'PART' ? 'Неполный день' : '',
+          sched === 'remote' ? 'Удалённо' : '',
         ].filter(Boolean);
 
-        if (!isStudentFriendly(v.name, description, tags)) {
-          continue; // Skip if it's actually a senior/middle role disguised in search results
-        }
+        // No description in the search payload — build a compact one from facts so
+        // the frontend's skill extraction and student filter have something to read.
+        const description = `${v.name}. ${tags.join('. ')}.`;
+        const comp = v.compensation || {};
+        const url2 = ((v.links && v.links.desktop) || `https://hh.kz/vacancy/${v.vacancyId}`)
+          .replace(/\b[a-z-]+\.hh\.kz/, 'hh.kz').replace('hh.ru', 'hh.kz');
 
         jobs.push({
           source: 'hh_kz',
-          source_id: `hh_${v.id}`,
-          source_url: (v.alternate_url || `https://hh.kz/vacancy/${v.id}`).replace('hh.ru', 'hh.kz'),
+          source_id: `hh_${v.vacancyId}`,
+          source_url: url2,
           title: v.name,
-          company: v.employer?.name || 'Unknown',
-          company_logo: v.employer?.logo_urls?.['90'] || null,
-          location: v.area?.name || 'Kazakhstan',
+          company: (v.company && (v.company.visibleName || v.company.name)) || 'Компания',
+          company_logo: null,
+          location: (v.area && (v.area.name || v.area)) || 'Kazakhstan',
           description: description,
-          salary_min: salary.min,
-          salary_max: salary.max,
-          currency: salary.currency,
+          salary_min: comp.from || null,
+          salary_max: comp.to || null,
+          currency: comp.currencyCode || 'KZT',
           tags: tags,
           status: 'active',
-          posted_at: v.published_at || new Date().toISOString()
+          posted_at: (v.publicationTime && v.publicationTime['$']) || new Date().toISOString(),
         });
-
-        await sleep(200); // be nice to the API
       }
 
-      log('hh.kz', `Query "${query}": found ${data.items?.length || 0} vacancies`);
-      await sleep(500);
+      log('hh.kz', `Query "${query}": ${vacs.length} parsed, ${jobs.length} entry-level so far`);
+      await sleep(800); // be gentle with the HTML site
     } catch (e) {
       log('hh.kz', `Error on "${query}": ${e.message}`);
     }
