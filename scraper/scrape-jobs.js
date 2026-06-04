@@ -622,13 +622,15 @@ async function main() {
   console.log(`  Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
   console.log('═══════════════════════════════════════════\n');
 
-  // Remove seed/placeholder jobs (IDs 1-20) that have fake search URLs instead of real vacancy links
+  // Remove seed/placeholder jobs (IDs 1-20) that have fake search URLs instead of real vacancy links.
+  // Exempt 'partner' — paid/exclusive listings can live in the low-id range and must NOT be swept.
   if (db) {
     try {
       const { data, error } = await db
         .from('jobs')
         .update({ status: 'inactive' })
         .lte('id', 20)
+        .neq('source', 'partner')
         .eq('status', 'active');
       if (error) log('cleanup', `Seed cleanup error: ${error.message}`);
       else log('cleanup', `Deactivated seed jobs (IDs 1-20)`);
