@@ -1,0 +1,36 @@
+name: SteppeUp Stale Job Cleanup
+
+# Deactivates dead listings (older than 14 days, or archived/closed on hh.kz) so
+# the board only shows live jobs. Runs daily. Must live at the repo root
+# (.github/workflows/) — GitHub Actions ignores workflows under subdirectories.
+
+on:
+  schedule:
+    - cron: '30 2 * * *'   # daily at 02:30 UTC (~07:30 Almaty)
+  workflow_dispatch: {}      # manual trigger from the Actions tab
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: cd scraper && npm install
+
+      - name: Run cleanup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: cd scraper && node cleanup-jobs.js
+
+      - name: Log result
+        if: always()
+        run: echo "Cleanup finished at $(date -u)"
