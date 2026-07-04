@@ -170,6 +170,12 @@ async function scrapeHH() {
       if (!res.ok) { log('hh.kz', `Query "${query}" failed: ${res.status}`); await sleep(800); continue; }
 
       const state = extractHhState(await res.text());
+      if (!state) {
+        // Make this failure mode unmissable in logs: the page came back 200
+        // but without the embedded JSON — hh changed the page shape, served a
+        // captcha/anti-bot page, or is soft-blocking this IP.
+        log('hh.kz', `Query "${query}": HH-Lux-InitialState template NOT FOUND in HTML (page shape changed or soft-block). 0 jobs parsed.`);
+      }
       const vacs = (state && state.vacancySearchResult && state.vacancySearchResult.vacancies) || [];
 
       for (const v of vacs) {
@@ -443,175 +449,145 @@ async function scrapeKolesa() {
 }
 
 // ── Source 5: Youth Employment (zhastar / youth portals) ──────
+// NOTE: rewritten off api.hh.ru (403-blocked from CI) onto the hh.kz HTML
+// search — the same HH-Lux-InitialState technique scrapeHH uses.
 async function scrapeYouthPortal() {
   const jobs = [];
+  const queries = ['молодой специалист', 'первое рабочее место'];
 
-  try {
-    // Try the Zhasproject / youth employment portals
-    const urls = [
-      'https://www.zhastar.zhastar.kz',
-      'https://jasproject.kz'
-    ];
+  for (const query of queries) {
+    try {
+      const url = `https://hh.kz/search/vacancy?text=${encodeURIComponent(query)}` +
+        `&area=40&items_on_page=30&order_by=publication_time`;
+      const res = await fetch(url, {
+        headers: { 'User-Agent': HH_UA, 'Accept': 'text/html', 'Accept-Language': 'ru-RU,ru;q=0.9' },
+      });
+      if (!res.ok) { log('youth', `Query "${query}" failed: ${res.status}`); await sleep(800); continue; }
 
-    // Fallback: search hh.kz specifically for youth/zhasproject programs
-    const url = `https://api.hh.ru/vacancies?area=40&text=${encodeURIComponent('Жас маман OR zhasproject OR молодой специалист OR первое рабочее место')}&per_page=30&order_by=publication_time&period=7`;
-    const res = await fetch(url, {
-      headers: { 'User-Agent': 'SteppeUp-Bot/1.0 (student-jobs-kz)' }
-    });
+      const state = extractHhState(await res.text());
+      const vacs = (state && state.vacancySearchResult && state.vacancySearchResult.vacancies) || [];
 
-    if (res.ok) {
-      const data = await res.json();
-      for (const v of (data.items || [])) {
-        const description = v.snippet?.responsibility || v.snippet?.requirement || '';
-        const tags = ['youth', 'zhasproject', 'government-program', v.experience?.name, v.employment?.name].filter(Boolean);
+      for (const v of vacs) {
+        const isEntry = v.workExperience === 'noExperience' || v.internship === true;
+        if (!isEntry) continue;
 
-        if (!isStudentFriendly(v.name, description, tags)) {
-          continue;
-        }
+        const tags = ['youth', 'government-program',
+          HH_EXP_LABEL[v.workExperience] || '',
+          v.internship ? 'Стажировка' : ''].filter(Boolean);
+        const description = `${v.name}. ${tags.join('. ')}.`;
+        if (!isStudentFriendly(v.name, description, tags)) continue;
 
-        const salary = extractSalary(v.salary);
+        const comp = v.compensation || {};
+        const url2 = ((v.links && v.links.desktop) || `https://hh.kz/vacancy/${v.vacancyId}`)
+          .replace(/\b[a-z-]+\.hh\.kz/, 'hh.kz').replace('hh.ru', 'hh.kz');
+
         jobs.push({
           source: 'youth_portal',
-          source_id: `youth_hh_${v.id}`,
-          source_url: (v.alternate_url || `https://hh.kz/vacancy/${v.id}`).replace('hh.ru', 'hh.kz'),
+          source_id: `youth_hh_${v.vacancyId}`,
+          source_url: url2,
           title: v.name,
-          company: v.employer?.name || 'Unknown',
-          company_logo: v.employer?.logo_urls?.['90'] || null,
-          location: v.area?.name || 'Kazakhstan',
+          company: (v.company && (v.company.visibleName || v.company.name)) || 'Компания',
+          company_logo: null,
+          location: (v.area && (v.area.name || v.area)) || 'Kazakhstan',
           description: description,
-          salary_min: salary.min,
-          salary_max: salary.max,
-          currency: salary.currency,
+          salary_min: comp.from || null,
+          salary_max: comp.to || null,
+          currency: comp.currencyCode || 'KZT',
           tags: tags,
           status: 'active',
-          posted_at: v.published_at
+          posted_at: (v.publicationTime && v.publicationTime['$']) || new Date().toISOString(),
         });
       }
+      await sleep(800);
+    } catch (e) {
+      log('youth', `Error on "${query}": ${e.message}`);
     }
-  } catch (e) {
-    log('youth', `Error: ${e.message}`);
   }
 
-  log('youth', `Total jobs: ${jobs.length}`);
-  return jobs;
+  // Deduplicate by source_id
+  const seen = new Set();
+  const unique = jobs.filter(j => {
+    if (seen.has(j.source_id)) return false;
+    seen.add(j.source_id);
+    return true;
+  });
+
+  log('youth', `Total jobs: ${unique.length}`);
+  return unique;
 }
 
 // ── Stale Job Cleanup ─────────────────────────────────────────
-// Checks if jobs are still live on their source. If source returns 404
-// or the listing is gone, mark as inactive.
+// REMOVED: cleanup is now owned exclusively by cleanup-jobs.js (its own
+// workflow, .github/workflows/cleanup-jobs.yml). The version that lived here
+// verified liveness against api.hh.ru, which 403-blocks ALL CI IPs, and
+// treated 403 as "job is dead" — silently mass-deactivating healthy listings
+// every run until the board decayed to ~12 jobs. One cleanup path, one set of
+// rules, one place to audit. Do not re-add cleanup logic here.
 async function cleanupStaleJobs() {
-  if (!db) return { checked: 0, removed: 0 };
-
-  log('cleanup', 'Checking for stale job listings...');
-
-  // Get active jobs older than 3 days
-  const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
-  const { data: activeJobs, error } = await db
-    .from('jobs')
-    .select('id, source_url, source, source_id, posted_at')
-    .eq('status', 'active')
-    .lt('posted_at', threeDaysAgo)
-    .limit(50); // check 50 at a time to stay within limits
-
-  if (error || !activeJobs) {
-    log('cleanup', `Error fetching jobs: ${error?.message}`);
-    return { checked: 0, removed: 0 };
-  }
-
-  let removed = 0;
-
-  for (const job of activeJobs) {
-    try {
-      // For hh.kz jobs, check via API
-      if (job.source === 'hh_kz' && job.source_id?.startsWith('hh_')) {
-        const hhId = job.source_id.replace('hh_', '');
-        const res = await fetch(`https://api.hh.ru/vacancies/${hhId}`, {
-          headers: { 'User-Agent': 'SteppeUp-Bot/1.0' }
-        });
-
-        if (res.status === 404 || res.status === 403) {
-          await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
-          removed++;
-          log('cleanup', `Removed hh.kz job ${hhId} (${res.status})`);
-        } else if (res.ok) {
-          const data = await res.json();
-          if (data.archived || data.type?.id === 'closed') {
-            await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
-            removed++;
-            log('cleanup', `Archived hh.kz job ${hhId}`);
-          }
-        }
-
-        await sleep(300);
-      }
-      // For other sources, check if URL still returns 200
-      else if (job.source_url) {
-        try {
-          const res = await fetch(job.source_url, {
-            method: 'HEAD',
-            headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)' },
-            redirect: 'follow',
-            timeout: 5000
-          });
-
-          if (res.status === 404 || res.status === 410) {
-            await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
-            removed++;
-            log('cleanup', `Removed ${job.source} job (${res.status}): ${job.source_url}`);
-          }
-        } catch (e) {
-          // Network error — don't remove, might be temporary
-        }
-
-        await sleep(500);
-      }
-
-      // Also remove jobs older than 30 days regardless
-      const age = Date.now() - new Date(job.posted_at).getTime();
-      if (age > 30 * 24 * 60 * 60 * 1000) {
-        await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
-        removed++;
-        log('cleanup', `Expired 30+ day old job: ${job.source_id}`);
-      }
-
-    } catch (e) {
-      // Skip this job on error
-    }
-  }
-
-  log('cleanup', `Checked ${activeJobs.length} jobs, removed ${removed}`);
-  return { checked: activeJobs.length, removed };
+  log('cleanup', 'Skipped — handled by cleanup-jobs.js (dedicated workflow).');
+  return { checked: 0, removed: 0 };
 }
 
 // ── Upsert to Supabase ───────────────────────────────────────
+// Hardened: batch failures fall back to per-row writes (one bad row can't
+// sink 49 good ones), every error logs its code+message, and we VERIFY the
+// writes landed by re-querying. Upserts silently failing while the workflow
+// stayed green is how the board sat at 12 jobs with nobody alerted.
 async function upsertJobs(jobs) {
-  if (!db || jobs.length === 0) return;
+  if (!db || jobs.length === 0) return { inserted: 0, errors: 0 };
 
-  // We need source_id as a unique key — add it to our table
-  // Upsert in batches of 50
   const batchSize = 50;
-  let inserted = 0, updated = 0, errors = 0;
+  let ok = 0, errors = 0;
 
   for (let i = 0; i < jobs.length; i += batchSize) {
     const batch = jobs.slice(i, i + batchSize);
-
-    const { data, error } = await db
+    const { error } = await db
       .from('jobs')
-      .upsert(batch, {
-        onConflict: 'source_id',
-        ignoreDuplicates: false
-      });
+      .upsert(batch, { onConflict: 'source_id', ignoreDuplicates: false });
 
-    if (error) {
-      log('db', `Batch upsert error: ${error.message}`);
-      errors += batch.length;
-    } else {
-      inserted += batch.length;
+    if (!error) { ok += batch.length; continue; }
+
+    // Batch failed — log precisely, then retry row-by-row so one bad row
+    // (or a missing unique constraint) degrades instead of zeroing the run.
+    log('db', `Batch upsert FAILED (${error.code || '?'}): ${error.message} — retrying per-row`);
+    for (const row of batch) {
+      const { error: e1 } = await db
+        .from('jobs')
+        .upsert(row, { onConflict: 'source_id', ignoreDuplicates: false });
+      if (!e1) { ok++; continue; }
+      // Last resort: update-if-exists, else insert (works without the
+      // unique constraint that onConflict requires).
+      const { data: existing } = await db.from('jobs').select('id').eq('source_id', row.source_id).limit(1);
+      if (existing && existing.length > 0) {
+        const { error: e2 } = await db.from('jobs').update(row).eq('id', existing[0].id);
+        if (!e2) { ok++; continue; }
+        log('db', `Row update failed [${row.source_id}] (${e2.code || '?'}): ${e2.message}`);
+      } else {
+        const { error: e3 } = await db.from('jobs').insert(row);
+        if (!e3) { ok++; continue; }
+        log('db', `Row insert failed [${row.source_id}] (${e3.code || '?'}): ${e3.message}`);
+      }
+      errors++;
     }
   }
 
-  log('db', `Upserted ${inserted} jobs (${errors} errors)`);
-  return { inserted, errors };
+  // Verify: spot-check that a sample of this run's rows actually exist.
+  try {
+    const sampleIds = jobs.slice(0, 10).map(j => j.source_id);
+    const { count } = await db.from('jobs')
+      .select('id', { count: 'exact', head: true })
+      .in('source_id', sampleIds);
+    log('db', `Write verification: ${count}/${sampleIds.length} sampled rows present in DB`);
+    if ((count || 0) === 0 && jobs.length > 0) {
+      log('db', 'VERIFICATION FAILED: nothing this run reached the DB. Failing loudly.');
+      process.exit(1);
+    }
+  } catch (e) {
+    log('db', `Write verification error: ${e.message}`);
+  }
+
+  log('db', `Upserted ${ok} jobs (${errors} errors)`);
+  return { inserted: ok, errors };
 }
 
 // ── Main ──────────────────────────────────────────────────────
@@ -680,6 +656,27 @@ async function main() {
   console.log(`  New/updated: ${allJobs.length}`);
   console.log(`  Stale removed: ${cleanup.removed}`);
   console.log('═══════════════════════════════════════════\n');
+
+  // ── Health gate ─────────────────────────────────────────────
+  // The active count in Supabase is exactly what the website shows — the
+  // in-memory scrape count can lie (upsert conflicts, over-aggressive cleanup,
+  // wrong status). Gate on the DB so decay fails the workflow and emails us.
+  {
+    const MIN_ACTIVE_HEALTHY = 25;
+    const { count, error } = await db.from('jobs')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'active');
+    if (error) {
+      console.error('[health] could not read active count: ' + error.message);
+      process.exit(1);
+    }
+    console.log(`[health] active jobs on the board: ${count} (scraped this run: ${allJobs.length})`);
+    if ((count || 0) < MIN_ACTIVE_HEALTHY) {
+      console.error(`[health-gate] FAIL: only ${count} active jobs (< ${MIN_ACTIVE_HEALTHY}). ` +
+        'A source is broken or cleanup is over-deleting. See per-source summary above.');
+      process.exit(1);
+    }
+  }
 
   // Log scraping run to Supabase
   try {
