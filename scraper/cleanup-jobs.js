@@ -57,6 +57,14 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // ── hh.kz liveness check (shared by Pass 2 + Pass 3) ─────────────────────────
 // Returns 'dead' | 'alive' | 'unknown'. Only definitive signals count.
+//
+// INCIDENT 2 (2026-07-05): a previous version string-matched 'vacancy-archived'
+// against the ENTIRE page HTML. That token exists in hh's JS bundles/i18n
+// dictionaries on EVERY page, so all 150 checked jobs tested "archived" and
+// were deactivated in one run. Rules now:
+//   - HTTP 404/410                      → dead (definitive)
+//   - 200 + embedded JSON says archived → dead (definitive, parsed not grepped)
+//   - anything else                     → alive/unknown, NEVER dead
 async function hhVacancyStatus(hhId) {
   try {
     const res = await fetch('https://hh.kz/vacancy/' + hhId, {
@@ -66,8 +74,18 @@ async function hhVacancyStatus(hhId) {
     if (res.status === 404 || res.status === 410) return 'dead';
     if (res.ok) {
       const html = await res.text();
-      // hh renders archived vacancies with an explicit archive banner
-      if (/вакансия\s+в\s+архиве|vacancy-archived|данная\s+вакансия\s+архивирована/i.test(html)) return 'dead';
+      // Parse the embedded state JSON (same template scrapeHH uses) and only
+      // trust a STRUCTURED archived flag — never free-text matching.
+      const m = html.match(/<template[^>]*id="HH-Lux-InitialState"[^>]*>([\s\S]*?)<\/template>/);
+      if (m) {
+        try {
+          const st = JSON.parse(m[1]);
+          const vv = st && st.vacancyView;
+          const archived = !!(vv && (vv.archived === true ||
+            (vv.status && (vv.status.archived === true || vv.status.disabled === true))));
+          if (archived) return 'dead';
+        } catch (_e) { /* unparseable state — treat as alive */ }
+      }
       return 'alive';
     }
     return 'unknown'; // 403/429/5xx — cannot verify from this IP; do NOT kill
@@ -107,20 +125,37 @@ async function verifyHhJobs() {
     .limit(HH_CHECK_LIMIT);
   if (error || !jobs) { console.log(`[hh-verify] fetch error: ${error && error.message}`); return 0; }
 
-  let removed = 0, unknown = 0;
+  // Collect verdicts FIRST, apply writes AFTER the circuit breaker.
+  const deadIds = [];
+  let unknown = 0, checked = 0;
   for (const job of jobs) {
     const hhId = (job.source_id || '').replace(/^hh_|^youth_hh_/, '');
     if (!/^\d+$/.test(hhId)) continue;
+    checked++;
     const status = await hhVacancyStatus(hhId);
-    if (status === 'dead') {
-      await db.from('jobs').update({ status: 'inactive' }).eq('id', job.id);
-      removed++;
-    } else if (status === 'unknown') {
-      unknown++;
-    }
+    if (status === 'dead') deadIds.push(job.id);
+    else if (status === 'unknown') unknown++;
     await sleep(400); // be gentle with hh.kz
   }
-  console.log(`[hh-verify] checked ${jobs.length}, deactivated ${removed} dead/archived, ${unknown} unverifiable (left active)`);
+
+  // ── MASS-KILL CIRCUIT BREAKER ─────────────────────────────────────────
+  // Real-world archival is gradual. If more than 40% of a meaningful sample
+  // tests dead, the far likelier explanation is a broken check (page shape
+  // change, soft-block, bad regex — it has happened TWICE). Refuse to write
+  // and fail the run so a human looks at it. Losing one night of cleanup is
+  // cheap; mass-deactivating a healthy board is not.
+  const deadRatio = checked > 0 ? deadIds.length / checked : 0;
+  if (checked >= 20 && deadRatio > 0.4) {
+    console.error(`[hh-verify] CIRCUIT BREAKER: ${deadIds.length}/${checked} (${Math.round(deadRatio * 100)}%) tested dead — almost certainly a broken liveness check, not real archivals. NOT deactivating anything.`);
+    process.exit(1);
+  }
+
+  let removed = 0;
+  for (const id of deadIds) {
+    await db.from('jobs').update({ status: 'inactive' }).eq('id', id);
+    removed++;
+  }
+  console.log(`[hh-verify] checked ${checked}, deactivated ${removed} dead/archived, ${unknown} unverifiable (left active)`);
   return removed;
 }
 
