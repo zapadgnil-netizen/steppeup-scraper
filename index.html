@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: 2026-07-06-hero-mobile-v8 -->
+<!-- BUILD: 2026-07-06-backnav-fix-v9 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -2818,8 +2818,9 @@ function navSearch() {
 var _suppressHistory = false;
 
 function navigate(view, jobId) {
-  // Save previous view (for in-app back button in job detail)
-  if (view !== 'job') prevView = currentView;
+  // Save the view we're leaving so the job-detail back button returns to the
+  // exact tab the user opened the job from (browse/saved/home), not a stale one.
+  if (view === 'job') { if (currentView && currentView !== 'job') prevView = currentView; }
   currentView = view;
 
   // Sync URL hash for deep linking AND so browser back/forward actually
