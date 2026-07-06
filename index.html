@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: 2026-07-06-hero-steppe-v6 -->
+<!-- BUILD: 2026-07-06-hero-theme-aware-v7 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -56,7 +56,7 @@
 .hero-sub{font-size:14px;margin-bottom:24px}
 .hero-cta{flex-direction:column;align-items:flex-start;gap:20px;width:100%}
 .btn-hero{width:100%;padding:14px 20px;font-size:14px;justify-content:center}
-.hero-float{display:none}
+.hero-float{display:flex;width:100%;min-width:0;height:200px;order:9;margin-top:6px}
 .stats{grid-template-columns:repeat(2,1fr);gap:12px;padding:24px 16px}
 .stat{gap:2px}
 .sn{font-size:24px}
@@ -209,7 +209,7 @@ footer{padding:24px 16px}
 .ob-btn-next,.btn-hero,.profile-save-btn{min-height:48px}
 .app-nav-avatar,.dark-toggle,.lang-btn{min-height:36px;min-width:36px;display:flex;align-items:center;justify-content:center}
 /* Hide hero-float completely on mobile — it's just empty space */
-.hero-float{display:none}
+.hero-float{display:flex;width:100%;min-width:0;height:200px;order:9;margin-top:6px}
 /* ── Mobile Bottom Navigation ─────────────────────────────────────────────── */
 #mob-nav{display:none;position:fixed;bottom:0;left:0;right:0;z-index:300;background:rgba(244,239,230,.97);backdrop-filter:blur(20px);border-top:1px solid var(--ink-20);padding:6px 0 calc(6px + env(safe-area-inset-bottom));display:none}
 html.dark #mob-nav{background:rgba(26,22,18,.97)}
@@ -230,7 +230,7 @@ html.dark #mob-nav{background:rgba(26,22,18,.97)}
 .hero-content h1{font-size:clamp(24px,4vw,32px)}
 .hero-cta{gap:12px}
 .btn-hero{font-size:12px;padding:10px 16px}
-.hero-float{display:none}
+.hero-float{display:flex;width:100%;min-width:0;height:200px;order:9;margin-top:6px}
 .stats{padding:16px 12px;gap:8px}
 .sn{font-size:20px}
 .how-section{padding:24px 12px}
@@ -1536,8 +1536,13 @@ html.dark .t-remote{background:rgba(255,122,102,.18) !important; color:#FFA694 !
 .hero-scene .hero-card-1{position:absolute;left:18px;bottom:22px;animation:cardfloat 6s ease-in-out infinite}
 .hero-scene .hero-pill{position:absolute;top:18px;right:16px;animation:cardfloat 6s ease-in-out 1.4s infinite}
 @keyframes cardfloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
-html.dark .hero-scene-img{filter:brightness(.82) saturate(.92)}
-html.dark .hero-scene-glow{opacity:.35}
+/* theme-aware artwork swap */
+.hero-img-dark{display:none}
+html.dark .hero-img-light{display:none}
+html.dark .hero-img-dark{display:block}
+html.dark .hero-scene{box-shadow:0 24px 64px -16px rgba(0,0,0,.6);border:1px solid rgba(147,137,255,.18)}
+html.dark .hero-scene-glow{background:radial-gradient(ellipse 44% 48% at 60% 40%,rgba(147,137,255,.4),transparent 72%)}
+@media (max-width:768px){.hero-scene{max-width:100%;border-radius:16px}.hero-scene .hero-card-1,.hero-scene .hero-pill{display:none}}
 @media (prefers-reduced-motion:reduce){.hero-scene-img,.hero-scene-glow,.hero-scene .hero-card-1,.hero-scene .hero-pill{animation:none}}
 
 .hero-demo{
@@ -2044,7 +2049,8 @@ document.addEventListener('DOMContentLoaded',function(){
       <!-- Hero right-side: floating product preview -->
       <div class="hero-float">
         <div class="hero-scene" aria-hidden="true">
-          <img class="hero-scene-img" src="/hero-steppe.png" alt="" width="1376" height="768" fetchpriority="high" decoding="async">
+          <img class="hero-scene-img hero-img-light" src="/hero-steppe.png" alt="" width="1376" height="768" fetchpriority="high" decoding="async">
+          <img class="hero-scene-img hero-img-dark" src="/hero-steppe-dark.png" alt="" width="1376" height="768" decoding="async">
           <div class="hero-scene-glow"></div>
 
           <!-- Primary product card floats over the steppe scene -->
