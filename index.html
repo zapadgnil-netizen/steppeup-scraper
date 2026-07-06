@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: 2026-07-06-hero-theme-aware-v7 -->
+<!-- BUILD: 2026-07-06-hero-mobile-v8 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -1925,9 +1925,9 @@ html.dark .trust-chip{background:rgba(244,244,247,.05); color:rgba(244,244,247,.
 html.dark .trust-chip:hover{background:rgba(147,137,255,.15); border-color:rgba(147,137,255,.3); color:#C2BBFF}
 html.dark .trust-chip-more{background:linear-gradient(135deg, rgba(147,137,255,.18) 0%, rgba(255,122,102,.14) 100%); color:#C2BBFF; border-color:rgba(147,137,255,.3)}
 
-/* Hide demo on mobile/tablet < 769px */
+/* Hero scene shows stacked on mobile/tablet < 769px */
 @media (max-width:768px){
-  .hero-float{display:none !important}
+  .hero-float{display:flex !important;width:100%;min-width:0;height:200px;order:9;margin-top:6px}
   .hero-trust{margin-top:28px}
   .hero-trust-row{gap:6px}
   .trust-chip{font-size:12px; padding:6px 11px}
