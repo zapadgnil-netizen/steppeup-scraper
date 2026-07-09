@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: 2026-07-06-revert-hero-v10 -->
+<!-- BUILD: 2026-07-07-guided-application-v11 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -1965,6 +1965,26 @@ document.addEventListener('DOMContentLoaded',function(){
       'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
   }
 </script>
+<style>
+/* ── GUIDED APPLICATION card (job detail) ─────────────────────────── */
+.guide-card{border-color:rgba(201,168,76,.45);box-shadow:0 8px 28px -8px rgba(201,168,76,.25)}
+.guide-row{margin-bottom:14px}
+.guide-row-label{font:600 13px 'DM Sans',sans-serif;margin-bottom:8px}
+.guide-row-label.ok{color:var(--sage)}
+.guide-row-label.gap{color:var(--rust)}
+.guide-chips{display:flex;flex-wrap:wrap;gap:6px}
+.guide-chip{padding:5px 12px;border-radius:100px;font:500 12px 'DM Sans',sans-serif}
+.guide-chip.have{background:var(--sage-lt);color:var(--sage);border:1px solid rgba(79,113,85,.25)}
+.guide-chip.gap{background:rgba(176,90,40,.1);color:var(--rust);border:1px dashed rgba(176,90,40,.4)}
+.guide-fix{font-size:12px;color:var(--ink-65,rgba(24,20,15,.68));margin-top:6px;font-style:italic}
+.guide-ready{font:600 14px 'DM Sans',sans-serif;color:var(--sage)}
+.guide-tip{margin-top:16px;padding:12px 14px;border-radius:14px;background:rgba(201,168,76,.08);font-size:13px;color:var(--ink-80);line-height:1.6}
+.guide-tip-title{font:600 12px 'DM Sans',sans-serif;color:var(--gold-dk);margin-bottom:4px}
+.guide-empty{font-size:13px;color:var(--ink-65,rgba(24,20,15,.68));line-height:1.6}
+.guide-cta{display:inline-block;margin-top:8px;background:var(--gold);color:var(--ink);border:0;padding:9px 18px;border-radius:100px;font:600 13px 'DM Sans',sans-serif;cursor:pointer}
+.guide-cta:hover{box-shadow:0 6px 18px rgba(201,168,76,.4)}
+html.dark .guide-tip{background:rgba(228,201,122,.08)}
+</style>
 </head>
 <body>
   <div id="landing-page">
@@ -3510,6 +3530,40 @@ async function renderJobDetail(jobId) {
     '</div>';
   }
 
+  // ── Guided application (Phase 1: no AI — pure match data) ─────────────
+  // Turns the passive listing into an action plan: what you have, what's
+  // missing (as a to-do list), and a deterministic "what HR wants" tip.
+  let guideHTML = '';
+  if (jobSkills.length > 0) {
+    var haveList = [], gapList = [];
+    jobSkills.forEach(function(skill) {
+      var got = userSkills.some(function(us) {
+        return us.indexOf(skill.toLowerCase()) !== -1 || skill.toLowerCase().indexOf(us) !== -1;
+      });
+      (got ? haveList : gapList).push(skill);
+    });
+    var tip = (job.type === 'internship') ? t('guide_tip_intern')
+            : job.remote ? t('guide_tip_remote')
+            : t('guide_tip_generic');
+    var inner = '';
+    if (!hasProfile) {
+      inner = '<div class="guide-empty">' + t('guide_no_profile') +
+        ' <button class="guide-cta" onclick="navigate(\'profile\')">' + t('guide_no_profile_btn') + '</button></div>';
+    } else {
+      if (haveList.length) inner +=
+        '<div class="guide-row"><div class="guide-row-label ok">✓ ' + t('guide_have') + '</div><div class="guide-chips">' +
+        haveList.map(function(s){ return '<span class="guide-chip have">' + s + '</span>'; }).join('') + '</div></div>';
+      if (gapList.length) inner +=
+        '<div class="guide-row"><div class="guide-row-label gap">→ ' + t('guide_gaps') + '</div><div class="guide-chips">' +
+        gapList.map(function(s){ return '<span class="guide-chip gap">' + s + '</span>'; }).join('') +
+        '</div><div class="guide-fix">' + t('guide_gap_fix') + '</div></div>';
+      else inner += '<div class="guide-row"><div class="guide-ready">🎯 ' + t('guide_ready') + '</div></div>';
+    }
+    inner += '<div class="guide-tip"><div class="guide-tip-title">💡 ' + t('guide_tip_title') + '</div>' + tip + '</div>';
+    guideHTML = '<div class="detail-body guide-card">' +
+      '<div class="detail-section-title">' + t('guide_title') + ' · ' + score + '%</div>' + inner + '</div>';
+  }
+
   // Tags for detail header
   const tagLabels = [];
   if (job.type === 'internship') tagLabels.push(t('tag_intern'));
@@ -3544,6 +3598,7 @@ async function renderJobDetail(jobId) {
       '</div>' +
     '</div>' +
 
+    guideHTML +
     skillBarsHTML +
 
     '<div class="detail-apply">' +
@@ -4701,6 +4756,12 @@ var T = {
     desc_extra:'Это отличная возможность для студента получить реальный опыт работы в динамичной команде.',
     skills_match:'Соответствие навыков', per_month_long:'/\u00a0месяц', match_label:'Совпадение:',
     apply:'Откликнуться →', fallback_link:'Не открывается? Найти на hh.kz →',
+    guide_title:'Гид по отклику', guide_have:'Уже есть у тебя', guide_gaps:'Чего не хватает', guide_gap_fix:'добавь в резюме или отметь в профиле',
+    guide_tip_title:'Что хочет HR', guide_tip_intern:'Это стажировка: опыт не ждут. Покажи учебные проекты, курсовые и мотивацию — почему именно эта сфера.',
+    guide_tip_generic:'Вынеси ключевые навыки из вакансии в первые строки резюме — HR сканирует его 6–8 секунд.',
+    guide_tip_remote:'Формат удалённый: упомяни самодисциплину и опыт онлайн-командной работы (даже учебной).',
+    guide_no_profile:'Заполни профиль и добавь навыки — гид покажет, чего не хватает именно тебе.', guide_no_profile_btn:'Заполнить профиль',
+    guide_ready:'Отличное совпадение — откликайся, пока вакансия свежая.',
     not_found:'Вакансия не найдена', loading_job:'Загрузка вакансии…',
     // profile
     prof_name:'Студент', lbl_name:'Имя', ph_name:'Ваше имя',
@@ -4838,6 +4899,12 @@ var T = {
     desc_extra:'Бұл студент үшін серпінді команданда нақты тәжірибе алуға тамаша мүмкіндік.',
     skills_match:'Дағдылар сәйкестігі', per_month_long:'/\u00a0ай', match_label:'Сәйкестік:',
     apply:'Жауап беру →', fallback_link:'Ашылмады ма? hh.kz-де табу →',
+    guide_title:'Өтінім бойынша гид', guide_have:'Сенде бар', guide_gaps:'Не жетіспейді', guide_gap_fix:'резюмеге қос немесе профильде белгіле',
+    guide_tip_title:'HR не қалайды', guide_tip_intern:'Бұл тәжірибе: жұмыс тәжірибесі талап етілмейді. Оқу жобаларың мен мотивацияңды көрсет.',
+    guide_tip_generic:'Вакансиядағы негізгі дағдыларды резюменің алғашқы жолдарына шығар — HR оны 6–8 секунд қарайды.',
+    guide_tip_remote:'Қашықтан жұмыс: өзін-өзі ұйымдастыру мен онлайн-командада жұмыс тәжірибеңді атап өт.',
+    guide_no_profile:'Профильді толтырып, дағдыларыңды қос — гид саған не жетіспейтінін көрсетеді.', guide_no_profile_btn:'Профильді толтыру',
+    guide_ready:'Тамаша сәйкестік — вакансия жаңа кезінде жауап бер.',
     not_found:'Жұмыс табылмады', loading_job:'Вакансия жүктелуде…',
     prof_name:'Студент', lbl_name:'Аты', ph_name:'Сіздің атыңыз',
     lbl_email:'Email', lbl_city:'Қала', ph_city:'Қаланы таңдаңыз',
@@ -4965,6 +5032,12 @@ var T = {
     desc_extra:'A great opportunity for a student to gain real experience in a dynamic team.',
     skills_match:'Skills Match', per_month_long:'/\u00a0month', match_label:'Match:',
     apply:'Apply →', fallback_link:'Not working? Find on hh.kz →',
+    guide_title:'Application guide', guide_have:'You already have', guide_gaps:'What is missing', guide_gap_fix:'add it to your resume or profile skills',
+    guide_tip_title:'What HR wants', guide_tip_intern:'This is an internship: no experience expected. Show coursework, study projects and motivation.',
+    guide_tip_generic:'Put the key skills from this posting in the first lines of your resume — HR scans it for 6–8 seconds.',
+    guide_tip_remote:'Remote role: mention self-discipline and any online teamwork experience (even from studies).',
+    guide_no_profile:'Fill in your profile and add skills — the guide will show what you personally are missing.', guide_no_profile_btn:'Complete profile',
+    guide_ready:'Great match — apply while the posting is fresh.',
     not_found:'Job not found', loading_job:'Loading job…',
     prof_name:'Student', lbl_name:'Name', ph_name:'Your name',
     lbl_email:'Email', lbl_city:'City', ph_city:'Select city',
