@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: 2026-07-07-guided-application-v11 -->
+<!-- BUILD: 2026-07-07-honest-matching-v12 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -3509,39 +3509,23 @@ async function renderJobDetail(jobId) {
   const userSkills = (profile && profile.skills) ? profile.skills.map(function(s) { return s.toLowerCase(); }) : [];
   const hasProfile = userSkills.length > 0;
 
-  // Build skill bars
+  // Skill bars REMOVED: they showed invented percentages (95/20/65 were
+  // hardcoded) which read as measurements and destroyed trust. The guide card
+  // below covers skills honestly — binary have/missing chips, no fake numbers.
   let skillBarsHTML = '';
-  if (jobSkills.length > 0) {
-    const bars = jobSkills.map(function(skill) {
-      const isMatch = userSkills.some(function(us) {
-        return us.indexOf(skill.toLowerCase()) !== -1 || skill.toLowerCase().indexOf(us) !== -1;
-      });
-      const pct = isMatch ? 95 : (hasProfile ? 20 : 65);
-      const cls = isMatch ? 'match' : (hasProfile ? 'miss' : 'partial');
-      return '<div class="skill-bar-row">' +
-               '<div class="skill-bar-label">' + skill + '</div>' +
-               '<div class="skill-bar-track"><div class="skill-bar-fill ' + cls + '" style="width:' + pct + '%"></div></div>' +
-               '<div class="skill-bar-pct">' + pct + '%</div>' +
-             '</div>';
-    });
-    skillBarsHTML = '<div class="detail-body">' +
-      '<div class="detail-section-title">' + t('skills_match') + '</div>' +
-      '<div class="skill-bars">' + bars.join('') + '</div>' +
-    '</div>';
-  }
+
+  // Confidence gate for extracted job skills. hh.kz search results carry a
+  // GENERATED stub description (title + tags), so keyword extraction over it is
+  // extraction over the title — one weak keyword ("педагог" → Teaching) must
+  // not be presented as "the requirement". Only show skill chips when there's
+  // real signal: at least 2 extracted skills AND a substantive description.
+  const skillsConfident = jobSkills.length >= 2 && ((job.description || '').length >= 120);
 
   // ── Guided application (Phase 1: no AI — pure match data) ─────────────
   // Turns the passive listing into an action plan: what you have, what's
   // missing (as a to-do list), and a deterministic "what HR wants" tip.
   let guideHTML = '';
-  if (jobSkills.length > 0) {
-    var haveList = [], gapList = [];
-    jobSkills.forEach(function(skill) {
-      var got = userSkills.some(function(us) {
-        return us.indexOf(skill.toLowerCase()) !== -1 || skill.toLowerCase().indexOf(us) !== -1;
-      });
-      (got ? haveList : gapList).push(skill);
-    });
+  {
     var tip = (job.type === 'internship') ? t('guide_tip_intern')
             : job.remote ? t('guide_tip_remote')
             : t('guide_tip_generic');
@@ -3549,7 +3533,18 @@ async function renderJobDetail(jobId) {
     if (!hasProfile) {
       inner = '<div class="guide-empty">' + t('guide_no_profile') +
         ' <button class="guide-cta" onclick="navigate(\'profile\')">' + t('guide_no_profile_btn') + '</button></div>';
+    } else if (!skillsConfident) {
+      // Honest state: the posting doesn't declare skills we can trust.
+      // No chips, no invented requirements, no fake numbers.
+      inner = '<div class="guide-empty">' + t('guide_no_skills') + '</div>';
     } else {
+      var haveList = [], gapList = [];
+      jobSkills.forEach(function(skill) {
+        var got = userSkills.some(function(us) {
+          return us.indexOf(skill.toLowerCase()) !== -1 || skill.toLowerCase().indexOf(us) !== -1;
+        });
+        (got ? haveList : gapList).push(skill);
+      });
       if (haveList.length) inner +=
         '<div class="guide-row"><div class="guide-row-label ok">✓ ' + t('guide_have') + '</div><div class="guide-chips">' +
         haveList.map(function(s){ return '<span class="guide-chip have">' + s + '</span>'; }).join('') + '</div></div>';
@@ -3560,8 +3555,11 @@ async function renderJobDetail(jobId) {
       else inner += '<div class="guide-row"><div class="guide-ready">🎯 ' + t('guide_ready') + '</div></div>';
     }
     inner += '<div class="guide-tip"><div class="guide-tip-title">💡 ' + t('guide_tip_title') + '</div>' + tip + '</div>';
+    // Show the match % in the header only when it's backed by real skill
+    // signal — a score computed off one keyword is noise, not information.
+    var guideHead = t('guide_title') + (hasProfile && skillsConfident ? ' · ' + score + '%' : '');
     guideHTML = '<div class="detail-body guide-card">' +
-      '<div class="detail-section-title">' + t('guide_title') + ' · ' + score + '%</div>' + inner + '</div>';
+      '<div class="detail-section-title">' + guideHead + '</div>' + inner + '</div>';
   }
 
   // Tags for detail header
@@ -3604,7 +3602,7 @@ async function renderJobDetail(jobId) {
     '<div class="detail-apply">' +
       '<div>' +
         '<div class="detail-salary">' + job.salary + ' <span>' + t('per_month_long') + '</span></div>' +
-        '<div style="font-size:12px;color:var(--ink-50);margin-top:4px">' + t('match_label') + ' ' + score + '%</div>' +
+        (hasProfile && skillsConfident ? '<div style="font-size:12px;color:var(--ink-50);margin-top:4px">' + t('match_label') + ' ' + score + '%</div>' : '') +
       '</div>' +
       '<div style="display:flex;gap:10px;align-items:center">' +
         '<div class="jc-save jc-save-lg ' + (isSaved ? 'saved' : '') + '" ' +
@@ -4762,6 +4760,7 @@ var T = {
     guide_tip_remote:'Формат удалённый: упомяни самодисциплину и опыт онлайн-командной работы (даже учебной).',
     guide_no_profile:'Заполни профиль и добавь навыки — гид покажет, чего не хватает именно тебе.', guide_no_profile_btn:'Заполнить профиль',
     guide_ready:'Отличное совпадение — откликайся, пока вакансия свежая.',
+    guide_no_skills:'В этой вакансии навыки не указаны — работодатель не расписал требования. Открой полное описание по кнопке «Откликнуться» и ориентируйся на совет ниже.',
     not_found:'Вакансия не найдена', loading_job:'Загрузка вакансии…',
     // profile
     prof_name:'Студент', lbl_name:'Имя', ph_name:'Ваше имя',
@@ -4905,6 +4904,7 @@ var T = {
     guide_tip_remote:'Қашықтан жұмыс: өзін-өзі ұйымдастыру мен онлайн-командада жұмыс тәжірибеңді атап өт.',
     guide_no_profile:'Профильді толтырып, дағдыларыңды қос — гид саған не жетіспейтінін көрсетеді.', guide_no_profile_btn:'Профильді толтыру',
     guide_ready:'Тамаша сәйкестік — вакансия жаңа кезінде жауап бер.',
+    guide_no_skills:'Бұл вакансияда дағдылар көрсетілмеген. «Жауап беру» батырмасы арқылы толық сипаттаманы ашып, төмендегі кеңеске сүйен.',
     not_found:'Жұмыс табылмады', loading_job:'Вакансия жүктелуде…',
     prof_name:'Студент', lbl_name:'Аты', ph_name:'Сіздің атыңыз',
     lbl_email:'Email', lbl_city:'Қала', ph_city:'Қаланы таңдаңыз',
@@ -5038,6 +5038,7 @@ var T = {
     guide_tip_remote:'Remote role: mention self-discipline and any online teamwork experience (even from studies).',
     guide_no_profile:'Fill in your profile and add skills — the guide will show what you personally are missing.', guide_no_profile_btn:'Complete profile',
     guide_ready:'Great match — apply while the posting is fresh.',
+    guide_no_skills:'This posting does not declare required skills. Open the full description via the Apply button and lean on the tip below.',
     not_found:'Job not found', loading_job:'Loading job…',
     prof_name:'Student', lbl_name:'Name', ph_name:'Your name',
     lbl_email:'Email', lbl_city:'City', ph_city:'Select city',
