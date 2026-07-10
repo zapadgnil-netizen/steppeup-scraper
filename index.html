@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: 2026-07-07-honest-matching-v12 -->
+<!-- BUILD: 2026-07-07-asymmetric-trust-v13 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -3530,34 +3530,39 @@ async function renderJobDetail(jobId) {
             : job.remote ? t('guide_tip_remote')
             : t('guide_tip_generic');
     var inner = '';
+    // Asymmetric trust rule:
+    //  - HAVE chips (skill in job ∩ user profile) always show — an
+    //    intersection of two independent sources is real signal.
+    //  - GAP chips ("you are missing X") show only when confident — this is
+    //    where one weak keyword became a fabricated requirement (Teaching).
+    var haveList = [], gapList = [];
+    jobSkills.forEach(function(skill) {
+      var got = userSkills.some(function(us) {
+        return us.indexOf(skill.toLowerCase()) !== -1 || skill.toLowerCase().indexOf(us) !== -1;
+      });
+      (got ? haveList : gapList).push(skill);
+    });
+    var showGaps = skillsConfident && gapList.length > 0;
     if (!hasProfile) {
       inner = '<div class="guide-empty">' + t('guide_no_profile') +
         ' <button class="guide-cta" onclick="navigate(\'profile\')">' + t('guide_no_profile_btn') + '</button></div>';
-    } else if (!skillsConfident) {
-      // Honest state: the posting doesn't declare skills we can trust.
-      // No chips, no invented requirements, no fake numbers.
-      inner = '<div class="guide-empty">' + t('guide_no_skills') + '</div>';
     } else {
-      var haveList = [], gapList = [];
-      jobSkills.forEach(function(skill) {
-        var got = userSkills.some(function(us) {
-          return us.indexOf(skill.toLowerCase()) !== -1 || skill.toLowerCase().indexOf(us) !== -1;
-        });
-        (got ? haveList : gapList).push(skill);
-      });
       if (haveList.length) inner +=
         '<div class="guide-row"><div class="guide-row-label ok">✓ ' + t('guide_have') + '</div><div class="guide-chips">' +
         haveList.map(function(s){ return '<span class="guide-chip have">' + s + '</span>'; }).join('') + '</div></div>';
-      if (gapList.length) inner +=
+      if (showGaps) inner +=
         '<div class="guide-row"><div class="guide-row-label gap">→ ' + t('guide_gaps') + '</div><div class="guide-chips">' +
         gapList.map(function(s){ return '<span class="guide-chip gap">' + s + '</span>'; }).join('') +
         '</div><div class="guide-fix">' + t('guide_gap_fix') + '</div></div>';
-      else inner += '<div class="guide-row"><div class="guide-ready">🎯 ' + t('guide_ready') + '</div></div>';
+      if (haveList.length && !gapList.length)
+        inner += '<div class="guide-row"><div class="guide-ready">🎯 ' + t('guide_ready') + '</div></div>';
+      if (!haveList.length && !showGaps)
+        inner += '<div class="guide-empty">' + t('guide_no_skills') + '</div>';
     }
     inner += '<div class="guide-tip"><div class="guide-tip-title">💡 ' + t('guide_tip_title') + '</div>' + tip + '</div>';
-    // Show the match % in the header only when it's backed by real skill
-    // signal — a score computed off one keyword is noise, not information.
-    var guideHead = t('guide_title') + (hasProfile && skillsConfident ? ' · ' + score + '%' : '');
+    // Match % in the header when backed by real signal: either confident
+    // extraction or at least one confirmed profile↔job skill hit.
+    var guideHead = t('guide_title') + (hasProfile && (skillsConfident || haveList.length > 0) ? ' · ' + score + '%' : '');
     guideHTML = '<div class="detail-body guide-card">' +
       '<div class="detail-section-title">' + guideHead + '</div>' + inner + '</div>';
   }
@@ -3601,8 +3606,10 @@ async function renderJobDetail(jobId) {
 
     '<div class="detail-apply">' +
       '<div>' +
-        '<div class="detail-salary">' + job.salary + ' <span>' + t('per_month_long') + '</span></div>' +
-        (hasProfile && skillsConfident ? '<div style="font-size:12px;color:var(--ink-50);margin-top:4px">' + t('match_label') + ' ' + score + '%</div>' : '') +
+        ((job.salary && job.salary !== '—')
+          ? '<div class="detail-salary">' + job.salary + ' <span>' + t('per_month_long') + '</span></div>'
+          : '<div class="detail-salary" style="font-size:15px;font-family:\'DM Sans\',sans-serif;font-weight:500;color:var(--ink-50)">' + t('salary_warn') + '</div>') +
+        (hasProfile && (skillsConfident || haveList.length > 0) ? '<div style="font-size:12px;color:var(--ink-50);margin-top:4px">' + t('match_label') + ' ' + score + '%</div>' : '') +
       '</div>' +
       '<div style="display:flex;gap:10px;align-items:center">' +
         '<div class="jc-save jc-save-lg ' + (isSaved ? 'saved' : '') + '" ' +
