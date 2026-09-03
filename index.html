@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- BUILD: 2026-07-07-asymmetric-trust-v13 -->
+<!-- BUILD: 2026-09-03-landing-v4 -->
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
@@ -7,7 +7,7 @@
   <meta name="theme-color" content="#F4EFE6" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#1a1612" media="(prefers-color-scheme: dark)">
   <title>SteppeUp — Стажировки и работа для студентов Казахстана</title>
-  <meta name="description" content="Найди стажировку или работу в Казахстане. 5 000+ вакансий для студентов без опыта — Алматы, Астана, удалённо. Бесплатно и быстро.">
+  <meta name="description" content="Стажировки и вакансии для студентов Казахстана без опыта — Алматы, Астана, удалённо. Подборка под ваши навыки, обновляется каждый день. Бесплатно.">
   <meta name="keywords" content="стажировка, работа студентам, вакансии Казахстан, стажировки Алматы, работа без опыта, hh.kz, intern, Kazakhstan jobs">
   <meta name="author" content="SteppeUp">
   <meta name="robots" content="index,follow">
@@ -16,7 +16,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="SteppeUp">
   <meta property="og:title" content="SteppeUp — Найди свой путь">
-  <meta property="og:description" content="Стажировки и вакансии для студентов Казахстана. Без опыта. Без стресса. 5 000+ возможностей.">
+  <meta property="og:description" content="Стажировки и вакансии для студентов Казахстана. Без опыта. Без стресса. Обновляется каждый день.">
   <meta property="og:url" content="https://steppeup-scraper.vercel.app/">
   <meta property="og:locale" content="ru_RU">
   <meta property="og:locale:alternate" content="kk_KZ">
@@ -27,8 +27,8 @@
   <meta property="og:image:alt" content="SteppeUp — Find your path">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="SteppeUp — Стажировки и работа для студентов">
-  <meta name="twitter:description" content="5 000+ вакансий для студентов Казахстана. Найди свой путь.">
-  <meta name="twitter:image" content="https://steppeup-scraper.vercel.app/og.svg">
+  <meta name="twitter:description" content="Стажировки и вакансии для студентов Казахстана без опыта. Найди свой путь.">
+  <meta name="twitter:image" content="https://steppeup-scraper.vercel.app/og.png">
   <!-- Favicon (inline SVG data URI — no extra request) -->
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2318140F'/%3E%3Ctext x='50' y='68' font-family='Playfair Display,serif' font-size='62' font-weight='900' text-anchor='middle' fill='%23C9A84C'%3ES%3C/text%3E%3C/svg%3E">
   <link rel="apple-touch-icon" href="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%2318140F'/%3E%3Ctext x='50' y='68' font-family='Playfair Display,serif' font-size='62' font-weight='900' text-anchor='middle' fill='%23C9A84C'%3ES%3C/text%3E%3C/svg%3E">
@@ -37,6 +37,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="preconnect" href="https://wiijdddhzddqgntfdbsx.supabase.co" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Vercel Web Analytics (enable once in Vercel → Project → Analytics; script is a no-op until then) -->
+  <script defer src="/_vercel/insights/script.js"></script>
   <!-- Structured data for search engines -->
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebSite","name":"SteppeUp","url":"https://steppeup-scraper.vercel.app/","description":"Стажировки и работа для студентов Казахстана","inLanguage":["ru","kk","en"],"potentialAction":{"@type":"SearchAction","target":"https://steppeup-scraper.vercel.app/#/browse?q={search_term_string}","query-input":"required name=search_term_string"}}
@@ -1936,6 +1938,144 @@ html.dark .trust-chip-more{background:linear-gradient(135deg, rgba(147,137,255,.
 }
 </style>
 
+<style id="landing-v4">
+/* ============================================================
+   LANDING v4 — market-ready pass
+   • app-shell must never bleed through the landing (was visible on load)
+   • one primary CTA, honest live numbers, no fake social proof
+   • step icons instead of broken gradient blocks
+   • employer section with pricing
+   ============================================================ */
+#app-shell{display:none}
+
+/* ---- Nav: fewer, clearer ---- */
+#main-nav{gap:28px}
+#main-nav .nav-links{gap:24px}
+#main-nav .nav-links a{font-size:13.5px;font-weight:500;color:var(--ink-80)}
+#main-nav .nav-links a:hover{color:var(--gold)}
+#main-nav .nav-actions{gap:8px}
+#main-nav .btn-ghost{padding:8px 12px}
+
+/* ---- Hero: hierarchy ---- */
+.eyebrow{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--ink-50);font-weight:600;letter-spacing:.08em}
+.eyebrow .live-count{color:var(--ink);font-weight:800;letter-spacing:0;font-size:13px}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#5DB079;box-shadow:0 0 0 0 rgba(93,176,121,.6);animation:livePulse 2.2s ease-out infinite}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(93,176,121,.55)}70%{box-shadow:0 0 0 8px rgba(93,176,121,0)}100%{box-shadow:0 0 0 0 rgba(93,176,121,0)}}
+.hero-cta{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.btn-hero-primary{
+  display:inline-flex;align-items:center;gap:6px;
+  background:linear-gradient(135deg,#6D5BFF 0%,#4B3BD1 100%);
+  color:#fff;border:0;padding:14px 26px;border-radius:100px;
+  font:700 15px 'DM Sans',sans-serif;letter-spacing:-.005em;cursor:pointer;text-decoration:none;
+  box-shadow:0 10px 28px -8px rgba(109,91,255,.55),inset 0 1px 0 rgba(255,255,255,.18);
+  transition:transform .15s,box-shadow .2s;
+}
+.btn-hero-primary:hover{transform:translateY(-1px);box-shadow:0 16px 34px -8px rgba(109,91,255,.6)}
+.btn-hero-primary:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.btn-hero-ghost{padding:13px 22px;font-size:15px;text-decoration:none}
+.hero-search{margin-top:18px !important;margin-bottom:10px !important}
+.hero-search-btn{background:#0B0B10 !important;color:#fff !important}
+html.dark .hero-search-btn{background:#F4F4F7 !important;color:#0B0B10 !important}
+.eyebrow-live[hidden],.hero-trust-item[hidden]{display:none !important}
+
+/* ---- Honest trust strip replaces fake employer chips ---- */
+.hero-trust{display:flex;gap:28px;flex-wrap:wrap;margin-top:26px;padding-top:22px;border-top:1px solid var(--ink-20)}
+.hero-trust-item{display:flex;flex-direction:column;gap:3px;min-width:0}
+.hero-trust-k{font:700 14px 'Manrope',sans-serif;color:var(--ink);letter-spacing:-.01em;white-space:nowrap}
+.hero-trust-l{font-size:11.5px;color:var(--ink-50);letter-spacing:.02em}
+
+/* ---- Floating cards: keep inside the hero box ---- */
+.hero-card-2{right:2% !important}
+.hero-card-3{left:2% !important}
+.hero-card .hc-title{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-card .hc-co{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-card .hc-salary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hero-stat[hidden]{display:none !important}
+
+/* ---- Stats: quieter, real ---- */
+.stats{padding:28px 28px 8px}
+.stats[hidden]{display:none}
+.sn{font-size:30px}
+.sl{font-size:12.5px}
+
+/* ---- How it works: icons instead of gradient slabs ---- */
+.step-num{display:none !important}
+.step{padding:28px 24px 26px !important;text-align:left !important;border-radius:20px}
+.step-ico{
+  position:relative;width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;
+  margin-bottom:18px;color:#fff;
+}
+.step-ico svg{width:22px;height:22px}
+.step-ico-iris{background:linear-gradient(135deg,#6D5BFF,#4B3BD1)}
+.step-ico-mint{background:linear-gradient(135deg,#5DB079,#3E8A5B)}
+.step-ico-coral{background:linear-gradient(135deg,#F25F4C,#C7412F)}
+.step-ico-ink{background:linear-gradient(135deg,#2A2A36,#0B0B10)}
+.step-n{
+  position:absolute;top:-8px;right:-8px;width:22px;height:22px;border-radius:50%;
+  background:var(--white);color:var(--ink);border:1px solid var(--ink-20);
+  font:800 11px 'Manrope',sans-serif;display:flex;align-items:center;justify-content:center;
+}
+.step-title{font-size:16px !important}
+.step-desc{font-size:13.5px !important}
+html.dark .step-n{background:#17171C;color:#F4F4F7}
+
+/* ---- Employers ---- */
+.emp-section{max-width:1200px;margin:0 auto;padding:40px 28px 60px}
+.emp-inner{
+  display:grid;grid-template-columns:1.05fr 1fr;gap:48px;align-items:center;
+  background:#0B0B10;color:#F4F4F7;border-radius:28px;padding:56px;position:relative;overflow:hidden;
+}
+html.dark .emp-inner{background:#15141C;border:1px solid rgba(147,137,255,.18)}
+.emp-copy .eyebrow{color:rgba(244,244,247,.55) !important}
+.emp-copy .eyebrow .live-dot{display:none}
+.emp-inner::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 50% 70% at 85% 10%,rgba(109,91,255,.35) 0%,transparent 60%),radial-gradient(ellipse 40% 60% at 10% 100%,rgba(93,176,121,.18) 0%,transparent 60%);pointer-events:none}
+.emp-copy,.emp-plans{position:relative;z-index:1}
+.emp-title{font-family:'Manrope',sans-serif;font-size:clamp(30px,3.4vw,44px);font-weight:800;letter-spacing:-.035em;line-height:1.05;margin:12px 0 16px;color:#fff}
+.emp-sub{font-size:15px;line-height:1.65;color:rgba(244,244,247,.72);max-width:460px;margin-bottom:28px}
+.emp-actions{display:flex;gap:12px;flex-wrap:wrap}
+.emp-actions .btn-hero-ghost{color:#fff;border-color:rgba(255,255,255,.3)}
+.emp-actions .btn-hero-ghost:hover{border-color:#fff;background:rgba(255,255,255,.08);color:#fff}
+.emp-plans{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.emp-plan{position:relative;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:22px 20px}
+.emp-plan-featured{background:rgba(109,91,255,.18);border-color:rgba(147,137,255,.5)}
+.emp-plan-badge{position:absolute;top:-11px;left:18px;background:#5DB079;color:#0B0B10;font:700 10.5px 'DM Sans',sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:100px}
+.emp-plan-name{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:rgba(244,244,247,.6);font-weight:600;margin-bottom:8px}
+.emp-plan-price{font-family:'Manrope',sans-serif;font-size:26px;font-weight:800;letter-spacing:-.02em;color:#fff;margin-bottom:14px}
+.emp-plan-price span{font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:rgba(244,244,247,.55);letter-spacing:0}
+.emp-plan-list{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+.emp-plan-list li{font-size:13px;line-height:1.45;color:rgba(244,244,247,.82);padding-left:20px;position:relative}
+.emp-plan-list li::before{content:"";position:absolute;left:0;top:6px;width:11px;height:11px;border-radius:50%;background:rgba(93,176,121,.25);box-shadow:inset 0 0 0 1.5px #5DB079}
+.cta-section{padding-top:40px}
+
+/* ---- Mobile ---- */
+@media (max-width:768px){
+  #main-nav .dark-toggle{display:none !important}
+  #main-nav .btn-ghost{padding:8px 6px;font-size:13px}
+  #main-nav{padding:0 14px;gap:10px}
+  #main-nav .nav-actions{gap:6px;margin-left:auto}
+  #main-nav .btn-solid{white-space:nowrap;padding:9px 12px;font-size:12.5px}
+  #main-nav .lang-sw{transform:scale(.9);transform-origin:right center}
+  #main-nav .nav-links{display:none}
+  .hero-content h1{font-size:clamp(38px,11vw,52px) !important;line-height:1.02 !important}
+  .hero-cta{width:100%;flex-direction:row}
+  .btn-hero-primary{flex:1;justify-content:center;padding:14px 18px}
+  .btn-hero-ghost{flex:1;justify-content:center;padding:13px 14px;font-size:14px}
+  .hero-trust{gap:18px 22px;margin-top:22px}
+  .stats{grid-template-columns:repeat(2,1fr);gap:18px 12px;padding:20px 16px 0}
+  .steps-grid{gap:12px}
+  .step{padding:18px 16px 16px !important}
+  .step-ico{width:40px;height:40px;margin-bottom:12px}
+  .emp-section{padding:24px 12px 40px}
+  .emp-inner{grid-template-columns:1fr;gap:28px;padding:28px 20px;border-radius:22px}
+  .emp-plans{grid-template-columns:1fr}
+  .emp-actions .btn-hero-primary,.emp-actions .btn-hero-ghost{flex:1;justify-content:center}
+}
+@media (max-width:480px){
+  .hero-content h1{font-size:clamp(36px,11.5vw,44px) !important}
+  .hero-cta{flex-direction:column;align-items:stretch}
+}
+</style>
+
 <script id="premium-interactions">
 /* Spotlight cursor tracking for job cards — lightweight */
 document.addEventListener('pointermove',function(e){
@@ -1991,9 +2131,9 @@ html.dark .guide-tip{background:rgba(228,201,122,.08)}
     <nav id="main-nav">
       <span class="logo">Steppe<span>Up</span></span>
       <div class="nav-links">
-        <a href="#how" data-i18n="nav_how">Как это работает</a>
         <a href="#vacancies" data-i18n="nav_vac">Вакансии</a>
-        <a href="#about" data-i18n="nav_about">О нас</a>
+        <a href="#how" data-i18n="nav_how">Как это работает</a>
+        <a href="#employers" data-i18n="nav_employers">Работодателям</a>
       </div>
       <div class="nav-actions">
         <div class="lang-sw" id="lang-sw-land" role="group" aria-label="Language">
@@ -2010,9 +2150,13 @@ html.dark .guide-tip{background:rgba(228,201,122,.08)}
     <section class="hero">
       <div class="hero-glow"></div>
       <div class="hero-content">
-        <div class="eyebrow" data-i18n="eyebrow">2 000+ студентов уже с нами</div>
+        <div class="eyebrow"><span class="live-dot" aria-hidden="true"></span><span data-i18n="eyebrow">Для студентов Казахстана</span><span class="eyebrow-live" id="eyebrow-live" hidden> · <span class="live-count" data-live="jobs">—</span> <span data-i18n="eyebrow_jobs">актуальных вакансий</span></span></div>
         <h1 data-i18n-html="hero_h1">Найди<br/>свой <em>путь</em></h1>
         <p class="hero-sub" data-i18n="hero_sub">Стажировки и вакансии для студентов Казахстана. Без опыта. Без стресса.</p>
+        <div class="hero-cta">
+          <button class="btn-hero-primary" onclick="startOnboarding()" data-i18n="start_free">Начать бесплатно →</button>
+          <button class="btn-hero-ghost" onclick="enterApp('browse')" data-i18n="browse_jobs">Смотреть вакансии</button>
+        </div>
         <form class="hero-search" onsubmit="event.preventDefault();heroSearch()" role="search">
           <span class="hero-search-icon" aria-hidden="true">⌕</span>
           <input class="hero-search-input" id="hero-search-input" type="search"
@@ -2022,30 +2166,11 @@ html.dark .guide-tip{background:rgba(228,201,122,.08)}
                  onkeydown="if(event.key==='Enter'){event.preventDefault();heroSearch()}"/>
           <button type="submit" class="hero-search-btn" data-i18n="search_btn">Найти</button>
         </form>
-        <div class="hero-cta">
-          <button class="btn-hero-ghost" onclick="startOnboarding()" data-i18n="start_free">Начать бесплатно →</button>
-          <div class="proof">
-            <div class="proof-faces"><span>А</span><span>М</span><span>К</span><span>Д</span></div>
-            <div class="proof-text"><strong data-i18n="proof_strong">2 000+ студентов</strong><span data-i18n="proof_text">уже нашли место</span></div>
-          </div>
-        </div>
-        <!-- Alert hook: introduces the bell to first-time visitors -->
-        <button type="button" class="hero-alert-hook" onclick="enterApp('browse')">
-          <span class="hero-alert-hook-ico" aria-hidden="true">🔔</span>
-          <span class="hero-alert-hook-text" data-i18n="hero_alert_hook">Получай уведомления о новых вакансиях по твоим фильтрам</span>
-          <span class="hero-alert-hook-arrow" aria-hidden="true">→</span>
-        </button>
-        <!-- Trust bar: top employers -->
+        <!-- Honest trust strip: where the jobs come from, how fresh they are -->
         <div class="hero-trust">
-          <div class="hero-trust-label" data-i18n="trust_label">Топ работодатели</div>
-          <div class="hero-trust-row">
-            <div class="trust-chip" title="Kaspi.kz">Kaspi</div>
-            <div class="trust-chip" title="Halyk Bank">Halyk</div>
-            <div class="trust-chip" title="Beeline">Beeline</div>
-            <div class="trust-chip" title="Magnum">Magnum</div>
-            <div class="trust-chip" title="Chocofamily">Choco</div>
-            <button type="button" class="trust-chip trust-chip-more" onclick="enterApp('browse')" data-i18n-title="trust_more_tt" title="Посмотреть всех работодателей">+47</button>
-          </div>
+          <div class="hero-trust-item" data-live-item><span class="hero-trust-k" data-live="updated">—</span><span class="hero-trust-l" data-i18n="trust_updated">обновлено</span></div>
+          <div class="hero-trust-item" data-live-item><span class="hero-trust-k" data-live="cities">—</span><span class="hero-trust-l" data-i18n="trust_cities">городов</span></div>
+          <div class="hero-trust-item"><span class="hero-trust-k">hh.kz · enbek.kz · Telegram</span><span class="hero-trust-l" data-i18n="trust_sources">источники вакансий</span></div>
         </div>
       </div>
       <!-- Hero right-side: floating product preview -->
@@ -2062,34 +2187,35 @@ html.dark .guide-tip{background:rgba(228,201,122,.08)}
           <svg class="hero-sparkle hero-sparkle-3" viewBox="0 0 24 24"><path d="M12 1L14.5 9.5L23 12L14.5 14.5L12 23L9.5 14.5L1 12L9.5 9.5L12 1Z" fill="currentColor"/></svg>
 
           <!-- Card 2 — top right, secondary -->
-          <div class="hero-card hero-card-2">
+          <!-- These three cards are placeholders until loadJobs() fills them with real listings (see fillHeroCards) -->
+          <div class="hero-card hero-card-2" data-hc="2">
             <div class="hc-head">
-              <div class="hc-logo hc-logo-mint">H</div>
-              <div class="hc-score-mini"><span class="pulse-dot"></span>Top match</div>
+              <div class="hc-logo hc-logo-mint" data-hc-logo>M</div>
+              <div class="hc-score-mini"><span class="pulse-dot"></span><span data-i18n="top_match">Top match</span></div>
             </div>
-            <div class="hc-title">Marketing Intern</div>
-            <div class="hc-co">Halyk Bank · Астана</div>
-            <div class="hc-salary">180 000 ₸ <span data-i18n="per_m">/ мес</span></div>
+            <div class="hc-title" data-hc-title>Marketing Intern</div>
+            <div class="hc-co" data-hc-co>Астана</div>
+            <div class="hc-salary" data-hc-salary><span data-i18n="tag_intern">Стажировка</span></div>
           </div>
 
           <!-- Card 3 — bottom left, tertiary -->
-          <div class="hero-card hero-card-3">
+          <div class="hero-card hero-card-3" data-hc="3">
             <div class="hc-head-sm">
-              <div class="hc-logo hc-logo-sm hc-logo-coral">W</div>
-              <div class="hc-pct-sm">85%</div>
+              <div class="hc-logo hc-logo-sm hc-logo-coral" data-hc-logo>U</div>
+              <div class="hc-pct-sm" data-hc-pct>85%</div>
             </div>
-            <div class="hc-title hc-title-sm">UX Researcher</div>
-            <div class="hc-co">Wildberries</div>
+            <div class="hc-title hc-title-sm" data-hc-title>UX Researcher</div>
+            <div class="hc-co" data-hc-co>Удалённо</div>
           </div>
 
           <!-- Card 1 — center, primary (on top) -->
-          <div class="hero-card hero-card-1">
+          <div class="hero-card hero-card-1" data-hc="1">
             <div class="hc-head">
-              <div class="hc-logo">K</div>
+              <div class="hc-logo" data-hc-logo>JD</div>
               <div class="hc-score-ring">
                 <svg viewBox="0 0 36 36" width="40" height="40">
                   <circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(11,11,16,.08)" stroke-width="2.5"/>
-                  <circle cx="18" cy="18" r="15.5" fill="none" stroke="url(#ringgrad)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="7.8" transform="rotate(-90 18 18)"/>
+                  <circle id="hc-ring-fg" cx="18" cy="18" r="15.5" fill="none" stroke="url(#ringgrad)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="97.4" stroke-dashoffset="7.8" transform="rotate(-90 18 18)"/>
                   <defs>
                     <linearGradient id="ringgrad" x1="0" y1="0" x2="1" y2="1">
                       <stop offset="0%" stop-color="#5DB079"/>
@@ -2097,22 +2223,21 @@ html.dark .guide-tip{background:rgba(228,201,122,.08)}
                     </linearGradient>
                   </defs>
                 </svg>
-                <span class="hc-score-num">92</span>
+                <span class="hc-score-num" data-hc-pct>92</span>
               </div>
             </div>
-            <div class="hc-title">Junior Data Analyst</div>
-            <div class="hc-co">Kaspi.kz · Алматы</div>
-            <div class="hc-tags">
+            <div class="hc-title" data-hc-title>Junior Data Analyst</div>
+            <div class="hc-co" data-hc-co>Алматы</div>
+            <div class="hc-tags" data-hc-tags>
               <span class="hc-tag tag-intern" data-i18n="tag_intern">Стажировка</span>
               <span class="hc-tag tag-remote">Hybrid</span>
-              <span class="hc-tag tag-paid" data-i18n="tag_paid">Оплачивается</span>
             </div>
             <div class="hc-row">
-              <div class="hc-salary">250 000 ₸ <span data-i18n="per_m">/ мес</span></div>
+              <div class="hc-salary" data-hc-salary><span data-i18n="tag_paid">Оплачивается</span></div>
               <button class="hc-apply" tabindex="-1">→</button>
             </div>
             <!-- Skill bars mini -->
-            <div class="hc-skills">
+            <div class="hc-skills" data-hc-skills>
               <div class="hc-sk"><div class="hc-sk-l">SQL</div><div class="hc-sk-bar"><div class="hc-sk-fill" style="width:96%"></div></div></div>
               <div class="hc-sk"><div class="hc-sk-l">Python</div><div class="hc-sk-bar"><div class="hc-sk-fill" style="width:88%"></div></div></div>
               <div class="hc-sk"><div class="hc-sk-l">Excel</div><div class="hc-sk-bar"><div class="hc-sk-fill" style="width:75%"></div></div></div>
@@ -2122,58 +2247,97 @@ html.dark .guide-tip{background:rgba(228,201,122,.08)}
           <!-- Floating match pill -->
           <div class="hero-pill">
             <div class="pulse-dot-lg"></div>
-            <span><strong>92%</strong> <span data-i18n="match_word">совпадение</span></span>
+            <span><strong data-hc-pill>92%</strong> <span data-i18n="match_word">совпадение</span></span>
           </div>
 
-          <!-- Floating stat card -->
-          <div class="hero-stat">
-            <div class="hero-stat-num">47</div>
-            <div class="hero-stat-lbl" data-i18n="new_today">новых сегодня</div>
+          <!-- Floating stat card: real count of listings posted in the last 7 days -->
+          <div class="hero-stat" id="hero-stat-new" hidden>
+            <div class="hero-stat-num" data-live="week">—</div>
+            <div class="hero-stat-lbl" data-i18n="new_week">новых за неделю</div>
           </div>
         </div>
       </div>
     </section>
 
-    <div class="stats">
-      <div class="stat"><span class="sn">5 183</span><span class="sl" data-i18n="stat_jobs">вакансий</span></div>
-      <div class="stat"><span class="sn">49</span><span class="sl" data-i18n="stat_intern">IT стажировок</span></div>
-      <div class="stat"><span class="sn">12</span><span class="sl" data-i18n="stat_cities">городов</span></div>
-      <div class="stat"><span class="sn">4</span><span class="sl" data-i18n="stat_sources">источника</span></div>
+    <!-- Live stats: every number here is computed from the loaded job list (see updateLiveStats) -->
+    <div class="stats" id="live-stats">
+      <div class="stat"><span class="sn" data-live="jobs">—</span><span class="sl" data-i18n="stat_jobs">вакансий для студентов</span></div>
+      <div class="stat"><span class="sn" data-live="interns">—</span><span class="sl" data-i18n="stat_intern">стажировок</span></div>
+      <div class="stat"><span class="sn" data-live="remote">—</span><span class="sl" data-i18n="stat_remote">удалённых</span></div>
+      <div class="stat"><span class="sn" data-live="cities">—</span><span class="sl" data-i18n="stat_cities">городов</span></div>
     </div>
 
     <section class="how-section" id="how">
       <div class="how-title" data-i18n="how_title">Как это работает</div>
       <div class="how-sub" data-i18n="how_sub">Всего 4 шага до первого дня на работе</div>
       <div class="steps-grid">
-        <div class="step"><div class="step-num">1</div><div class="step-title" data-i18n="step1_t">Заполните профиль</div><div class="step-desc" data-i18n="step1_d">Расскажите о своих навыках и интересах. Это займёт 2 минуты.</div></div>
-        <div class="step"><div class="step-num">2</div><div class="step-title" data-i18n="step2_t">Получите подборку</div><div class="step-desc" data-i18n="step2_d">Наш алгоритм подберёт для вас идеальные вакансии.</div></div>
-        <div class="step"><div class="step-num">3</div><div class="step-title" data-i18n="step3_t">Откликнитесь</div><div class="step-desc" data-i18n="step3_d">Один клик — и ваш отклик в руках работодателя.</div></div>
-        <div class="step"><div class="step-num">4</div><div class="step-title" data-i18n="step4_t">Начните работать</div><div class="step-desc" data-i18n="step4_d">Встретьтесь с командой и начните свой путь в карьере.</div></div>
+        <div class="step">
+          <div class="step-ico step-ico-iris" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/></svg><span class="step-n">1</span></div>
+          <div class="step-title" data-i18n="step1_t">Заполните профиль</div><div class="step-desc" data-i18n="step1_d">Расскажите о своих навыках и интересах. Это займёт 2 минуты.</div>
+        </div>
+        <div class="step">
+          <div class="step-ico step-ico-mint" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 17l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z"/></svg><span class="step-n">2</span></div>
+          <div class="step-title" data-i18n="step2_t">Получите подборку</div><div class="step-desc" data-i18n="step2_d">Наш алгоритм подберёт для вас идеальные вакансии.</div>
+        </div>
+        <div class="step">
+          <div class="step-ico step-ico-coral" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg><span class="step-n">3</span></div>
+          <div class="step-title" data-i18n="step3_t">Откликнитесь</div><div class="step-desc" data-i18n="step3_d">Один клик — и ваш отклик в руках работодателя.</div>
+        </div>
+        <div class="step">
+          <div class="step-ico step-ico-ink" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 012-2h4a2 2 0 012 2v2"/><path d="M3 12h18"/></svg><span class="step-n">4</span></div>
+          <div class="step-title" data-i18n="step4_t">Начните работать</div><div class="step-desc" data-i18n="step4_d">Встретьтесь с командой и начните свой путь в карьере.</div>
+        </div>
       </div>
     </section>
 
     <section class="listings-section" id="vacancies">
       <div class="section-header">
-        <div class="section-title" data-i18n="popular">Популярные вакансии</div>
+        <div class="section-title" data-i18n="popular">Свежие вакансии</div>
         <a class="see-all-link" onclick="navigate('browse'); return false;" data-i18n="see_all">Смотреть все →</a>
       </div>
       <div class="jc-grid" id="landing-grid"></div>
     </section>
 
-    <section class="testi-section" id="about">
-      <div class="testi-header">
-        <div class="testi-title" data-i18n="testi_title">Отзывы студентов</div>
-      </div>
-      <div class="testi-grid">
-        <div class="testi-card"><div class="testi-rating">⭐⭐⭐⭐⭐</div><div class="testi-text" data-i18n="testi_1">«За 2 дня нашла стажировку в IT. Удобно, что фильтруется по навыкам и городу.»</div><div class="testi-author"><div class="testi-av">А</div><div class="testi-info"><div class="testi-name" data-i18n="testi_1_name">Айгерим</div><div class="testi-role" data-i18n="testi_1_role">КазНУ, Frontend</div></div></div></div>
-        <div class="testi-card"><div class="testi-rating">⭐⭐⭐⭐⭐</div><div class="testi-text" data-i18n="testi_2">«Нашёл работу в стартапе благодаря SteppeUp. Отличное сообщество молодых разработчиков.»</div><div class="testi-author"><div class="testi-av">М</div><div class="testi-info"><div class="testi-name" data-i18n="testi_2_name">Марат</div><div class="testi-role" data-i18n="testi_2_role">AITU, Backend</div></div></div></div>
-        <div class="testi-card"><div class="testi-rating">⭐⭐⭐⭐⭐</div><div class="testi-text" data-i18n="testi_3">«Как дизайнер без опыта я боялась искать работу, но SteppeUp показал, что это возможно.»</div><div class="testi-author"><div class="testi-av">К</div><div class="testi-info"><div class="testi-name" data-i18n="testi_3_name">Ксения</div><div class="testi-role" data-i18n="testi_3_role">СарПС, UX/UI</div></div></div></div>
+    <!-- Employers: the paying side of the marketplace gets its own section instead of a footer link -->
+    <section class="emp-section" id="employers">
+      <div class="emp-inner">
+        <div class="emp-copy">
+          <div class="eyebrow" data-i18n="emp_eyebrow">Работодателям</div>
+          <h2 class="emp-title" data-i18n-html="emp_title">Ищете стажёров<br/>и джуниоров?</h2>
+          <p class="emp-sub" data-i18n="emp_sub">Ваша вакансия попадёт к студентам Алматы, Астаны и всего Казахстана, которые ищут первую работу, а наш алгоритм покажет её тем, чьи навыки подходят.</p>
+          <div class="emp-actions">
+            <button class="btn-hero-primary" onclick="openSubmitModal()" data-i18n="emp_post">Разместить вакансию</button>
+            <a class="btn-hero-ghost" href="mailto:partners@steppeup.kz?subject=SteppeUp%20%E2%80%94%20Featured%20%D0%B2%D0%B0%D0%BA%D0%B0%D0%BD%D1%81%D0%B8%D1%8F" data-i18n="emp_contact">Написать нам</a>
+          </div>
+        </div>
+        <div class="emp-plans">
+          <div class="emp-plan">
+            <div class="emp-plan-name" data-i18n="plan_free_n">Обычное размещение</div>
+            <div class="emp-plan-price" data-i18n="plan_free_p">Бесплатно</div>
+            <ul class="emp-plan-list">
+              <li data-i18n="plan_free_1">Вакансия в общей ленте 30 дней</li>
+              <li data-i18n="plan_free_2">Показ студентам с подходящими навыками</li>
+              <li data-i18n="plan_free_3">Отклики напрямую на вашу почту</li>
+            </ul>
+          </div>
+          <div class="emp-plan emp-plan-featured">
+            <div class="emp-plan-badge" data-i18n="plan_feat_badge">Рекомендуем</div>
+            <div class="emp-plan-name" data-i18n="plan_feat_n">Featured</div>
+            <div class="emp-plan-price">15 000 ₸ <span data-i18n="plan_feat_per">/ 30 дней</span></div>
+            <ul class="emp-plan-list">
+              <li data-i18n="plan_feat_1">Закреплено в топе ленты и на главной</li>
+              <li data-i18n="plan_feat_2">Анонс в Telegram-канале SteppeUp</li>
+              <li data-i18n="plan_feat_3">Push-уведомление подходящим студентам</li>
+              <li data-i18n="plan_feat_4">Отметка «Партнёр» на карточке</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </section>
 
     <section class="cta-section">
       <div class="cta-title" data-i18n="cta_title">Готовы к переменам?</div>
-      <div class="cta-sub" data-i18n="cta_sub">Присоединяйтесь к 2000+ студентов, которые уже нашли свой путь на SteppeUp</div>
+      <div class="cta-sub" data-i18n="cta_sub">Профиль за 2 минуты — и подборка вакансий под ваши навыки уже на экране.</div>
       <button class="btn-hero" onclick="startOnboarding()" data-i18n="start_now">Начать сейчас →</button>
     </section>
 
@@ -2183,8 +2347,8 @@ html.dark .guide-tip{background:rgba(228,201,122,.08)}
         <div class="footer-main">
           <div class="footer-col">
             <h3 data-i18n="ft_company">Компания</h3>
-            <a href="#about" data-i18n="ft_about">О нас</a>
             <a href="#how" data-i18n="ft_blog">Как это работает</a>
+            <a href="#employers" data-i18n="ft_employers">Для работодателей</a>
             <a href="mailto:hello@steppeup.kz" data-i18n="ft_contacts">Контакты</a>
           </div>
           <div class="footer-col">
@@ -2196,7 +2360,7 @@ html.dark .guide-tip{background:rgba(228,201,122,.08)}
           <div class="footer-col">
             <h3 data-i18n="ft_employers">Для работодателей</h3>
             <a href="#/submit" onclick="openSubmitModal();return false;" data-i18n="ft_post">Разместить вакансию</a>
-            <a href="mailto:partners@steppeup.kz?subject=SteppeUp%20Pricing" data-i18n="ft_pricing">Цены</a>
+            <a href="#employers" data-i18n="ft_pricing">Цены</a>
             <a href="mailto:help@steppeup.kz" data-i18n="ft_help">Справка</a>
           </div>
           <div class="footer-col">
@@ -2388,18 +2552,18 @@ let obData = {};
 
 // ── Mock Jobs ──────────────────────────────────────────────────────────────
 const MOCK_JOBS = [
-  { id:1,  title:'Стажёр-разработчик (Frontend)', company:'Kaspi Bank',       city:'Алматы', type:'internship', remote:false, salary:'150 000 ₸', skills:['JavaScript','React','CSS'],              description:'Разрабатываете UI-компоненты для мобильного банка с командой опытных фронтенд-разработчиков.',            url:'https://hh.kz/search/vacancy?text=kaspi+bank',    logo:'KB', stripe:'default' },
-  { id:2,  title:'Маркетинг-стажёр',              company:'Kolesa Group',      city:'Алматы', type:'internship', remote:true,  salary:'120 000 ₸', skills:['SMM','Canva','Аналитика'],               description:'Помогаете маркетинговой команде создавать контент и анализировать результаты кампаний.',                   url:'https://hh.kz/search/vacancy?text=kolesa+group',  logo:'KG', stripe:'sage'    },
-  { id:3,  title:'Аналитик данных (Junior)',       company:'Halyk Bank',        city:'Астана', type:'part-time',  remote:false, salary:'200 000 ₸', skills:['Excel','SQL','Python'],                  description:'Анализируете данные клиентов и создаёте отчёты для принятия управленческих решений.',                    url:'https://hh.kz/search/vacancy?text=halyk+bank',    logo:'HB', stripe:'rust'    },
-  { id:4,  title:'UX/UI стажёр',                  company:'Chocofamily',       city:'Алматы', type:'internship', remote:true,  salary:'100 000 ₸', skills:['Figma','UX Research','Прототипирование'], description:'Работаете над дизайном мобильных приложений и веб-платформ в одной из крупнейших tech-компаний Казахстана.', url:'https://hh.kz/search/vacancy?text=chocofamily',   logo:'CF', stripe:'default' },
-  { id:5,  title:'Backend-разработчик',            company:'Beeline Kazakhstan', city:'Алматы', type:'part-time', remote:false, salary:'250 000 ₸', skills:['Python','Django','PostgreSQL'],           description:'Разрабатываете backend API для мобильных приложений и внутренних сервисов.',                             url:'https://hh.kz/search/vacancy?text=beeline+kz',    logo:'BL', stripe:'sage'    },
-  { id:6,  title:'Контент-менеджер',              company:'OLX Kazakhstan',    city:'Астана', type:'internship', remote:true,  salary:'90 000 ₸',  skills:['Копирайтинг','SEO','WordPress'],          description:'Создаёте контент для платформы, управляете блогом и оптимизируете тексты под SEO.',                      url:'https://hh.kz/search/vacancy?text=olx+kz',        logo:'OL', stripe:'default' },
-  { id:7,  title:'Стажёр HR',                     company:'Air Astana',        city:'Астана', type:'internship', remote:false, salary:'130 000 ₸', skills:['Рекрутинг','HR','Коммуникации'],          description:'Помогаете HR-команде проводить собеседования и обрабатывать заявки кандидатов.',                         url:'https://hh.kz/search/vacancy?text=air+astana',    logo:'AA', stripe:'rust'    },
-  { id:8,  title:'Junior DevOps',                 company:'Kcell',             city:'Алматы', type:'part-time',  remote:true,  salary:'220 000 ₸', skills:['Linux','Docker','CI/CD'],                description:'Поддерживаете инфраструктуру и настраиваете деплой приложений в облаке.',                                url:'https://hh.kz/search/vacancy?text=kcell',          logo:'KC', stripe:'sage'    },
-  { id:9,  title:'SMM-менеджер',                  company:'Wildberries KZ',    city:'Алматы', type:'internship', remote:true,  salary:'110 000 ₸', skills:['Instagram','TikTok','Canva'],             description:'Ведёте социальные сети, создаёте вирусный контент и анализируете аудиторию.',                            url:'https://hh.kz/search/vacancy?text=wildberries+kz', logo:'WB', stripe:'default' },
-  { id:10, title:'Финансовый аналитик',           company:'Freedom Finance',   city:'Астана', type:'part-time',  remote:false, salary:'270 000 ₸', skills:['Excel','Финансы','1C'],                  description:'Анализируете финансовые показатели, создаёте прогнозы и готовите управленческую отчётность.',            url:'https://hh.kz/search/vacancy?text=freedom+finance', logo:'FF', stripe:'rust'  },
-  { id:11, title:'QA-тестировщик',                company:'2GIS Kazakhstan',   city:'Алматы', type:'internship', remote:false, salary:'140 000 ₸', skills:['Тестирование','Jira','SQL'],             description:'Тестируете функционал продукта, пишете тест-кейсы и отслеживаете баги в Jira.',                         url:'https://hh.kz/search/vacancy?text=2gis',           logo:'2G', stripe:'default' },
-  { id:12, title:'Python-разработчик',            company:'Jusan Bank',        city:'Астана', type:'part-time',  remote:true,  salary:'230 000 ₸', skills:['Python','FastAPI','Redis'],               description:'Разрабатываете микросервисы для финансовых систем на современном Python-стеке.',                         url:'https://hh.kz/search/vacancy?text=jusan+bank',     logo:'JB', stripe:'sage'    }
+  { id:1,  title:'Стажёр-разработчик (Frontend)', company:'Финтех-компания',       city:'Алматы', type:'internship', remote:false, salary:'150 000 ₸', skills:['JavaScript','React','CSS'],              description:'Разрабатываете UI-компоненты для мобильного банка с командой опытных фронтенд-разработчиков.',            url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',    logo:'KB', stripe:'default' },
+  { id:2,  title:'Маркетинг-стажёр',              company:'Маркетплейс',      city:'Алматы', type:'internship', remote:true,  salary:'120 000 ₸', skills:['SMM','Canva','Аналитика'],               description:'Помогаете маркетинговой команде создавать контент и анализировать результаты кампаний.',                   url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',  logo:'KG', stripe:'sage'    },
+  { id:3,  title:'Аналитик данных (Junior)',       company:'Банк',        city:'Астана', type:'part-time',  remote:false, salary:'200 000 ₸', skills:['Excel','SQL','Python'],                  description:'Анализируете данные клиентов и создаёте отчёты для принятия управленческих решений.',                    url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',    logo:'HB', stripe:'rust'    },
+  { id:4,  title:'UX/UI стажёр',                  company:'E-commerce стартап',       city:'Алматы', type:'internship', remote:true,  salary:'100 000 ₸', skills:['Figma','UX Research','Прототипирование'], description:'Работаете над дизайном мобильных приложений и веб-платформ в одной из крупнейших tech-компаний Казахстана.', url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',   logo:'CF', stripe:'default' },
+  { id:5,  title:'Backend-разработчик',            company:'Телеком-оператор', city:'Алматы', type:'part-time', remote:false, salary:'250 000 ₸', skills:['Python','Django','PostgreSQL'],           description:'Разрабатываете backend API для мобильных приложений и внутренних сервисов.',                             url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',    logo:'BL', stripe:'sage'    },
+  { id:6,  title:'Контент-менеджер',              company:'Классифайд-платформа',    city:'Астана', type:'internship', remote:true,  salary:'90 000 ₸',  skills:['Копирайтинг','SEO','WordPress'],          description:'Создаёте контент для платформы, управляете блогом и оптимизируете тексты под SEO.',                      url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',        logo:'OL', stripe:'default' },
+  { id:7,  title:'Стажёр HR',                     company:'Авиакомпания',        city:'Астана', type:'internship', remote:false, salary:'130 000 ₸', skills:['Рекрутинг','HR','Коммуникации'],          description:'Помогаете HR-команде проводить собеседования и обрабатывать заявки кандидатов.',                         url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',    logo:'AA', stripe:'rust'    },
+  { id:8,  title:'Junior DevOps',                 company:'Телеком-оператор',             city:'Алматы', type:'part-time',  remote:true,  salary:'220 000 ₸', skills:['Linux','Docker','CI/CD'],                description:'Поддерживаете инфраструктуру и настраиваете деплой приложений в облаке.',                                url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',          logo:'KC', stripe:'sage'    },
+  { id:9,  title:'SMM-менеджер',                  company:'Маркетплейс',    city:'Алматы', type:'internship', remote:true,  salary:'110 000 ₸', skills:['Instagram','TikTok','Canva'],             description:'Ведёте социальные сети, создаёте вирусный контент и анализируете аудиторию.',                            url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0', logo:'WB', stripe:'default' },
+  { id:10, title:'Финансовый аналитик',           company:'Брокерская компания',   city:'Астана', type:'part-time',  remote:false, salary:'270 000 ₸', skills:['Excel','Финансы','1C'],                  description:'Анализируете финансовые показатели, создаёте прогнозы и готовите управленческую отчётность.',            url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0', logo:'FF', stripe:'rust'  },
+  { id:11, title:'QA-тестировщик',                company:'IT-компания',   city:'Алматы', type:'internship', remote:false, salary:'140 000 ₸', skills:['Тестирование','Jira','SQL'],             description:'Тестируете функционал продукта, пишете тест-кейсы и отслеживаете баги в Jira.',                         url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',           logo:'2G', stripe:'default' },
+  { id:12, title:'Python-разработчик',            company:'Банк',        city:'Астана', type:'part-time',  remote:true,  salary:'230 000 ₸', skills:['Python','FastAPI','Redis'],               description:'Разрабатываете микросервисы для финансовых систем на современном Python-стеке.',                         url:'https://hh.kz/search/vacancy?text=%D1%81%D1%82%D0%B0%D0%B6%D0%B8%D1%80%D0%BE%D0%B2%D0%BA%D0%B0',     logo:'JB', stripe:'sage'    }
 ];
 
 // ── Load persisted data ─────────────────────────────────────────────────────
@@ -4467,6 +4631,103 @@ async function loadJobs() {
   ALL_JOBS = MOCK_JOBS;
 }
 
+// ── Landing: live numbers + real hero cards ─────────────────────────────────
+// Everything the landing page claims is derived from ALL_JOBS so the page can
+// never promise more than the board actually has.
+function _fmtNum(n){ try { return Number(n).toLocaleString('ru-RU'); } catch(_e){ return String(n); } }
+function _setLive(key, val){
+  document.querySelectorAll('[data-live="' + key + '"]').forEach(function(el){ el.textContent = val; });
+}
+function updateLiveStats(){
+  var jobs = (ALL_JOBS && ALL_JOBS.length) ? ALL_JOBS : [];
+  var real = ALL_JOBS !== MOCK_JOBS && jobs.length > 0;
+  if (!real) {
+    // No live data (offline / API down): hide numbers rather than show fakes
+    var st = document.getElementById('live-stats'); if (st) st.hidden = true;
+    var hs = document.getElementById('hero-stat-new'); if (hs) hs.hidden = true;
+    var eb = document.getElementById('eyebrow-live'); if (eb) eb.hidden = true;
+    document.querySelectorAll('[data-live-item]').forEach(function(el){ el.hidden = true; });
+    return;
+  }
+  var interns = jobs.filter(function(j){ return j.type === 'internship'; }).length;
+  var remote  = jobs.filter(function(j){ return j.remote; }).length;
+  var cities  = {};
+  jobs.forEach(function(j){
+    var c = (j.city || '').split(/[,\/·]/)[0].trim().toLowerCase();
+    if (c && c !== 'казахстан' && c !== 'kazakhstan') cities[c] = 1;
+  });
+  var nCities = Object.keys(cities).length;
+  var now = Date.now(), week = 0, newest = 0;
+  jobs.forEach(function(j){
+    var t = j.posted_at ? new Date(j.posted_at).getTime() : 0;
+    if (t && now - t < 7 * 864e5) week++;
+    if (t > newest) newest = t;
+  });
+  _setLive('jobs', _fmtNum(jobs.length));
+  _setLive('interns', _fmtNum(interns));
+  _setLive('remote', _fmtNum(remote));
+  _setLive('cities', _fmtNum(nCities || 1));
+  _setLive('week', _fmtNum(week));
+  var hsEl = document.getElementById('hero-stat-new'); if (hsEl) hsEl.hidden = week < 3;
+  var st2 = document.getElementById('live-stats'); if (st2) st2.hidden = false;
+  var eb2 = document.getElementById('eyebrow-live'); if (eb2) eb2.hidden = false;
+  document.querySelectorAll('[data-live-item]').forEach(function(el){ el.hidden = false; });
+  if (newest) {
+    var days = Math.floor((now - newest) / 864e5);
+    _setLive('updated', days <= 0 ? t('updated_today') : days + ' ' + t('updated_days'));
+  } else {
+    _setLive('updated', t('updated_today'));
+  }
+}
+function fillHeroCards(){
+  var jobs = (ALL_JOBS && ALL_JOBS !== MOCK_JOBS) ? ALL_JOBS : [];
+  if (jobs.length < 3) return; // keep neutral placeholders
+  // Prefer partner/intern listings with a salary and a short title so the cards stay tidy
+  var pick = sortPartnersFirst(jobs.slice()).filter(function(j){ return j.title && j.title.length <= 34; });
+  if (pick.length < 3) pick = jobs.slice();
+  var scored = pick.map(function(j){ return { j: j, s: calcMatch(j) }; })
+                   .sort(function(a,b){ return b.s - a.s; }).slice(0, 3);
+  var slots = { 1: scored[0], 2: scored[1], 3: scored[2] };
+  Object.keys(slots).forEach(function(n){
+    var card = document.querySelector('.hero-card[data-hc="' + n + '"]'); if (!card || !slots[n]) return;
+    var j = slots[n].j, s = slots[n].s;
+    var q = function(sel){ return card.querySelector(sel); };
+    if (q('[data-hc-logo]'))  q('[data-hc-logo]').textContent = (j.logo || 'SU').slice(0, 2);
+    if (q('[data-hc-title]')) q('[data-hc-title]').textContent = j.title;
+    if (q('[data-hc-co]'))    q('[data-hc-co]').textContent = j.company + ' · ' + (j.remote ? t('tag_remote') : j.city);
+    if (q('[data-hc-pct]'))   q('[data-hc-pct]').textContent = n === '1' ? String(s) : s + '%';
+    if (q('[data-hc-salary]')) {
+      var hasSal = j.salary && j.salary !== '—';
+      q('[data-hc-salary]').textContent = hasSal ? j.salary : (j.type === 'internship' ? t('tag_intern') : t('salary_warn'));
+    }
+    if (n === '1') {
+      var ring = document.getElementById('hc-ring-fg');
+      if (ring) ring.setAttribute('stroke-dashoffset', String((97.4 * (100 - s) / 100).toFixed(1)));
+      var tags = q('[data-hc-tags]');
+      if (tags) {
+        var tg = [];
+        if (j.type === 'internship') tg.push('<span class="hc-tag tag-intern">' + t('tag_intern') + '</span>');
+        if (j.remote) tg.push('<span class="hc-tag tag-remote">' + t('tag_remote') + '</span>');
+        if (j.type === 'part-time') tg.push('<span class="hc-tag tag-paid">' + t('tag_part') + '</span>');
+        if (!tg.length) tg.push('<span class="hc-tag tag-paid">' + t('tag_paid') + '</span>');
+        tags.innerHTML = tg.join('');
+      }
+      var sk = q('[data-hc-skills]');
+      if (sk) {
+        var skills = (j.skills || []).slice(0, 3);
+        if (skills.length >= 2) {
+          sk.style.display = '';
+          sk.innerHTML = skills.map(function(name, i){
+            var w = [96, 84, 70][i] || 60;
+            return '<div class="hc-sk"><div class="hc-sk-l">' + escapeHtml(String(name).slice(0, 12)) + '</div><div class="hc-sk-bar"><div class="hc-sk-fill" style="width:' + w + '%"></div></div></div>';
+          }).join('');
+        } else { sk.style.display = 'none'; }
+      }
+      var pill = document.querySelector('[data-hc-pill]'); if (pill) pill.textContent = s + '%';
+    }
+  });
+}
+
 // ── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   // Apply dark mode preference before anything renders
@@ -4492,6 +4753,7 @@ async function init() {
       if (Date.now() - __lastJobsFetch > 60000) {
         __lastJobsFetch = Date.now();
         await loadJobs();
+        try { updateLiveStats(); fillHeroCards(); } catch(_e2) {}
       }
     } catch(_e) { /* ignore — badge will fall back to last-known list */ }
     if (typeof refreshAlertBadge === 'function') refreshAlertBadge();
@@ -4505,6 +4767,8 @@ async function init() {
       return buildJobCard(job, calcMatch(job));
     }).join('');
   }
+  // Landing numbers + hero preview cards come from the real job list
+  try { updateLiveStats(); fillHeroCards(); } catch(_e) { console.warn('[SteppeUp] live stats', _e); }
 
   // ── Multi-select chip toggle helper ────────────────────────────────────
   // key: 'data-filter' (feed) or 'data-bfilter' (browse)
@@ -4612,10 +4876,12 @@ async function init() {
   // Listen to hash changes so deep links + back button work
   window.addEventListener('hashchange', handleHashRoute);
 
-  // Check onboarding state
-  if (localStorage.getItem('steppeup_onboarded')) {
-    // Already onboarded: stay on landing, user clicks "Войти" to enter
-    // (or check hash for direct link)
+  // Check onboarding state.
+  // First-time visitors used to get the onboarding modal thrown at them the
+  // moment the page loaded, covering the landing page entirely. Now the landing
+  // page does its job first; onboarding starts when they click a CTA (or open
+  // a deep link into the app).
+  if (localStorage.getItem('steppeup_onboarded') || !/^#\//.test(location.hash)) {
     handleHashRoute();
   } else {
     startOnboarding();
@@ -4721,23 +4987,24 @@ var T = {
     nav_home:'Главная', nav_browse:'Все вакансии', nav_saved:'Сохранённые',
     login:'Войти', start:'Начать →', start_free:'Начать бесплатно →', start_now:'Начать сейчас →',
     // landing
-    eyebrow:'2 000+ студентов уже с нами',
+    eyebrow:'Для студентов Казахстана',
+    eyebrow_jobs:'актуальных вакансий', browse_jobs:'Смотреть вакансии', top_match:'Топ-совпадение', new_week:'новых за неделю', trust_updated:'обновлено', trust_cities:'городов', trust_sources:'источники вакансий', stat_remote:'удалённых', nav_employers:'Работодателям', emp_eyebrow:'Работодателям', emp_title:'Ищете стажёров<br/>и джуниоров?', emp_sub:'Ваша вакансия попадёт к студентам Алматы, Астаны и всего Казахстана, которые ищут первую работу, а наш алгоритм покажет её тем, чьи навыки подходят.', emp_post:'Разместить вакансию', emp_contact:'Написать нам', plan_free_n:'Обычное размещение', plan_free_p:'Бесплатно', plan_free_1:'Вакансия в общей ленте 30 дней', plan_free_2:'Показ студентам с подходящими навыками', plan_free_3:'Отклики напрямую на вашу почту', plan_feat_badge:'Рекомендуем', plan_feat_n:'Featured', plan_feat_per:'/ 30 дней', plan_feat_1:'Закреплено в топе ленты и на главной', plan_feat_2:'Анонс в Telegram-канале SteppeUp', plan_feat_3:'Push-уведомление подходящим студентам', plan_feat_4:'Отметка «Партнёр» на карточке', updated_today:'сегодня', updated_days:'дн. назад',
     hero_h1_1:'Найди', hero_h1_2:'свой', hero_h1_em:'путь',
     hero_h1:'Найди<br/>свой <em>путь</em>',
     hero_sub:'Стажировки и вакансии для студентов Казахстана. Без опыта. Без стресса.',
     proof_strong:'2 000+ студентов', proof_text:'уже нашли место',
-    stat_jobs:'вакансий', stat_intern:'IT стажировок', stat_cities:'городов', stat_sources:'источника',
+    stat_jobs:'вакансий для студентов', stat_intern:'стажировок', stat_cities:'городов', stat_sources:'источника',
     how_title:'Как это работает', how_sub:'Всего 4 шага до первого дня на работе',
     step1_t:'Заполните профиль', step1_d:'Расскажите о своих навыках и интересах. Это займёт 2 минуты.',
     step2_t:'Получите подборку', step2_d:'Наш алгоритм подберёт для вас идеальные вакансии.',
     step3_t:'Откликнитесь', step3_d:'Один клик — и ваш отклик в руках работодателя.',
     step4_t:'Начните работать', step4_d:'Встретьтесь с командой и начните свой путь в карьере.',
-    popular:'Популярные вакансии', see_all:'Смотреть все →',
+    popular:'Свежие вакансии', see_all:'Смотреть все →',
     testi_title:'Отзывы студентов',
-    cta_title:'Готовы к переменам?', cta_sub:'Присоединяйтесь к 2000+ студентов, которые уже нашли свой путь на SteppeUp',
-    nav_how:'Как это работает', nav_vac:'Примеры', nav_about:'О нас',
+    cta_title:'Готовы к переменам?', cta_sub:'Профиль за 2 минуты — и подборка вакансий под ваши навыки уже на экране.',
+    nav_how:'Как это работает', nav_vac:'Вакансии', nav_about:'О нас',
     // footer
-    ft_company:'Компания', ft_about:'О нас', ft_blog:'Блог', ft_contacts:'Контакты',
+    ft_company:'Компания', ft_about:'О нас', ft_blog:'Как это работает', ft_contacts:'Контакты',
     ft_students:'Для студентов', ft_find:'Найти вакансию', ft_courses:'Создать профиль', ft_community:'Сохранённые',
     ft_employers:'Для работодателей', ft_post:'Разместить вакансию', ft_pricing:'Цены', ft_help:'Справка',
     ft_social:'Соцсети', ft_rights:'Все права защищены.',
@@ -4751,7 +5018,7 @@ var T = {
     saved_title:'Сохранённые', vac1:'вакансия', vac24:'вакансии', vac5:'вакансий',
     saved_empty_t:'Пусто пока', saved_empty_p:'Нажмите ♡ на любой вакансии, чтобы сохранить её',
     // job card
-    tag_intern:'Стажировка', tag_part:'Неполный день', tag_remote:'Удалённо',
+    tag_intern:'Стажировка', tag_part:'Неполный день', tag_remote:'Удалённо', tag_paid:'Оплачивается',
     ind_it:'IT', ind_finance:'Финансы', ind_marketing:'Маркетинг', ind_design:'Дизайн', ind_hr:'HR', ind_sales:'Продажи',
     per_month:'/\u00a0мес', salary_warn:'Зарплата по запросу', match_word:'совпадение', match_tooltip:'совпадение с вашим профилем (навыки, город, интересы)',
     filter_clear:'Сбросить', filter_all_hint:'Все вакансии', filter_active:'фильтров активно',
@@ -4872,22 +5139,23 @@ var T = {
     feed_refine:'Іздеу керек пе? → Барлық жұмыстар', fab_submit:'Ұсыну', trust_more_tt:'Барлық жұмыс берушілерді көру',
     nav_home:'Басты', nav_browse:'Барлық жұмыстар', nav_saved:'Сақталған',
     login:'Кіру', start:'Бастау →', start_free:'Тегін бастау →', start_now:'Қазір бастау →',
-    eyebrow:'2 000+ студент біздің қатарда',
+    eyebrow:'Қазақстан студенттеріне',
+    eyebrow_jobs:'өзекті вакансия', browse_jobs:'Вакансияларды көру', top_match:'Топ сәйкестік', new_week:'аптада жаңа', trust_updated:'жаңартылды', trust_cities:'қала', trust_sources:'вакансия көздері', stat_remote:'қашықтан', nav_employers:'Жұмыс берушілерге', emp_eyebrow:'Жұмыс берушілерге', emp_title:'Тағылымдамашы мен<br/>джуниор іздейсіз бе?', emp_sub:'Вакансияңыз Алматы, Астана және бүкіл Қазақстандағы алғашқы жұмысын іздеген студенттерге жетеді, ал алгоритм оны дағдысы сәйкес келетіндерге көрсетеді.', emp_post:'Вакансия орналастыру', emp_contact:'Бізге жазыңыз', plan_free_n:'Қарапайым орналастыру', plan_free_p:'Тегін', plan_free_1:'Жалпы лентада 30 күн', plan_free_2:'Дағдысы сәйкес студенттерге көрсету', plan_free_3:'Үн қатулар тікелей поштаңызға', plan_feat_badge:'Ұсынамыз', plan_feat_n:'Featured', plan_feat_per:'/ 30 күн', plan_feat_1:'Лента мен басты беттің төбесінде бекітілген', plan_feat_2:'SteppeUp Telegram-арнасында анонс', plan_feat_3:'Сәйкес студенттерге push-хабарлама', plan_feat_4:'Карточкада «Серіктес» белгісі', updated_today:'бүгін', updated_days:'күн бұрын',
     hero_h1_1:'Өз', hero_h1_2:'жолыңды', hero_h1_em:'тап',
     hero_h1:'Өз<br/>жолыңды <em>тап</em>',
     hero_sub:'Қазақстан студенттеріне арналған тағылымдамалар мен жұмыстар. Тәжірибесіз. Стресссіз.',
     proof_strong:'2 000+ студент', proof_text:'жұмыс тапты',
-    stat_jobs:'жұмыс', stat_intern:'IT тағылымдама', stat_cities:'қала', stat_sources:'дерек көзі',
+    stat_jobs:'студенттерге вакансия', stat_intern:'тағылымдама', stat_cities:'қала', stat_sources:'дерек көзі',
     how_title:'Қалай жұмыс істейді', how_sub:'Алғашқы жұмыс күніне 4 қадам',
     step1_t:'Профиліңізді толтырыңыз', step1_d:'Дағдыларыңыз бен қызығушылықтарыңыз туралы айтыңыз. 2 минут алады.',
     step2_t:'Таңдау алыңыз', step2_d:'Алгоритміміз сізге идеал жұмыстарды таңдайды.',
     step3_t:'Жауап беріңіз', step3_d:'Бір клик — сіздің жауабыңыз жұмыс берушіде.',
     step4_t:'Жұмысқа кірісіңіз', step4_d:'Командамен танысыңыз және мансап жолыңызды бастаңыз.',
-    popular:'Танымал жұмыстар', see_all:'Барлығын көру →',
+    popular:'Жаңа вакансиялар', see_all:'Барлығын көру →',
     testi_title:'Студент пікірлері',
-    cta_title:'Өзгерістерге дайынсыз ба?', cta_sub:'SteppeUp арқылы жолын тапқан 2000+ студентке қосылыңыз',
-    nav_how:'Қалай жұмыс істейді', nav_vac:'Мысалдар', nav_about:'Біз туралы',
-    ft_company:'Компания', ft_about:'Біз туралы', ft_blog:'Блог', ft_contacts:'Байланыс',
+    cta_title:'Өзгерістерге дайынсыз ба?', cta_sub:'Профиль 2 минутта — дағдыларыңызға сай вакансиялар бірден экранда.',
+    nav_how:'Қалай жұмыс істейді', nav_vac:'Вакансиялар', nav_about:'Біз туралы',
+    ft_company:'Компания', ft_about:'Біз туралы', ft_blog:'Қалай жұмыс істейді', ft_contacts:'Байланыс',
     ft_students:'Студенттерге', ft_find:'Жұмыс табу', ft_courses:'Профиль жасау', ft_community:'Сақталғандар',
     ft_employers:'Жұмыс берушілерге', ft_post:'Жұмыс орналастыру', ft_pricing:'Бағалар', ft_help:'Көмек',
     ft_social:'Әлеуметтік желілер', ft_rights:'Барлық құқықтар қорғалған.',
@@ -4896,7 +5164,7 @@ var T = {
     search_ph:'Атауы немесе компания бойынша іздеу...', hero_search_ph:'Мысалы: дизайнер, Алматы, маркетинг…', nav_search_ph:'Жұмыс іздеу…', search_btn:'Іздеу',
     saved_title:'Сақталған', vac1:'жұмыс', vac24:'жұмыс', vac5:'жұмыс',
     saved_empty_t:'Әзірге бос', saved_empty_p:'Сақтау үшін кез келген жұмыстағы ♡ белгісін басыңыз',
-    tag_intern:'Тағылымдама', tag_part:'Жартылай жұмыс', tag_remote:'Қашықтан',
+    tag_intern:'Тағылымдама', tag_part:'Жартылай жұмыс', tag_remote:'Қашықтан', tag_paid:'Ақылы',
     ind_it:'IT', ind_finance:'Қаржы', ind_marketing:'Маркетинг', ind_design:'Дизайн', ind_hr:'HR', ind_sales:'Сатылым',
     per_month:'/\u00a0ай', salary_warn:'Жалақы сұрау бойынша', match_word:'сәйкестік', match_tooltip:'профиліңізбен сәйкестік (дағдылар, қала, қызығушылық)',
     filter_clear:'Тазарту', filter_all_hint:'Барлық жұмыстар', filter_active:'сүзгі белсенді',
@@ -5006,22 +5274,23 @@ var T = {
     feed_refine:'Need to search? → All jobs', fab_submit:'Suggest', trust_more_tt:'See all employers',
     nav_home:'Home', nav_browse:'All Jobs', nav_saved:'Saved',
     login:'Sign in', start:'Get started →', start_free:'Start free →', start_now:'Start now →',
-    eyebrow:'2,000+ students already with us',
+    eyebrow:'For students in Kazakhstan',
+    eyebrow_jobs:'open positions', browse_jobs:'Browse jobs', top_match:'Top match', new_week:'new this week', trust_updated:'updated', trust_cities:'cities', trust_sources:'job sources', stat_remote:'remote', nav_employers:'For employers', emp_eyebrow:'For employers', emp_title:'Hiring interns<br/>and juniors?', emp_sub:'Your listing reaches students in Almaty, Astana and across Kazakhstan looking for their first job, and our matching shows it to the ones whose skills fit.', emp_post:'Post a job', emp_contact:'Contact us', plan_free_n:'Standard listing', plan_free_p:'Free', plan_free_1:'In the main feed for 30 days', plan_free_2:'Shown to students with matching skills', plan_free_3:'Applications straight to your inbox', plan_feat_badge:'Recommended', plan_feat_n:'Featured', plan_feat_per:'/ 30 days', plan_feat_1:'Pinned to the top of the feed and homepage', plan_feat_2:'Announced in the SteppeUp Telegram channel', plan_feat_3:'Push notification to matching students', plan_feat_4:'“Partner” badge on the card', updated_today:'today', updated_days:'days ago',
     hero_h1_1:'Find', hero_h1_2:'your', hero_h1_em:'path',
     hero_h1:'Find<br/>your <em>path</em>',
     hero_sub:'Internships and jobs for students in Kazakhstan. No experience needed. No stress.',
     proof_strong:'2,000+ students', proof_text:'already found their place',
-    stat_jobs:'jobs', stat_intern:'IT internships', stat_cities:'cities', stat_sources:'sources',
+    stat_jobs:'student-friendly jobs', stat_intern:'internships', stat_cities:'cities', stat_sources:'sources',
     how_title:'How it works', how_sub:'Just 4 steps to your first day at work',
     step1_t:'Fill your profile', step1_d:'Tell us about your skills and interests. Takes 2 minutes.',
     step2_t:'Get your matches', step2_d:'Our algorithm picks the perfect jobs for you.',
     step3_t:'Apply', step3_d:'One click and your application is with the employer.',
     step4_t:'Start working', step4_d:'Meet your team and begin your career journey.',
-    popular:'Popular Jobs', see_all:'See all →',
+    popular:'Fresh jobs', see_all:'See all →',
     testi_title:'Student Reviews',
-    cta_title:'Ready for a change?', cta_sub:'Join 2,000+ students who already found their path on SteppeUp',
-    nav_how:'How it works', nav_vac:'Examples', nav_about:'About',
-    ft_company:'Company', ft_about:'About', ft_blog:'Blog', ft_contacts:'Contact',
+    cta_title:'Ready for a change?', cta_sub:'A 2-minute profile — and a list of jobs matched to your skills is on screen.',
+    nav_how:'How it works', nav_vac:'Jobs', nav_about:'About',
+    ft_company:'Company', ft_about:'About', ft_blog:'How it works', ft_contacts:'Contact',
     ft_students:'For Students', ft_find:'Find a job', ft_courses:'Create profile', ft_community:'Saved jobs',
     ft_employers:'For Employers', ft_post:'Post a job', ft_pricing:'Pricing', ft_help:'Help',
     ft_social:'Social', ft_rights:'All rights reserved.',
@@ -5030,7 +5299,7 @@ var T = {
     search_ph:'Search by title or company...', hero_search_ph:'Try: designer, Almaty, marketing…', nav_search_ph:'Search jobs…', search_btn:'Search',
     saved_title:'Saved Jobs', vac1:'job', vac24:'jobs', vac5:'jobs',
     saved_empty_t:'Nothing here yet', saved_empty_p:'Tap ♡ on any job to save it',
-    tag_intern:'Internship', tag_part:'Part-time', tag_remote:'Remote',
+    tag_intern:'Internship', tag_part:'Part-time', tag_remote:'Remote', tag_paid:'Paid',
     ind_it:'IT', ind_finance:'Finance', ind_marketing:'Marketing', ind_design:'Design', ind_hr:'HR', ind_sales:'Sales',
     per_month:'/\u00a0mo', salary_warn:'Salary on request', match_word:'match', match_tooltip:'match with your profile (skills, city, interests)',
     filter_clear:'Clear all', filter_all_hint:'All jobs', filter_active:'filters active',
@@ -5164,6 +5433,10 @@ function applyLang(lang) {
     var key = el.getAttribute('data-i18n-title');
     if (dict[key]) el.setAttribute('title', dict[key]);
   });
+  // Landing live numbers / hero cards carry translated words too
+  if (typeof updateLiveStats === 'function' && typeof ALL_JOBS !== 'undefined' && ALL_JOBS.length) {
+    try { updateLiveStats(); fillHeroCards(); } catch(_e) {}
+  }
   // Update nav tabs
   var tabs = [['home','nav_home'],['browse','nav_browse'],['saved','nav_saved']];
   tabs.forEach(function(pair) {
