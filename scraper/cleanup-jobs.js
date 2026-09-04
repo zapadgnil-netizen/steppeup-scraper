@@ -152,7 +152,8 @@ async function main() {
     for (const row of rows) {
       // Never resurrect something today's rules would reject — that would undo
       // the garbage sweep every night.
-      if (normalize.validateJob(row) || filter.studentRejectReason(row.title, '')) continue;
+      if (normalize.validateJob(row) ||
+          filter.studentRejectReason(row.title, '', [], { structuredEntry: filter.STRUCTURED_SOURCES.includes(src.name) })) continue;
       let verdict;
       try { verdict = await src.verify(ctx, row); } catch (_e) { verdict = 'unknown'; }
       if (verdict === 'alive') {
@@ -186,7 +187,9 @@ async function main() {
       const reasons = {};
       for (const row of rows || []) {
         if (EXEMPT_SOURCES.includes(row.source)) continue;
-        const reason = normalize.validateJob(row) || filter.studentRejectReason(row.title, row.description || '');
+        const structuredEntry = filter.STRUCTURED_SOURCES.includes(row.source);
+        const reason = normalize.validateJob(row) ||
+          filter.studentRejectReason(row.title, row.description || '', [], { structuredEntry });
         if (reason) { bad.push(row.id); reasons[reason] = (reasons[reason] || 0) + 1; }
       }
       const ratio = rows.length ? bad.length / rows.length : 0;
