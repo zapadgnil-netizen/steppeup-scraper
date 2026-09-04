@@ -1,36 +1,35 @@
 name: SteppeUp Stale Job Cleanup
 
-# Deactivates dead listings (older than 14 days, or archived/closed on hh.kz) so
-# the board only shows live jobs. Runs daily. Must live at the repo root
-# (.github/workflows/) — GitHub Actions ignores workflows under subdirectories.
+# Standalone cleanup so dead listings still get retired if scraping is paused.
+# Passes: per-source TTL expiry → liveness verify (circuit-broken) → self-heal
+# → garbage sweep against current filter rules. Never deletes on ambiguity.
 
 on:
   schedule:
-    - cron: '30 2 * * *'   # daily at 02:30 UTC (~07:30 Almaty)
-  workflow_dispatch: {}      # manual trigger from the Actions tab
+    - cron: '30 3 * * *'   # 03:30 UTC ≈ 08:30 Almaty
+  workflow_dispatch: {}
+
+concurrency:
+  group: steppeup-cleanup
+  cancel-in-progress: false
 
 jobs:
   cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
+          cache: npm
+          cache-dependency-path: scraper/package-lock.json
       - name: Install dependencies
-        run: cd scraper && npm install
-
-      - name: Run cleanup
+        run: cd scraper && npm ci --omit=dev || npm install --omit=dev
+      - name: Cleanup
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.ALERT_TELEGRAM_BOT_TOKEN }}
+          ALERT_TELEGRAM_CHAT_ID: ${{ secrets.ALERT_TELEGRAM_CHAT_ID }}
         run: cd scraper && node cleanup-jobs.js
-
-      - name: Log result
-        if: always()
-        run: echo "Cleanup finished at $(date -u)"

@@ -1,37 +1,55 @@
 name: SteppeUp Daily Job Scraper
 
-# Scrapes fresh student jobs (hh.kz via HTML+JSON, enbek, etc.) into Supabase.
-# Must live at the repo root (.github/workflows/) — GitHub Actions ignores
-# workflows under subdirectories, which is why the old scraper/.github copy
-# never ran. Pairs with cleanup-jobs.yml (removes stale) for a self-maintaining board.
+# Scrapes every source in scraper/sources/ into Supabase, then runs cleanup so
+# the board is refreshed and pruned in one pass. Runs 4x/day: KZ job sites post
+# through the working day and a 24h-old board looks stale to students.
+#
+# The run FAILS (and GitHub emails) when the board drops below the health floor
+# or a write cannot be verified; it reports "degraded" when a single source
+# under-delivers. Silent green runs on a broken source are the failure mode this
+# whole pipeline is designed around — see scraper/SPEC.md.
 
 on:
   schedule:
-    - cron: '0 1 * * *'    # daily at 01:00 UTC (~06:00 Almaty), before the 02:30 cleanup
-  workflow_dispatch: {}      # manual trigger from the Actions tab
+    - cron: '0 1,7,13,19 * * *'   # 01/07/13/19 UTC ≈ 06/12/18/00 Almaty
+  workflow_dispatch: {}
+
+concurrency:
+  group: steppeup-scrape
+  cancel-in-progress: false
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: scraper/package-lock.json
 
       - name: Install dependencies
-        run: cd scraper && npm install
+        run: cd scraper && npm ci --omit=dev || npm install --omit=dev
 
-      - name: Run scraper
+      - name: Unit tests (parsers must still understand today's page shapes)
+        run: cd scraper && npm test
+
+      - name: Scrape
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.ALERT_TELEGRAM_BOT_TOKEN }}
+          ALERT_TELEGRAM_CHAT_ID: ${{ secrets.ALERT_TELEGRAM_CHAT_ID }}
         run: cd scraper && node scrape-jobs.js
 
-      - name: Log result
+      - name: Cleanup (expiry, liveness, self-heal, garbage sweep)
         if: always()
-        run: echo "Scraper finished at $(date -u)"
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ALERT_TELEGRAM_BOT_TOKEN: ${{ secrets.ALERT_TELEGRAM_BOT_TOKEN }}
+          ALERT_TELEGRAM_CHAT_ID: ${{ secrets.ALERT_TELEGRAM_CHAT_ID }}
+        run: cd scraper && node cleanup-jobs.js
