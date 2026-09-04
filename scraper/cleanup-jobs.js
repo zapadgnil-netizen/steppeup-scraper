@@ -35,7 +35,11 @@ const EXEMPT_SOURCES = ['partner'];   // paid / manually curated — never auto-
 const DEFAULT_TTL_DAYS = 21;
 const VERIFY_LIMIT = 120;             // rows checked for liveness per run
 const HEAL_LIMIT = 120;
-const SWEEP_LIMIT = 400;              // rows examined by the garbage sweep
+// The sweep must see the WHOLE board. It used to read 400 unordered rows, so
+// on a 642-row board a third of it was never examined and junk survived every
+// night. Paged, ordered, and it says so when coverage is capped.
+const SWEEP_LIMIT = 5000;             // max rows examined by the garbage sweep
+const SWEEP_PAGE = 1000;
 const SWEEP_MAX_KILL_RATIO = 0.5;     // sweep safety: never retire >50% of what it reads
 const MIN_ACTIVE_HEALTHY = 25;
 const BREAKER_MIN_SAMPLE = 20;
@@ -164,11 +168,20 @@ async function main() {
   // ── Pass 4: garbage sweep ─────────────────────────────────────────────────
   // Retire active rows that today's normalizer/filter would never have accepted.
   {
-    const { data: rows, error } = await client.from('jobs')
-      .select('id, title, company, source, source_url, description')
-      .eq('status', 'active').limit(SWEEP_LIMIT);
+    let rows = [], error = null;
+    for (let from = 0; from < SWEEP_LIMIT; from += SWEEP_PAGE) {
+      const res = await client.from('jobs')
+        .select('id, title, company, source, source_url, description')
+        .eq('status', 'active')
+        .order('id', { ascending: true })
+        .range(from, from + SWEEP_PAGE - 1);
+      if (res.error) { error = res.error; break; }
+      rows = rows.concat(res.data || []);
+      if (!res.data || res.data.length < SWEEP_PAGE) break;
+    }
     if (error) health.problem('sweep fetch: ' + error.message);
     else {
+      if (rows.length >= SWEEP_LIMIT) health.problem(`sweep coverage capped at ${SWEEP_LIMIT} rows — raise SWEEP_LIMIT`);
       const bad = [];
       const reasons = {};
       for (const row of rows || []) {
