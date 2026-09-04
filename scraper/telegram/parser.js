@@ -53,27 +53,54 @@ const SKILLS = [
 ];
 
 // ── Helpers ────────────────────────────────────────────────────────────────
+const { NOT_A_JOB } = require('../lib/filter');
+const { titleProblem } = require('../lib/normalize');
+const {
+  hasRoleWord, TITLE_LABEL_RE, TITLE_VERB_RE, COMPANY_LABEL_RE, APPLY_LABEL_RE, SALARY_LABEL_RE,
+} = require('./roles');
+
 const lc = (s) => (s || '').toLowerCase();
 
-// Is this post actually a job/internship vacancy (vs. an event, news, media post)?
+// Is this post actually a job/internship vacancy (vs. an event, grant, course,
+// club recruitment, ad, or news)?
+//
+// The old version accepted any post containing a loose "job signal" word, which
+// is how grants ("Грант Tech Orda"), club recruitment ("AIESEC Recruitment
+// Fall'26"), training academies and resume-service ads all ended up on the
+// board. The gate is now: NOT-A-JOB veto (shared with lib/filter) → must have a
+// role word → must have at least one hiring-structure signal.
 function isVacancy(text) {
-  if (!text || text.replace(/\s/g, '').length < 40) return false;          // empty / media-only
+  if (!text || text.replace(/\s/g, '').length < 60) return false;          // empty / media-only
   if (/please open telegram|view in telegram/i.test(text)) return false;    // media placeholder
   const t = lc(text);
-  const jobSignals = ['вакансия', 'должность', 'позиция', 'требуется', 'ищем', 'в поиске',
-    'стажировк', 'стажёр', 'стажер', 'тағылымдама', 'intern', 'vacancy', 'hiring', 'job',
-    'обязанности', 'требовани', 'резюме', 'отклик', 'трудоустройств', 'оклад', 'жалақы'];
-  const eventSignals = ['лекция', 'вебинар', 'мастер-класс', 'митап', 'meetup', 'встреча состоится',
-    'приглашаем на встречу', 'день открытых дверей'];
-  // Reject posts whose headline is clearly an EVENT, not a vacancy.
-  const firstLine = lc((text.split('\n').map((l) => l.trim()).find((l) => l.length > 4) || ''));
-  if (/^(гостев\w* лекци|лекци|вебинар|мастер-?класс|митап|meetup|день открытых дверей|встреча с|приглашаем на (встреч|лекци|вебинар)|workshop|ярмарка)/.test(firstLine)) return false;
 
-  const hasJob = jobSignals.some((k) => t.includes(k));
-  const looksEvent = eventSignals.some((k) => t.includes(k));
-  // An event post only counts if it ALSO clearly offers a vacancy/application.
-  if (looksEvent && !/вакансия|ссылка на вакансию|резюме|отклик|apply/.test(t)) return false;
-  return hasJob;
+  // 1. Hard veto: things career channels post that are not jobs. Reuse the
+  //    shared list so the website, scraper and Telegram agree on what a job is.
+  const strongJob = /вакансия|должность|стажировк|стажер|стажёр|intern|trainee|тағылымдама/.test(t);
+  if (!strongJob) {
+    for (const re of NOT_A_JOB) if (re.test(t)) return false;
+  }
+  // Programs/academies/grants are never vacancies even when they say "стажировка"
+  // as a perk ("даёт доступ к стажировкам").
+  if (/(грант|scholarship|стипенди)\w*\s|training\s+program|academy|академи[яю]\s|курс\s+подойд|онлайн-курс|обучающ\w+\s+программ/.test(t)
+      && !/(вакансия|должность\s*:|мы\s+ищем|требуется\s+на\s+должность)/.test(t)) return false;
+  if (/recruitment\s+(fall|spring|summer|winter)|набор\s+в\s+(команду\s+)?aiesec|enactus|волонт[её]р/.test(t)) return false;
+
+  // 2. Must name a role somewhere.
+  if (!hasRoleWord(t)) return false;
+
+  // 3. Must look like an actual hiring post: structure or an explicit label.
+  const structure = [
+    /обязанност|требовани|условия\s+работы|что\s+мы\s+предлагаем|мы\s+предлагаем|responsibilities|requirements|qualifications/,
+    /график\s+работы|полная\s+занятост|частичная\s+занятост|неполный\s+день|５\/２|5\/2/,
+    /резюме\s+(на|по|отправ)|отклик|подать\s+заявку|apply|ссылка\s+на\s+вакансию|откликнуться/,
+    /зарплат|оклад|заработной\s+платы|salary|жалақы/,
+    /^\s*(должность|вакансия|позиция|position)\s*[:\-–—]/im,
+    // NB: test against `t` (lower-cased), not `text` — real posts capitalise
+    // "Обязанности:" / "Требования:" and a case-sensitive test silently
+    // rejected every one of them.
+  ].filter((re) => re.test(t)).length;
+  return structure >= 1;
 }
 
 // Pick the external application link. Anything that isn't a Telegram/CDN URL wins;
@@ -134,57 +161,144 @@ function cleanLine(s) {
     .trim();
 }
 
-// Title: prefer an explicit label, else the first substantive line.
+// ── Title ────────────────────────────────────────────────────────────────────
+// Returns a ROLE, or null when the post has no recognisable one (caller drops
+// the post). Order matters: an explicit label beats a guessed line, and a
+// guessed line must contain a role word — otherwise we get sentence fragments
+// like "находится на стыке бизнес-аналитики" (a real row from the old board).
 function detectTitle(text) {
-  const labelRe = /(?:вакансия|должность|позиция|роль|position|job title|ваканси[яи]\s*:)\s*[:\-—]?\s*(.+)/i;
-  for (const raw of text.split('\n')) {
-    const m = raw.match(labelRe);
-    if (m && cleanLine(m[1]).length > 2) return cleanLine(m[1]).slice(0, 120);
-  }
-  const lines = text.split('\n').map(cleanLine).filter((l) => l.length > 4 && l.length < 120);
-  return lines.length ? lines[0].slice(0, 120) : 'Вакансия';
-}
+  const lines = (text || '').split('\n').map((l) => l.trim()).filter(Boolean);
 
-// Company: explicit label (must have a ':'/'—' separator so we don't match
-// prose like "Компания работает в…"), or a legal-entity prefix, or a «quoted» name.
-function detectCompany(text) {
-  const labelRe = /(?:компания|работодатель|company|employer)\s*[:\-—]\s*([^\n.]{2,80})/i;
-  for (const raw of text.split('\n')) {
-    const m = raw.match(labelRe);
+  // 1. Explicit label line: "Должность: Стажер в отдел логистики"
+  for (const raw of lines) {
+    const m = raw.match(TITLE_LABEL_RE);
     if (m) {
       const v = cleanLine(m[1]);
-      // Guard against label-as-prose ("компания работает/предоставляет/ищет…")
+      if (v.length > 3 && !titleProblem(v)) return trimTitle(v);
+    }
+  }
+
+  // 2. Verb pattern: "LG Electronics is looking for talented students!" /
+  //    "в поиске молодых специалистов ... на позицию: Ассистента рекрутера"
+  const onPosition = text.match(/на\s+(?:позицию|должность)\s*[:\-–—]?\s*([^\n.!]{3,80})/i);
+  if (onPosition) {
+    const v = cleanLine(onPosition[1]);
+    if (hasRoleWord(v) && !titleProblem(v)) return trimTitle(v);
+  }
+  const verb = text.match(TITLE_VERB_RE);
+  if (verb) {
+    const v = cleanLine(verb[1]);
+    if (hasRoleWord(v) && !titleProblem(v)) return trimTitle(v);
+  }
+
+  // 3. A standalone line that reads like a role. Prefer the earliest short one:
+  //    posts usually lead with the role or put it right after the company.
+  const candidates = lines
+    .map(cleanLine)
+    .filter((l) => l.length >= 4 && l.length <= 90 && hasRoleWord(l) && !titleProblem(l))
+    // Drop lines that are clearly prose about the role rather than the role.
+    .filter((l) => !/^(мы|наша|наш|это|для|в\s|на\s|с\s|по\s|при\s|из\s|от\s)/i.test(l))
+    // Bullets and list items are body copy, never the headline role.
+    .filter((l) => !/^[•·\-*–—+>]/.test(l))
+    // Lines that start with a quantity are conditions, not roles
+    // ("11 месяцев стажировки по трудовому договору").
+    .filter((l) => !/^\d/.test(l))
+    // Responsibility bullets often start with a verbal noun and contain a
+    // department phrase ("Проверка и анализ данных по продажам и складам").
+    .filter((l) => !/^(проверка|анализ|ведение|подготовка|составление|обработка|контроль|сопровождение|организация|формирование|участие|взаимодействие)\s/i.test(l))
+    // English gerund/participle phrases ("Participating in various HR projects")
+    // Any English gerund opener is a responsibility bullet, not a role
+    // ("Gathering vacancy requirements and liaising with…").
+    .filter((l) => !/^[a-z]+ing\s/i.test(l))
+    // Email-subject / template instructions ("«Trainee Program – [Имя Фамилия]»")
+    .filter((l) => !/[\[\]]|тема\s+письма|subject\s*:/i.test(l))
+    .filter((l) => l.split(/\s+/).length <= 10);
+  if (candidates.length) {
+    candidates.sort((a, b) => a.length - b.length);
+    // Shortest role-bearing line, but not absurdly short.
+    const best = candidates.find((c) => c.length >= 8) || candidates[0];
+    return trimTitle(best);
+  }
+
+  return null; // no role found → not usable as a listing
+}
+
+// Trim decoration that makes titles ugly without changing their meaning.
+function trimTitle(s) {
+  return cleanLine(s)
+    .replace(/^\s*(?:ваканси[яи]|должность|позиция|position|role|job)\s*[:\-–—]\s*/i, '')
+    .replace(/\s*job\s+pattern\s*:.*$/i, '')
+    .replace(/\s*(уровень\s+)?(заработной\s+платы|зарплата|з\/п)\s*[:\-–—].*$/i, '')
+    .replace(/[\s,.;:!\-–—]+$/, '')
+    .slice(0, 120);
+}
+
+// ── Company ──────────────────────────────────────────────────────────────────
+// Never returns 'Unknown': the caller supplies the channel label as a last
+// resort, so a card always shows a human-meaningful source.
+function detectCompany(text, fallback) {
+  const lines = (text || '').split('\n').map((l) => l.trim()).filter(Boolean);
+
+  // 1. Explicit label: "Компания: Danone, ТМ"
+  for (const raw of lines) {
+    const m = raw.match(COMPANY_LABEL_RE);
+    if (m) {
+      const v = cleanLine(m[1]);
       if (v.length > 1 && !/^(работает|предоставля|ищет|приглаша|занимается)/i.test(v)) return v.slice(0, 80);
     }
   }
-  const legal = text.match(/((?:ТОО|АО|ИП|ОО|АҚ|ЖШС)\s+[«"]?[\wА-Яа-яЁё.\-]{2,50}[»"]?)/);
+  // 2. Legal entity anywhere: ТОО «Атлас Копко…», АО FlyArystan
+  const legal = text.match(/((?:ТОО|АО|ИП|ЖШС|АҚ|LLP|LLC)\s+[«"']?[\wА-Яа-яЁё&.\- ]{2,50}[»"']?)/);
   if (legal) return cleanLine(legal[1]).slice(0, 80);
-  // "Стажировка в X", "практика в X", "вакансия в X"
-  const prep = text.match(/(?:стажировк\w*|практик\w*|ваканси\w*|работа)\s+в\s+([A-ZА-ЯЁ][\wА-Яа-яЁё&.\-]+(?:\s+[A-ZА-ЯЁ][\wА-Яа-яЁё&.\-]+){0,3})/);
-  if (prep) return cleanLine(prep[1]).slice(0, 80);
-  // "X приглашает / ищет / запускает / открывает …"
-  const verb = text.match(/(?:^|\n)\s*(?:компания\s+)?([A-ZА-ЯЁ][\wА-Яа-яЁё&.\-]+(?:\s+[A-ZА-ЯЁ][\wА-Яа-яЁё&.\-]+){0,3})\s+(?:приглашает|ищет|запускает|открывает|в поиске|набирает)/);
-  if (verb) return cleanLine(verb[1]).slice(0, 80);
-  const quoted = text.match(/[«"“]([^»"”\n]{2,60})[»"”]/);
-  if (quoted) return cleanLine(quoted[1]).slice(0, 80);
-  return 'Unknown';
+  // 3. "<Company> приглашает / ищет / объявляет"
+  const verb = text.match(/(?:^|\n)\s*([A-ZА-ЯЁ][\wА-Яа-яЁё&.\-]*(?:\s+[A-ZА-ЯЁa-zа-яё][\wА-Яа-яЁё&.\-]*){0,3})\s+(?:приглашает|ищет|объявляет|запускает|набирает|is\s+looking|announces)/);
+  if (verb) { const v = cleanLine(verb[1]); if (v.length > 2 && !hasRoleWord(v)) return v.slice(0, 80); }
+  // 4. "стажировка в X" / "карьеру ... вместе с X"
+  // "Начни карьеру в HR вместе с Air Astana" — the department is not the
+  // employer, so skip department abbreviations and keep looking.
+  const DEPT = /^(hr|it|pr|smm|seo|qa|r&d|hse|sales|finance|marketing|логистик|продаж|маркетинг)$/i;
+  const prepRe = /(?:стажировк\w*|практик\w*|ваканси\w*|карьеру)\s+(?:в|вместе\s+с|с)\s+([A-ZА-ЯЁ][\wА-Яа-яЁё&.\-]+(?:\s+[A-ZА-ЯЁ][\wА-Яа-яЁё&.\-]+){0,3})/g;
+  let pm;
+  while ((pm = prepRe.exec(text)) !== null) {
+    const v = cleanLine(pm[1]);
+    if (v && !DEPT.test(v)) return v.slice(0, 80);
+  }
+  const together = text.match(/вместе\s+с\s+([A-ZА-ЯЁ][\wА-Яа-яЁё&.\-]+(?:\s+[A-ZА-ЯЁ][\wА-Яа-яЁё&.\-]+){0,2})/);
+  if (together) { const v = cleanLine(together[1]); if (!DEPT.test(v)) return v.slice(0, 80); }
+  // 5. First line, when it looks like a company name and not a role/sentence.
+  const first = cleanLine(lines[0] || '');
+  if (first && first.length >= 3 && first.length <= 60 && !hasRoleWord(first) &&
+      first.split(/\s+/).length <= 5 && !/[.!?]$/.test(first) &&
+      /^[A-ZА-ЯЁ«"']/.test(first) && !/^(hi|hello|привет|друзья|коллеги|внимание)/i.test(first)) {
+    return first.slice(0, 80);
+  }
+  return fallback || 'Компания';
 }
 
 // ── THE SWAP POINT ───────────────────────────────────────────────────────────
-function parsePost(rawPost) {
+function parsePost(rawPost, opts = {}) {
   const { channel, msgId, postUrl, dateISO, text, links } = rawPost;
-  if (!isVacancy(text)) return null;
+  if (!isVacancy(text)) { parsePost.lastReject = 'not-a-vacancy'; return null; }
 
-  const { apply_url, source_type } = pickApplyUrl(links, postUrl);
+  const title = detectTitle(text);
+  if (!title) { parsePost.lastReject = 'no-role-in-post'; return null; }
+
+  // An explicit "Ссылка на вакансию: <url>" line beats link-order heuristics.
+  let apply_url = null, source_type = null;
+  for (const raw of text.split('\n')) {
+    const m = raw.match(APPLY_LABEL_RE);
+    if (m && /^https?:\/\//.test(m[1])) { apply_url = m[1]; source_type = 'external_link'; break; }
+  }
+  if (!apply_url) ({ apply_url, source_type } = pickApplyUrl(links, postUrl));
+
   const salary = detectSalary(text);
   const jobType = detectType(text);
-  // Fold the detected type into tags so the frontend's tag-based type detection
-  // (mapSupabaseJob) picks it up — the jobs table has no dedicated `type` column.
   const typeTag = jobType === 'internship' ? 'стажировка'
     : jobType === 'part-time' ? 'part-time'
     : jobType === 'remote' ? 'remote' : null;
   const tags = ['telegram_career', `ch:${channel}`].concat(typeTag ? [typeTag] : []);
 
+  parsePost.lastReject = null;
   return {
     source: 'telegram_career',
     source_id: `tg_${channel}_${msgId}`,
@@ -192,8 +306,8 @@ function parsePost(rawPost) {
     apply_url,
     source_type,
     source_channel: channel,
-    title: detectTitle(text),
-    company: detectCompany(text),
+    title,
+    company: detectCompany(text, opts.companyFallback),
     location: detectCity(text),
     salary_min: salary.min,
     salary_max: salary.max,
@@ -210,6 +324,6 @@ function parsePost(rawPost) {
 
 module.exports = {
   parsePost, isVacancy, pickApplyUrl, detectCity, detectType, detectSkills,
-  detectSalary, detectTitle, detectCompany,
+  detectSalary, detectTitle, detectCompany, trimTitle,
   CITY_KEYWORDS, TYPE_RULES, SKILLS,
 };

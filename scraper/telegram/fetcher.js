@@ -74,9 +74,12 @@ function extractMessage($, el) {
 }
 
 // Fetch one channel's preview page and return its raw posts.
-async function fetchChannel(username, { before = null } = {}) {
+// `http` (from lib/http.createHttp) is preferred — it carries the shared retry,
+// timeout, UA-rotation and request-budget policy. The built-in fetchHtml stays
+// as a fallback so the legacy telegram/index.js entry point keeps working.
+async function fetchChannel(username, { before = null, http = null } = {}) {
   const url = `https://t.me/s/${username}` + (before ? `?before=${before}` : '');
-  const html = await fetchHtml(url);
+  const html = http ? (await http.text(url)).body : await fetchHtml(url);
   const $ = cheerio.load(html);
 
   const posts = [];
