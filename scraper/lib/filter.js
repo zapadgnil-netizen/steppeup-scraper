@@ -45,7 +45,15 @@ const NOT_A_JOB = [
   /(резюме\s+(?:за|под)\s+\d|поможем\s+с\s+резюме|консультаци[яи]\s+по\s+карьер|карьерн\w+\s+консульт)/i,
 ];
 
-function studentRejectReason(title, description, tags = []) {
+/**
+ * opts.structuredEntry — the SOURCE has already told us this role is entry-level
+ * (hh.kz `workExperience=noExperience`, enbek's experience-years filter). That
+ * machine-readable flag beats prose: descriptions routinely say "опыт работы в
+ * продажах будет плюсом", which the text heuristic below reads as a hard
+ * requirement. Without this, cleanup retired 8 genuine hh listings every night
+ * and the next scrape put them straight back — a flapping board.
+ */
+function studentRejectReason(title, description, tags = [], opts = {}) {
   const titleText = (title || '').toLowerCase();
   const t = `${titleText} ${(description || '').toLowerCase()} ${(tags || []).join(' ').toLowerCase()}`;
 
@@ -76,7 +84,7 @@ function studentRejectReason(title, description, tags = []) {
   // 3. Requires prior experience (unless it also welcomes no-experience)
   const requiresExp = /опыт\s*работы\s*(от|не\s*менее|обязателен|:)|с\s*опытом|опыт\s*от\s*\d|обязателен\s*опыт|требуется\s*опыт|опыт\s*не\s*менее|стаж\s*(работы\s*)?(от|не\s*менее)|experience\s*(required|of\s*\d)|\d\+?\s*years?\s*of\s*experience|от\s*\d\s*(года|лет)\s*опыт|опыт\s*в\s*(сфере|продаж|данной)\s*\w*\s*от/.test(t);
   const welcomesNoExp = /без\s*опыта|опыт\s*не\s*требуется|опыта\s*не\s*требуется|можно\s*без\s*опыта|no\s*experience|обучение\s*с\s*нуля|обучаем|стажировк|стажер|стажёр|intern|тәжірибесіз/.test(t);
-  if (requiresExp && !welcomesNoExp) return 'requires-experience';
+  if (requiresExp && !welcomesNoExp && !opts.structuredEntry) return 'requires-experience';
 
   // 4. Age / gender restriction (discriminatory; usually not student roles)
   if (/(женщин\w*|мужчин\w*|девушк\w*|парн\w*|парень|жен\.|муж\.)\s*(от|до)?\s*\d{2}/.test(t))
@@ -90,11 +98,15 @@ function studentRejectReason(title, description, tags = []) {
   return null;
 }
 
+// Sources whose listings come from a structured entry-level query. Cleanup has
+// only a DB row, so it infers the flag from the source name.
+const STRUCTURED_SOURCES = ['hh_kz', 'enbek_kz'];
+
 function isStudentFriendly(title, description, tags = [], { structuredEntry = false } = {}) {
-  if (studentRejectReason(title, description, tags)) return false;
+  if (studentRejectReason(title, description, tags, { structuredEntry })) return false;
   if (structuredEntry) return true;
   const fullText = `${title || ''} ${description || ''} ${(tags || []).join(' ')}`.toLowerCase();
   return POSITIVE.some((kw) => fullText.includes(kw));
 }
 
-module.exports = { studentRejectReason, isStudentFriendly, POSITIVE, NOT_A_JOB };
+module.exports = { studentRejectReason, isStudentFriendly, POSITIVE, NOT_A_JOB, STRUCTURED_SOURCES };
