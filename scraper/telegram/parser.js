@@ -173,8 +173,8 @@ function detectTitle(text) {
   for (const raw of lines) {
     const m = raw.match(TITLE_LABEL_RE);
     if (m) {
-      const v = cleanLine(m[1]);
-      if (v.length > 3 && !titleProblem(v)) return trimTitle(v);
+      const v = trimTitle(cleanLine(m[1]));
+      if (v.length > 3 && !titleProblem(v)) return v;
     }
   }
 
@@ -182,13 +182,13 @@ function detectTitle(text) {
   //    "в поиске молодых специалистов ... на позицию: Ассистента рекрутера"
   const onPosition = text.match(/на\s+(?:позицию|должность)\s*[:\-–—]?\s*([^\n.!]{3,80})/i);
   if (onPosition) {
-    const v = cleanLine(onPosition[1]);
-    if (hasRoleWord(v) && !titleProblem(v)) return trimTitle(v);
+    const v = trimTitle(cleanLine(onPosition[1]));
+    if (hasRoleWord(v) && !titleProblem(v)) return v;
   }
   const verb = text.match(TITLE_VERB_RE);
   if (verb) {
-    const v = cleanLine(verb[1]);
-    if (hasRoleWord(v) && !titleProblem(v)) return trimTitle(v);
+    const v = trimTitle(cleanLine(verb[1]));
+    if (hasRoleWord(v) && !titleProblem(v)) return v;
   }
 
   // 3. A standalone line that reads like a role. Prefer the earliest short one:
@@ -225,12 +225,15 @@ function detectTitle(text) {
 
 // Trim decoration that makes titles ugly without changing their meaning.
 function trimTitle(s) {
-  return cleanLine(s)
+  const out = cleanLine(s)
     .replace(/^\s*(?:ваканси[яи]|должность|позиция|position|role|job)\s*[:\-–—]\s*/i, '')
     .replace(/\s*job\s+pattern\s*:.*$/i, '')
     .replace(/\s*(уровень\s+)?(заработной\s+платы|зарплата|з\/п)\s*[:\-–—].*$/i, '')
     .replace(/[\s,.;:!\-–—]+$/, '')
     .slice(0, 120);
+  // Capitalise a Cyrillic opener only: lowercase Latin tokens like "iOS" and
+  // "frontend" are written that way on purpose.
+  return /^[а-яё]/.test(out) ? out[0].toUpperCase() + out.slice(1) : out;
 }
 
 // ── Company ──────────────────────────────────────────────────────────────────
