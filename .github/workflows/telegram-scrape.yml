@@ -22,10 +22,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-          cache-dependency-path: scraper/package-lock.json
       - name: Install dependencies
-        run: cd scraper && npm ci --omit=dev || npm install --omit=dev
+        run: cd scraper && npm install --omit=dev --no-audit --no-fund
       - name: Scrape Telegram channels only
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
