@@ -1,704 +1,212 @@
 /**
- * SteppeUp Job Scraper
- * Runs daily via GitHub Actions (free). Scrapes KZ job sites for student-friendly
- * positions, upserts to Supabase, and removes stale listings.
+ * SteppeUp Job Scraper — v2 orchestrator.
  *
- * Sources:
- *   1. hh.kz (HeadHunter) — public API, no auth needed
- *   2. enbek.kz — government employment portal
- *   3. Kolesa Group careers
- *   4. GitHub Jobs (KZ-related tech)
- *   5. Youth employment portal
+ * Runs every source module (scraper/sources/*.js), upserts the results, and
+ * ends with an explicit verdict: ok | degraded | failed. See SPEC.md for the
+ * source contract and the history that shaped these rules.
+ *
+ * THE RULE THIS FILE EXISTS TO ENFORCE: a source that produces nothing must
+ * fail loudly. Every past outage was silent — api.hh.ru 403s treated as "job
+ * dead", `vacancy-archived` grepped out of JS bundles, upserts rejected by a
+ * missing unique index, and hh.kz entity-encoding its embedded JSON so
+ * JSON.parse threw and hh returned zero jobs for weeks. In every case the
+ * workflow stayed green. Now each source declares `minExpected`, and falling
+ * short is reported, alerted, and written to scraping_logs.
+ *
+ * Run:
+ *   node scrape-jobs.js              # live  (SUPABASE_URL + SUPABASE_SERVICE_KEY)
+ *   node scrape-jobs.js --dry-run    # no DB writes, prints everything
+ *   node scrape-jobs.js --only=hh_kz # one source (repeatable, comma-separated)
  */
 
-const fetch = require('node-fetch');
-const cheerio = require('cheerio');
-const { createClient } = require('@supabase/supabase-js');
-// Provide our own WebSocket implementation so @supabase/realtime-js doesn't
-// crash at import time on Node versions without a native global WebSocket.
-// We never use Realtime here — this is purely defensive.
-const WebSocket = require('ws');
+const { createHttp } = require('./lib/http');
+const filter = require('./lib/filter');
+const normalize = require('./lib/normalize');
+const { createDb } = require('./lib/db');
+const { createHealth, notify, writeStepSummary } = require('./lib/health');
 
-// ── Config ────────────────────────────────────────────────────
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY; // use service role for server-side
+const SOURCES = [
+  require('./sources/hh'),
+  require('./sources/enbek'),
+  require('./sources/telegram'),
+];
+
 const DRY_RUN = process.argv.includes('--dry-run');
+const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').replace('--only=', '')
+  .split(',').map((s) => s.trim()).filter(Boolean);
+
+// Board-wide floor. Below this the website looks broken, so the run fails and
+// GitHub emails. Deliberately lower than the sum of source minimums: one source
+// having a bad day should degrade, not fail.
+const MIN_ACTIVE_HEALTHY = 25;
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 if (!DRY_RUN && (!SUPABASE_URL || !SUPABASE_KEY)) {
   console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_KEY env vars');
   process.exit(1);
 }
 
-const db = DRY_RUN ? null : createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false },
-  realtime: { transport: WebSocket }
-});
+const log = (...a) => console.log(...a);
 
-// Student-friendly keywords (RU + EN)
-const STUDENT_KEYWORDS_RU = [
-  'стажер', 'стажёр', 'стажировка', 'junior', 'джуниор', 'начинающий',
-  'без опыта', 'студент', 'практика', 'intern', 'trainee', 'entry level',
-  'помощник', 'ассистент', 'частичная занятость', 'подработка', 'гибкий график'
-];
-
-const STUDENT_KEYWORDS_EN = [
-  'intern', 'internship', 'junior', 'entry level', 'entry-level', 'graduate',
-  'trainee', 'assistant', 'part-time', 'student', 'no experience', 'starter',
-  'associate', 'fresh graduate', 'beginner'
-];
-
-const ALL_KEYWORDS = [...STUDENT_KEYWORDS_RU, ...STUDENT_KEYWORDS_EN];
-
-// Negative keywords that disqualify a job from being student-friendly
-const NON_STUDENT_KEYWORDS = [
-  'senior', 'сеньор', 'синьор', 'middle', 'мидл', 'lead', 'руководитель',
-  'начальник', 'директор', 'главный', 'эксперт', 'expert', 'head',
-  'опыт от 1', 'опыт от 2', 'опыт от 3', 'опыт работы от 1', 'опыт работы от 2',
-  'опыт работы от 3', 'от 1 года', 'от 2 лет', 'от 3 лет', 'от 3-х лет',
-  'коммерческий опыт', 'опыт коммерческой'
-];
-
-// Kazakhstan city mapping
-const KZ_CITIES = {
-  160: 'Almaty', 159: 'Astana', 181: 'Karaganda', 182: 'Shymkent',
-  183: 'Aktobe', 184: 'Atyrau', 185: 'Kostanay', 186: 'Pavlodar',
-  187: 'Semey', 188: 'Ust-Kamenogorsk', 189: 'Oral', 190: 'Aktau',
-  191: 'Taraz', 192: 'Petropavlovsk', 193: 'Kyzylorda', 194: 'Turkestan',
-  195: 'Taldykorgan', 196: 'Ekibastuz', 197: 'Temirtau', 198: 'Rudny'
-};
-
-// ── Helpers ───────────────────────────────────────────────────
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-// Strict reject gate, shared (in spirit) with the client-side isStudentSuitable
-// in index.html. Returns a reason string when a job is NOT student-suitable, or
-// null when it passes. Keep these two in sync when you change the rules.
-function studentRejectReason(title, description, tags = []) {
-  const titleText = (title || '').toLowerCase();
-  const t = `${titleText} ${(description || '').toLowerCase()} ${tags.join(' ').toLowerCase()}`;
-
-  // 1. Explicitly excludes students ("студентов просьба не беспокоить")
-  if (/студент\w*[^.]{0,25}(не\s*беспоко|не\s*обраща|не\s*подход|не\s*рассматр)|без\s*студент|не\s*для\s*студент/.test(t))
-    return 'excludes-students';
-
-  // 2. Senior / management role by title
-  // NB: \b doesn't work before Cyrillic in JS regex, so Cyrillic terms are plain substrings.
-  if (/\b(senior|middle|lead|head)\b|сень[оё]р|синьор|мидл|тимлид|руководител|начальник|директор|главн(ый|ого|ая)|заведующ|управляющ|ведущий\s+специалист|эксперт/.test(titleText))
-    return 'senior-title';
-
-  // 3. Requires prior experience (unless it also welcomes no-experience)
-  const requiresExp = /опыт\s*работы|с\s*опытом|опыт\s*от|обязателен\s*опыт|требуется\s*опыт|опыт\s*не\s*менее|стаж\s*(работы|от)|experience\s*(required|of)|years?\s*of\s*experience|опыт\s*в\s*(сфере|продаж|данной)/.test(t);
-  const welcomesNoExp = /без\s*опыта|опыт\s*не\s*требуется|опыта\s*не\s*требуется|можно\s*без\s*опыта|no\s*experience|обучение\s*с\s*нуля|обучаем/.test(t);
-  if (requiresExp && !welcomesNoExp) return 'requires-experience';
-
-  // 4. Age / gender restriction (discriminatory; usually not student roles)
-  if (/(женщин\w*|мужчин\w*|девушк\w*|парн\w*|парень|жен\.|муж\.)\s*(от|до)?\s*\d{2}/.test(t))
-    return 'age-gender-restricted';
-
-  // 5. Multi-job digest (several vacancies mashed into one post)
-  const c = (re) => (t.match(re) || []).length;
-  if (c(/зарплата/g) >= 2 || c(/обязанности/g) >= 2 || c(/требовани[ея]/g) >= 3)
-    return 'multi-job-digest';
-
-  return null;
-}
-
-function isStudentFriendly(title, description, tags = []) {
-  const fullText = `${title} ${description || ''} ${tags.join(' ')}`.toLowerCase();
-
-  // Hard reject gate (experience, seniority, exclusion, discrimination, digests)
-  if (studentRejectReason(title, description, tags)) return false;
-
-  // Legacy negative-keyword list, kept as an extra guard
-  if (NON_STUDENT_KEYWORDS.some(kw => fullText.includes(kw))) {
-    if (!fullText.includes('без опыта') && !fullText.includes('опыт не требуется')) return false;
-  }
-
-  // Must contain at least one student / junior keyword
-  return ALL_KEYWORDS.some(kw => fullText.includes(kw));
-}
-
-function extractSalary(salaryObj) {
-  if (!salaryObj) return { min: null, max: null, currency: 'KZT' };
-  return {
-    min: salaryObj.from || null,
-    max: salaryObj.to || null,
-    currency: salaryObj.currency || 'KZT'
-  };
-}
-
-function cleanHtml(html) {
-  if (!html) return '';
-  return html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 5000);
-}
-
-const log = (src, msg) => console.log(`[${src}] ${msg}`);
-
-// ── Source 1: HeadHunter (hh.kz) ─────────────────────────────
-// Public API: https://api.hh.ru/vacancies — works for .kz too
-// Area 40 = Kazakhstan
-// NOTE: api.hh.ru is IP-blocked (403) from datacenter/CI ranges. The public
-// HTML search page (hh.kz/search/vacancy) is NOT blocked and embeds the full
-// result set as JSON in a <template id="HH-Lux-InitialState">. We parse that —
-// far more robust than DOM scraping, and it survives the API block.
-const HH_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
-const HH_EXP_LABEL = {
-  noExperience: 'Без опыта', between1And3: 'Опыт 1–3 года',
-  between3And6: 'Опыт 3–6 лет', moreThan6: 'Опыт более 6 лет',
-};
-
-function extractHhState(html) {
-  const m = html.match(/<template[^>]*id="HH-Lux-InitialState"[^>]*>([\s\S]*?)<\/template>/);
-  if (!m) return null;
-  try { return JSON.parse(m[1]); } catch (e) { return null; }
-}
-
-async function scrapeHH() {
-  const jobs = [];
-  const queries = [
-    'стажер', 'стажировка', 'junior', 'intern', 'студент',
-    'без опыта', 'начинающий', 'подработка'
-  ];
-
-  for (const query of queries) {
-    try {
-      const url = `https://hh.kz/search/vacancy?text=${encodeURIComponent(query)}` +
-        `&area=40&items_on_page=50&order_by=publication_time`;
-      const res = await fetch(url, {
-        headers: { 'User-Agent': HH_UA, 'Accept': 'text/html', 'Accept-Language': 'ru-RU,ru;q=0.9' },
-      });
-      if (!res.ok) { log('hh.kz', `Query "${query}" failed: ${res.status}`); await sleep(800); continue; }
-
-      const state = extractHhState(await res.text());
-      if (!state) {
-        // Make this failure mode unmissable in logs: the page came back 200
-        // but without the embedded JSON — hh changed the page shape, served a
-        // captcha/anti-bot page, or is soft-blocking this IP.
-        log('hh.kz', `Query "${query}": HH-Lux-InitialState template NOT FOUND in HTML (page shape changed or soft-block). 0 jobs parsed.`);
-      }
-      const vacs = (state && state.vacancySearchResult && state.vacancySearchResult.vacancies) || [];
-
-      for (const v of vacs) {
-        // Structured entry-level gate: keep only no-experience roles or internships.
-        const isEntry = v.workExperience === 'noExperience' || v.internship === true;
-        if (!isEntry) continue;
-
-        const empType = v.employment && v.employment['@type'];     // FULL | PART
-        const sched = v['@workSchedule'];                          // remote | fullDay | ...
-        const tags = [
-          HH_EXP_LABEL[v.workExperience] || '',
-          v.internship ? 'Стажировка' : '',
-          empType === 'PART' ? 'Неполный день' : '',
-          sched === 'remote' ? 'Удалённо' : '',
-        ].filter(Boolean);
-
-        // No description in the search payload — build a compact one from facts so
-        // the frontend's skill extraction and student filter have something to read.
-        const description = `${v.name}. ${tags.join('. ')}.`;
-        const comp = v.compensation || {};
-        const url2 = ((v.links && v.links.desktop) || `https://hh.kz/vacancy/${v.vacancyId}`)
-          .replace(/\b[a-z-]+\.hh\.kz/, 'hh.kz').replace('hh.ru', 'hh.kz');
-
-        jobs.push({
-          source: 'hh_kz',
-          source_id: `hh_${v.vacancyId}`,
-          source_url: url2,
-          title: v.name,
-          company: (v.company && (v.company.visibleName || v.company.name)) || 'Компания',
-          company_logo: null,
-          location: (v.area && (v.area.name || v.area)) || 'Kazakhstan',
-          description: description,
-          salary_min: comp.from || null,
-          salary_max: comp.to || null,
-          currency: comp.currencyCode || 'KZT',
-          tags: tags,
-          status: 'active',
-          posted_at: (v.publicationTime && v.publicationTime['$']) || new Date().toISOString(),
-        });
-      }
-
-      log('hh.kz', `Query "${query}": ${vacs.length} parsed, ${jobs.length} entry-level so far`);
-      await sleep(800); // be gentle with the HTML site
-    } catch (e) {
-      log('hh.kz', `Error on "${query}": ${e.message}`);
-    }
-  }
-
-  // Deduplicate by source_id
-  const seen = new Set();
-  const unique = jobs.filter(j => {
-    if (seen.has(j.source_id)) return false;
-    seen.add(j.source_id);
-    return true;
-  });
-
-  log('hh.kz', `Total unique jobs: ${unique.length}`);
-  return unique;
-}
-
-// ── Source 2: Enbek.kz (Government Portal) ────────────────────
-async function scrapeEnbek() {
-  const jobs = [];
-
+async function runSource(src, ctx, health) {
+  const started = Date.now();
+  let canary = null;
   try {
-    // Enbek has a public search page we can parse
-    const queries = ['стажер', 'студент', 'junior', 'без опыта'];
-
-    for (const query of queries) {
-      try {
-        const url = `https://www.enbek.kz/ru/search/vacancy?key=${encodeURIComponent(query)}&sort=date`;
-        const res = await fetch(url, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)',
-            'Accept': 'text/html,application/xhtml+xml',
-            'Accept-Language': 'ru-RU,ru;q=0.9,en;q=0.8'
-          }
-        });
-
-        if (!res.ok) {
-          log('enbek.kz', `Query "${query}" failed: ${res.status}`);
-          continue;
-        }
-
-        const html = await res.text();
-        const $ = cheerio.load(html);
-
-        $('a.vacancy-card, .vacancy-item, [class*="vacancy"]').each((_, el) => {
-          const $el = $(el);
-          const title = $el.find('h3, .vacancy-title, .title').text().trim() ||
-            $el.find('a').first().text().trim();
-          const company = $el.find('.company-name, .employer, [class*="company"]').text().trim();
-          const location = $el.find('.location, .city, [class*="location"]').text().trim() || 'Kazakhstan';
-          const link = $el.attr('href') || $el.find('a').attr('href') || '';
-          const fullLink = link.startsWith('http') ? link : `https://www.enbek.kz${link}`;
-          const salaryText = $el.find('.salary, [class*="salary"]').text().trim();
-
-          const description = $el.find('.description, .snippet, p').text().trim().slice(0, 5000);
-
-          if (title && title.length > 3 && isStudentFriendly(title, description)) {
-            let salaryMin = null, salaryMax = null;
-            const salaryMatch = salaryText.match(/(\d[\d\s]*)/g);
-            if (salaryMatch) {
-              const nums = salaryMatch.map(s => parseInt(s.replace(/\s/g, '')));
-              salaryMin = nums[0] || null;
-              salaryMax = nums[1] || nums[0] || null;
-            }
-
-            jobs.push({
-              source: 'enbek_kz',
-              source_id: `enbek_${Buffer.from(fullLink).toString('base64').slice(0, 32)}`,
-              source_url: fullLink,
-              title,
-              company: company || 'Enbek.kz Listing',
-              company_logo: null,
-              location,
-              description: description,
-              salary_min: salaryMin,
-              salary_max: salaryMax,
-              currency: 'KZT',
-              tags: ['enbek.kz', 'verified'],
-              status: 'active',
-              posted_at: new Date().toISOString()
-            });
-          }
-        });
-
-        log('enbek.kz', `Query "${query}": parsed page`);
-        await sleep(1000);
-      } catch (e) {
-        log('enbek.kz', `Error on "${query}": ${e.message}`);
-      }
+    if (typeof src.canary === 'function') {
+      canary = await src.canary(ctx);
+      log(`[${src.name}] canary: ${canary.ok ? 'ok' : 'FAILED — ' + canary.reason}`);
     }
   } catch (e) {
-    log('enbek.kz', `Scraper error: ${e.message}`);
+    canary = { ok: false, reason: 'canary threw: ' + e.message };
+    log(`[${src.name}] canary threw: ${e.message}`);
   }
 
-  // Deduplicate
-  const seen = new Set();
-  const unique = jobs.filter(j => {
-    if (seen.has(j.source_id)) return false;
-    seen.add(j.source_id);
-    return true;
-  });
-
-  log('enbek.kz', `Total unique jobs: ${unique.length}`);
-  return unique;
-}
-
-// ── Source 3: GitHub Jobs (KZ tech companies) ─────────────────
-// GitHub Jobs API is deprecated, so we search GitHub for KZ companies
-// and their career pages / job issues
-async function scrapeGitHubJobs() {
-  const jobs = [];
-
   try {
-    // Search for job issues in KZ tech repos
-    const queries = [
-      'label:job location:kazakhstan',
-      'hiring intern kazakhstan',
-      'вакансия стажер казахстан'
-    ];
-
-    for (const query of queries) {
-      try {
-        const url = `https://api.github.com/search/issues?q=${encodeURIComponent(query + ' is:open')}&sort=created&order=desc&per_page=20`;
-        const res = await fetch(url, {
-          headers: {
-            'User-Agent': 'SteppeUp-Bot/1.0',
-            'Accept': 'application/vnd.github.v3+json'
-          }
-        });
-
-        if (!res.ok) continue;
-        const data = await res.json();
-
-        for (const issue of (data.items || [])) {
-          const title = issue.title;
-          const body = (issue.body || '').slice(0, 5000);
-          const labels = (issue.labels || []).map(l => l.name);
-          const repoName = issue.repository_url?.split('/').slice(-2).join('/') || '';
-
-          if (isStudentFriendly(title, body)) {
-            jobs.push({
-              source: 'github_kz',
-              source_id: `gh_${issue.id}`,
-              source_url: issue.html_url,
-              title: title,
-              company: repoName || 'GitHub Listing',
-              company_logo: issue.user?.avatar_url || null,
-              location: 'Remote / Kazakhstan',
-              description: cleanHtml(body),
-              salary_min: null,
-              salary_max: null,
-              currency: 'KZT',
-              tags: ['github', 'tech', ...labels],
-              status: 'active',
-              posted_at: issue.created_at
-            });
-          }
-        }
-
-        log('github', `Query "${query.slice(0, 30)}...": ${data.items?.length || 0} results`);
-        await sleep(1000);
-      } catch (e) {
-        log('github', `Error: ${e.message}`);
-      }
-    }
-  } catch (e) {
-    log('github', `Scraper error: ${e.message}`);
-  }
-
-  log('github', `Total jobs: ${jobs.length}`);
-  return jobs;
-}
-
-// ── Source 4: Kolesa Group Careers ─────────────────────────────
-async function scrapeKolesa() {
-  const jobs = [];
-
-  try {
-    const url = 'https://kolesa.group/career';
-    const res = await fetch(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SteppeUp-Bot/1.0)',
-        'Accept': 'text/html'
-      }
+    // The canary is diagnostic, not a gate: a changed page shape might still
+    // yield jobs, and we would rather have them plus a warning.
+    const { jobs = [], stats = {}, notes = [] } = await src.scrape(ctx);
+    const kept = jobs.filter((j) => {
+      // The orchestrator is the filter authority even if a source pre-filtered.
+      const structuredEntry = (j.tags || []).some((t) => /без опыта|noexperience|стажировка|internship/i.test(t));
+      return filter.isStudentFriendly(j.title, j.description, j.tags, { structuredEntry });
     });
-
-    if (!res.ok) {
-      log('kolesa', `Failed: ${res.status}`);
-      return jobs;
-    }
-
-    const html = await res.text();
-    const $ = cheerio.load(html);
-
-    // Parse job cards from Kolesa Group career page
-    $('a[href*="career"], a[href*="vacancy"], .vacancy, .job-card, [class*="vacancy"]').each((_, el) => {
-      const $el = $(el);
-      const title = $el.find('h3, h4, .title, .vacancy-title').text().trim() || $el.text().trim();
-      const link = $el.attr('href') || '';
-      const fullLink = link.startsWith('http') ? link : `https://kolesa.group${link}`;
-      const dept = $el.find('.department, .team, .category').text().trim();
-
-      if (title && title.length > 3 && title.length < 200) {
-        jobs.push({
-          source: 'kolesa_group',
-          source_id: `kolesa_${Buffer.from(fullLink).toString('base64').slice(0, 32)}`,
-          source_url: fullLink,
-          title,
-          company: 'Kolesa Group',
-          company_logo: null,
-          location: 'Almaty',
-          description: dept ? `Department: ${dept}` : 'Kolesa Group — leading tech company in Central Asia',
-          salary_min: null,
-          salary_max: null,
-          currency: 'KZT',
-          tags: ['kolesa', 'tech', dept].filter(Boolean),
-          status: 'active',
-          posted_at: new Date().toISOString()
-        });
-      }
+    const dropped = jobs.length - kept.length;
+    health.source(src.name, {
+      found: kept.length, minExpected: src.minExpected, canary,
+      extra: { raw: jobs.length, droppedByFilter: dropped, ms: Date.now() - started, ...stats },
     });
+    notes.forEach((n) => log(`[${src.name}] note: ${n}`));
+    log(`[${src.name}] ${jobs.length} scraped → ${kept.length} student-suitable (${dropped} dropped) in ${((Date.now() - started) / 1000).toFixed(1)}s`);
+    return kept;
   } catch (e) {
-    log('kolesa', `Error: ${e.message}`);
+    health.source(src.name, { found: 0, minExpected: src.minExpected, canary, error: e.message });
+    log(`[${src.name}] CRASHED: ${e.message}`);
+    if (process.env.DEBUG) console.error(e);
+    return [];
   }
-
-  log('kolesa', `Total jobs: ${jobs.length}`);
-  return jobs;
 }
 
-// ── Source 5: Youth Employment (zhastar / youth portals) ──────
-// NOTE: rewritten off api.hh.ru (403-blocked from CI) onto the hh.kz HTML
-// search — the same HH-Lux-InitialState technique scrapeHH uses.
-async function scrapeYouthPortal() {
-  const jobs = [];
-  const queries = ['молодой специалист', 'первое рабочее место'];
-
-  for (const query of queries) {
-    try {
-      const url = `https://hh.kz/search/vacancy?text=${encodeURIComponent(query)}` +
-        `&area=40&items_on_page=30&order_by=publication_time`;
-      const res = await fetch(url, {
-        headers: { 'User-Agent': HH_UA, 'Accept': 'text/html', 'Accept-Language': 'ru-RU,ru;q=0.9' },
-      });
-      if (!res.ok) { log('youth', `Query "${query}" failed: ${res.status}`); await sleep(800); continue; }
-
-      const state = extractHhState(await res.text());
-      const vacs = (state && state.vacancySearchResult && state.vacancySearchResult.vacancies) || [];
-
-      for (const v of vacs) {
-        const isEntry = v.workExperience === 'noExperience' || v.internship === true;
-        if (!isEntry) continue;
-
-        const tags = ['youth', 'government-program',
-          HH_EXP_LABEL[v.workExperience] || '',
-          v.internship ? 'Стажировка' : ''].filter(Boolean);
-        const description = `${v.name}. ${tags.join('. ')}.`;
-        if (!isStudentFriendly(v.name, description, tags)) continue;
-
-        const comp = v.compensation || {};
-        const url2 = ((v.links && v.links.desktop) || `https://hh.kz/vacancy/${v.vacancyId}`)
-          .replace(/\b[a-z-]+\.hh\.kz/, 'hh.kz').replace('hh.ru', 'hh.kz');
-
-        jobs.push({
-          source: 'youth_portal',
-          source_id: `youth_hh_${v.vacancyId}`,
-          source_url: url2,
-          title: v.name,
-          company: (v.company && (v.company.visibleName || v.company.name)) || 'Компания',
-          company_logo: null,
-          location: (v.area && (v.area.name || v.area)) || 'Kazakhstan',
-          description: description,
-          salary_min: comp.from || null,
-          salary_max: comp.to || null,
-          currency: comp.currencyCode || 'KZT',
-          tags: tags,
-          status: 'active',
-          posted_at: (v.publicationTime && v.publicationTime['$']) || new Date().toISOString(),
-        });
-      }
-      await sleep(800);
-    } catch (e) {
-      log('youth', `Error on "${query}": ${e.message}`);
-    }
-  }
-
-  // Deduplicate by source_id
-  const seen = new Set();
-  const unique = jobs.filter(j => {
-    if (seen.has(j.source_id)) return false;
-    seen.add(j.source_id);
-    return true;
-  });
-
-  log('youth', `Total jobs: ${unique.length}`);
-  return unique;
-}
-
-// ── Stale Job Cleanup ─────────────────────────────────────────
-// REMOVED: cleanup is now owned exclusively by cleanup-jobs.js (its own
-// workflow, .github/workflows/cleanup-jobs.yml). The version that lived here
-// verified liveness against api.hh.ru, which 403-blocks ALL CI IPs, and
-// treated 403 as "job is dead" — silently mass-deactivating healthy listings
-// every run until the board decayed to ~12 jobs. One cleanup path, one set of
-// rules, one place to audit. Do not re-add cleanup logic here.
-async function cleanupStaleJobs() {
-  log('cleanup', 'Skipped — handled by cleanup-jobs.js (dedicated workflow).');
-  return { checked: 0, removed: 0 };
-}
-
-// ── Upsert to Supabase ───────────────────────────────────────
-// Hardened: batch failures fall back to per-row writes (one bad row can't
-// sink 49 good ones), every error logs its code+message, and we VERIFY the
-// writes landed by re-querying. Upserts silently failing while the workflow
-// stayed green is how the board sat at 12 jobs with nobody alerted.
-async function upsertJobs(jobs) {
-  if (!db || jobs.length === 0) return { inserted: 0, errors: 0 };
-
-  const batchSize = 50;
-  let ok = 0, errors = 0;
-
-  for (let i = 0; i < jobs.length; i += batchSize) {
-    const batch = jobs.slice(i, i + batchSize);
-    const { error } = await db
-      .from('jobs')
-      .upsert(batch, { onConflict: 'source_id', ignoreDuplicates: false });
-
-    if (!error) { ok += batch.length; continue; }
-
-    // Batch failed — log precisely, then retry row-by-row so one bad row
-    // (or a missing unique constraint) degrades instead of zeroing the run.
-    log('db', `Batch upsert FAILED (${error.code || '?'}): ${error.message} — retrying per-row`);
-    for (const row of batch) {
-      const { error: e1 } = await db
-        .from('jobs')
-        .upsert(row, { onConflict: 'source_id', ignoreDuplicates: false });
-      if (!e1) { ok++; continue; }
-      // Last resort: update-if-exists, else insert (works without the
-      // unique constraint that onConflict requires).
-      const { data: existing } = await db.from('jobs').select('id').eq('source_id', row.source_id).limit(1);
-      if (existing && existing.length > 0) {
-        const { error: e2 } = await db.from('jobs').update(row).eq('id', existing[0].id);
-        if (!e2) { ok++; continue; }
-        log('db', `Row update failed [${row.source_id}] (${e2.code || '?'}): ${e2.message}`);
-      } else {
-        const { error: e3 } = await db.from('jobs').insert(row);
-        if (!e3) { ok++; continue; }
-        log('db', `Row insert failed [${row.source_id}] (${e3.code || '?'}): ${e3.message}`);
-      }
-      errors++;
-    }
-  }
-
-  // Verify: spot-check that a sample of this run's rows actually exist.
-  try {
-    const sampleIds = jobs.slice(0, 10).map(j => j.source_id);
-    const { count } = await db.from('jobs')
-      .select('id', { count: 'exact', head: true })
-      .in('source_id', sampleIds);
-    log('db', `Write verification: ${count}/${sampleIds.length} sampled rows present in DB`);
-    if ((count || 0) === 0 && jobs.length > 0) {
-      log('db', 'VERIFICATION FAILED: nothing this run reached the DB. Failing loudly.');
-      process.exit(1);
-    }
-  } catch (e) {
-    log('db', `Write verification error: ${e.message}`);
-  }
-
-  log('db', `Upserted ${ok} jobs (${errors} errors)`);
-  return { inserted: ok, errors };
-}
-
-// ── Main ──────────────────────────────────────────────────────
 async function main() {
-  console.log('═══════════════════════════════════════════');
-  console.log('  SteppeUp Job Scraper');
-  console.log(`  ${new Date().toISOString()}`);
-  console.log(`  Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
-  console.log('═══════════════════════════════════════════\n');
+  const t0 = Date.now();
+  log('═══════════════════════════════════════════');
+  log('  SteppeUp Job Scraper v2');
+  log(`  ${new Date().toISOString()}  |  ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
+  log('═══════════════════════════════════════════\n');
 
-  // Remove seed/placeholder jobs (IDs 1-20) that have fake search URLs instead of real vacancy links.
-  // Exempt 'partner' — paid/exclusive listings can live in the low-id range and must NOT be swept.
-  if (db) {
-    try {
-      const { data, error } = await db
-        .from('jobs')
-        .update({ status: 'inactive' })
-        .lte('id', 20)
-        .neq('source', 'partner')
-        .eq('status', 'active');
-      if (error) log('cleanup', `Seed cleanup error: ${error.message}`);
-      else log('cleanup', `Deactivated seed jobs (IDs 1-20)`);
-    } catch (e) {
-      log('cleanup', `Seed cleanup failed: ${e.message}`);
-    }
+  const http = createHttp({ log, budget: 3000 });
+  const health = createHealth({ log });
+  const db = DRY_RUN ? null : createDb({ url: SUPABASE_URL, key: SUPABASE_KEY, log });
+
+  const ctx = { http, log, filter, normalize, limits: { maxJobs: 400, maxPages: 6, maxAgeDays: 21 }, dryRun: DRY_RUN };
+
+  const active = SOURCES.filter((s) => !ONLY.length || ONLY.includes(s.name));
+  if (!active.length) { console.error(`No sources matched --only=${ONLY.join(',')}`); process.exit(1); }
+
+  // Sources run sequentially: they share one HTTP budget and politeness matters
+  // more than wall-clock here (the whole run is well inside the 20m timeout).
+  const perSource = {};
+  for (const src of active) {
+    perSource[src.name] = await runSource(src, ctx, health);
   }
 
-  // Run all scrapers
-  const [hhJobs, enbekJobs, githubJobs, kolesaJobs, youthJobs] = await Promise.all([
-    scrapeHH(),
-    scrapeEnbek(),
-    scrapeGitHubJobs(),
-    scrapeKolesa(),
-    scrapeYouthPortal()
-  ]);
+  const allJobs = Object.values(perSource).flat();
 
-  const allJobs = [...hhJobs, ...enbekJobs, ...githubJobs, ...kolesaJobs, ...youthJobs];
+  // Cross-source dedupe: the same vacancy often appears on hh.kz AND in a
+  // career channel that links to it. Prefer the structured source (earlier in
+  // SOURCES order), which has better company/salary/liveness data.
+  const seen = new Set();
+  const deduped = [];
+  let crossDupes = 0;
+  for (const j of allJobs) {
+    const applyKey = j.apply_url ? 'a:' + j.apply_url.replace(/[?#].*$/, '') : null;
+    const nameKey = 't:' + j.title.toLowerCase().replace(/\s+/g, ' ') + '|' + j.company.toLowerCase();
+    if ((applyKey && seen.has(applyKey)) || seen.has(nameKey)) { crossDupes++; continue; }
+    if (applyKey) seen.add(applyKey);
+    seen.add(nameKey);
+    deduped.push(j);
+  }
 
-  console.log('\n── Summary ──────────────────────────────');
-  console.log(`  hh.kz:        ${hhJobs.length} jobs`);
-  console.log(`  enbek.kz:     ${enbekJobs.length} jobs`);
-  console.log(`  GitHub:       ${githubJobs.length} jobs`);
-  console.log(`  Kolesa Group: ${kolesaJobs.length} jobs`);
-  console.log(`  Youth Portal: ${youthJobs.length} jobs`);
-  console.log(`  ─────────────────────────────`);
-  console.log(`  TOTAL:        ${allJobs.length} jobs`);
+  log('\n── Summary ──────────────────────────────');
+  for (const [name, jobs] of Object.entries(perSource)) log(`  ${name.padEnd(16)} ${String(jobs.length).padStart(4)} jobs`);
+  log(`  ${'cross-dupes'.padEnd(16)} ${String(crossDupes).padStart(4)} removed`);
+  log(`  ${'TOTAL'.padEnd(16)} ${String(deduped.length).padStart(4)} jobs`);
 
   if (DRY_RUN) {
-    console.log('\n[DRY RUN] Would upsert these jobs to Supabase:');
-    allJobs.slice(0, 5).forEach(j => {
-      console.log(`  - [${j.source}] ${j.title} @ ${j.company} (${j.location})`);
-    });
-    if (allJobs.length > 5) console.log(`  ... and ${allJobs.length - 5} more`);
+    log('\n[DRY RUN] Sample of what would be upserted:');
+    deduped.slice(0, 25).forEach((j) =>
+      log(`  [${j.source}] ${j.title.slice(0, 46).padEnd(48)} | ${j.company.slice(0, 22).padEnd(24)} | ${j.location}`));
+    if (deduped.length > 25) log(`  … and ${deduped.length - 25} more`);
+    const v = health.verdict();
+    log('\n' + v.summary);
+    if (v.problems.length) log('\nProblems:\n - ' + v.problems.join('\n - '));
+    log(`\nHTTP requests: ${http.used}  |  ${((Date.now() - t0) / 1000).toFixed(1)}s`);
     return;
   }
 
-  // Upsert to Supabase
-  if (allJobs.length > 0) {
-    await upsertJobs(allJobs);
-  }
-
-  // Clean up stale listings
-  const cleanup = await cleanupStaleJobs();
-
-  console.log('\n── Done ─────────────────────────────────');
-  console.log(`  New/updated: ${allJobs.length}`);
-  console.log(`  Stale removed: ${cleanup.removed}`);
-  console.log('═══════════════════════════════════════════\n');
-
-  // ── Health gate ─────────────────────────────────────────────
-  // The active count in Supabase is exactly what the website shows — the
-  // in-memory scrape count can lie (upsert conflicts, over-aggressive cleanup,
-  // wrong status). Gate on the DB so decay fails the workflow and emails us.
-  {
-    const MIN_ACTIVE_HEALTHY = 25;
-    const { count, error } = await db.from('jobs')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active');
-    if (error) {
-      console.error('[health] could not read active count: ' + error.message);
-      process.exit(1);
-    }
-    console.log(`[health] active jobs on the board: ${count} (scraped this run: ${allJobs.length})`);
-    if ((count || 0) < MIN_ACTIVE_HEALTHY) {
-      console.error(`[health-gate] FAIL: only ${count} active jobs (< ${MIN_ACTIVE_HEALTHY}). ` +
-        'A source is broken or cleanup is over-deleting. See per-source summary above.');
-      process.exit(1);
+  // ── Write ────────────────────────────────────────────────────────────────
+  let upsert = { ok: 0, errors: 0, errorSamples: [], verified: null };
+  if (deduped.length) {
+    upsert = await db.upsertJobs(deduped);
+    log(`\n[db] upserted ${upsert.ok}, errors ${upsert.errors}` +
+        (upsert.verified ? `, verification ${upsert.verified.present}/${upsert.verified.sampled} sampled rows present` : ''));
+    upsert.errorSamples.forEach((s) => log(`[db] ${s}`));
+    // Writes silently failing while the workflow stayed green is a past
+    // incident — treat "nothing landed" as fatal, not as a warning.
+    if (upsert.verified && upsert.verified.present === 0) {
+      health.problem('write verification failed: none of the sampled rows reached the DB');
     }
   }
 
-  // Log scraping run to Supabase
+  // ── Health ───────────────────────────────────────────────────────────────
+  let activeTotal = 0, bySource = {};
   try {
-    await db.from('scraping_logs').insert({
-      source: 'all',
-      jobs_found: allJobs.length,
-      jobs_removed: cleanup.removed,
-      status: 'success',
-      details: {
-        hh_kz: hhJobs.length,
-        enbek_kz: enbekJobs.length,
-        github_kz: githubJobs.length,
-        kolesa_group: kolesaJobs.length,
-        youth_portal: youthJobs.length
-      }
-    });
+    activeTotal = await db.activeCount();
+    bySource = await db.activeCountsBySource();
   } catch (e) {
-    // Logging table might not exist yet, that's fine
+    health.problem('could not read active counts: ' + e.message);
   }
+  log(`\n[health] active on board: ${activeTotal}  ${JSON.stringify(bySource)}`);
+
+  const fatal = activeTotal < MIN_ACTIVE_HEALTHY ||
+                (upsert.verified && upsert.verified.present === 0 && deduped.length > 0);
+  if (activeTotal < MIN_ACTIVE_HEALTHY) {
+    health.problem(`board has only ${activeTotal} active jobs (floor ${MIN_ACTIVE_HEALTHY})`);
+  }
+  const verdict = health.verdict({ fatal });
+
+  // Per-source log rows, then the summary row. Each is best-effort.
+  for (const [name, s] of Object.entries(verdict.sources)) {
+    await db.logRun({ source: name, jobs_found: s.found, status: s.verdict, details: s });
+  }
+  await db.logRun({
+    source: 'all', jobs_found: deduped.length, status: verdict.status,
+    details: { bySource, activeTotal, crossDupes, upserted: upsert.ok, errors: upsert.errors, http: http.stats, seconds: (Date.now() - t0) / 1000 },
+  });
+
+  writeStepSummary(
+    `## Scrape ${verdict.status.toUpperCase()}\n\n${verdict.summary}\n\n` +
+    `Board: **${activeTotal}** active · upserted ${upsert.ok} · ${((Date.now() - t0) / 1000).toFixed(0)}s\n` +
+    (verdict.problems.length ? `\n### Problems\n- ${verdict.problems.join('\n- ')}\n` : ''));
+
+  log('\n═══════════════════════════════════════════');
+  log(`  VERDICT: ${verdict.status.toUpperCase()}`);
+  log(verdict.summary);
+  if (verdict.problems.length) log('  Problems:\n   - ' + verdict.problems.join('\n   - '));
+  log('═══════════════════════════════════════════');
+
+  if (verdict.status !== 'ok') {
+    await notify(
+      `Scrape ${verdict.status}\n${verdict.summary}\n\nBoard: ${activeTotal} active\n` +
+      verdict.problems.map((p) => '• ' + p).join('\n'),
+      { level: verdict.status === 'failed' ? 'error' : 'warn', log });
+  }
+  if (verdict.status === 'failed') process.exit(1);
 }
 
-main().catch(e => {
+main().catch(async (e) => {
   console.error('Fatal error:', e);
+  await notify(`Scraper crashed: ${e.message}`, { level: 'error' });
   process.exit(1);
 });

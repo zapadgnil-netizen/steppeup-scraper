@@ -1,43 +1,45 @@
 /**
- * SteppeUp — Stale-job cleanup (standalone, focused).
+ * SteppeUp — cleanup v2. Keeps the board honest without ever mass-deleting it.
  *
- * Marks dead listings status='inactive' so the board only shows live jobs.
- * Runs on its own schedule via .github/workflows/cleanup-jobs.yml — kept separate
- * from scrape-jobs.js so cleanup runs reliably even if scraping is paused.
+ *   Pass 1  TTL expiry     — per-source age limit (source.ttlDays); partners exempt.
+ *   Pass 2  Liveness       — source.verify() per row, behind a circuit breaker.
+ *   Pass 3  Self-heal      — recently-killed rows that verify 'alive' come back.
+ *   Pass 4  Garbage sweep  — active rows that today's rules call junk get retired.
  *
- *   Pass 1  Time expiry   — anything older than FRESH_DAYS (except partner jobs).
- *   Pass 2  hh.kz verify  — active hh-sourced jobs that are archived/closed/gone
- *                           on the source, so early archivals die within a day.
- *   Pass 3  Self-heal     — recently deactivated hh jobs that are actually still
- *                           live on hh.kz get re-activated. Recovers from any bug
- *                           or outage that wrongly killed listings.
+ * THE RULE: never delete on ambiguity. 404/410 and a structured archived flag
+ * are the only "dead" signals. A 403 means "you may not ask" — an earlier
+ * version read it as "the job is gone" and wiped the board to ~12 listings.
+ * A later one grepped `vacancy-archived` out of hh's JS bundle and killed 150
+ * jobs in one run. Hence Pass 2's circuit breaker: if >40% of a meaningful
+ * sample tests dead, that's a broken check, not reality — abort and alert.
  *
- * VERIFICATION RULE (hard-learned): api.hh.ru 403-blocks ALL datacenter/CI IPs.
- * A 403 means "you may not ask", NOT "the job is gone". An earlier version
- * treated 403 as dead and silently wiped the whole board down to ~12 jobs.
- * We therefore verify against the public hh.kz vacancy PAGE (which serves CI
- * traffic fine) and only trust definitive signals:
- *   404/410            → dead
- *   200 + archive text → dead
- *   anything else      → unknown, LEAVE ACTIVE (retry next run)
+ * Pass 4 exists because rules improve: the board is currently full of rows that
+ * today's filter would never have accepted (grants, event announcements, titles
+ * that are sentence fragments). Without a sweep, old junk lives forever.
  *
  * Run:
- *   node cleanup-jobs.js            # live (needs SUPABASE_URL + SUPABASE_SERVICE_KEY)
- *   node cleanup-jobs.js --dry-run  # report only, no writes
+ *   node cleanup-jobs.js
+ *   node cleanup-jobs.js --dry-run
  */
 
-const fetch = require('node-fetch');
-const { createClient } = require('@supabase/supabase-js');
-const WebSocket = require('ws');
+const { createHttp } = require('./lib/http');
+const filter = require('./lib/filter');
+const normalize = require('./lib/normalize');
+const { createDb } = require('./lib/db');
+const { createHealth, notify, writeStepSummary } = require('./lib/health');
 
-// ── Config ──────────────────────────────────────────────────────────────────
-const FRESH_DAYS = 14;                 // jobs older than this are deactivated
-const EXEMPT_SOURCES = ['partner'];    // never auto-expire (paid / manually curated)
-const HH_CHECK_LIMIT = 150;            // max hh verifications per run (Pass 2)
-const HEAL_CHECK_LIMIT = 150;          // max resurrection checks per run (Pass 3)
-const MIN_ACTIVE_HEALTHY = 25;         // health gate: fewer than this fails the run
-const HH_SOURCES = ['hh_kz', 'youth_portal']; // sources whose source_id is hh_<id>
-const HH_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36';
+const SOURCES = [require('./sources/hh'), require('./sources/enbek'), require('./sources/telegram')];
+const BY_NAME = Object.fromEntries(SOURCES.map((s) => [s.name, s]));
+
+const EXEMPT_SOURCES = ['partner'];   // paid / manually curated — never auto-expire
+const DEFAULT_TTL_DAYS = 21;
+const VERIFY_LIMIT = 120;             // rows checked for liveness per run
+const HEAL_LIMIT = 120;
+const SWEEP_LIMIT = 400;              // rows examined by the garbage sweep
+const SWEEP_MAX_KILL_RATIO = 0.5;     // sweep safety: never retire >50% of what it reads
+const MIN_ACTIVE_HEALTHY = 25;
+const BREAKER_MIN_SAMPLE = 20;
+const BREAKER_DEAD_RATIO = 0.4;
 
 const DRY_RUN = process.argv.includes('--dry-run');
 const SUPABASE_URL = process.env.SUPABASE_URL;
@@ -48,197 +50,190 @@ if (!DRY_RUN && (!SUPABASE_URL || !SUPABASE_KEY)) {
   process.exit(1);
 }
 
-const db = DRY_RUN ? null : createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false },
-  realtime: { transport: WebSocket },
-});
-
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-// ── hh.kz liveness check (shared by Pass 2 + Pass 3) ─────────────────────────
-// Returns 'dead' | 'alive' | 'unknown'. Only definitive signals count.
-//
-// INCIDENT 2 (2026-07-05): a previous version string-matched 'vacancy-archived'
-// against the ENTIRE page HTML. That token exists in hh's JS bundles/i18n
-// dictionaries on EVERY page, so all 150 checked jobs tested "archived" and
-// were deactivated in one run. Rules now:
-//   - HTTP 404/410                      → dead (definitive)
-//   - 200 + embedded JSON says archived → dead (definitive, parsed not grepped)
-//   - anything else                     → alive/unknown, NEVER dead
-async function hhVacancyStatus(hhId) {
-  try {
-    const res = await fetch('https://hh.kz/vacancy/' + hhId, {
-      headers: { 'User-Agent': HH_UA, 'Accept': 'text/html', 'Accept-Language': 'ru-RU,ru;q=0.9' },
-      redirect: 'follow',
-    });
-    if (res.status === 404 || res.status === 410) return 'dead';
-    if (res.ok) {
-      const html = await res.text();
-      // Parse the embedded state JSON (same template scrapeHH uses) and only
-      // trust a STRUCTURED archived flag — never free-text matching.
-      const m = html.match(/<template[^>]*id="HH-Lux-InitialState"[^>]*>([\s\S]*?)<\/template>/);
-      if (m) {
-        try {
-          const st = JSON.parse(m[1]);
-          const vv = st && st.vacancyView;
-          const archived = !!(vv && (vv.archived === true ||
-            (vv.status && (vv.status.archived === true || vv.status.disabled === true))));
-          if (archived) return 'dead';
-        } catch (_e) { /* unparseable state — treat as alive */ }
-      }
-      return 'alive';
-    }
-    return 'unknown'; // 403/429/5xx — cannot verify from this IP; do NOT kill
-  } catch (e) {
-    return 'unknown'; // network blip — leave as-is, retry next run
-  }
-}
-
-// ── Pass 1: time-based expiry ────────────────────────────────────────────────
-async function expireOldJobs() {
-  const cutoff = new Date(Date.now() - FRESH_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  if (DRY_RUN) {
-    const ids = await db_dry('jobs', 'select=id&status=eq.active&posted_at=lt.' + cutoff);
-    console.log(`[expiry] DRY: ${ids.length} active jobs older than ${FRESH_DAYS}d would be deactivated`);
-    return 0;
-  }
-  let query = db.from('jobs').update({ status: 'inactive' })
-    .eq('status', 'active')
-    .lt('posted_at', cutoff)
-    .select('id');
-  for (const s of EXEMPT_SOURCES) query = query.neq('source', s);
-  const { data, error } = await query;
-  if (error) { console.log(`[expiry] error: ${error.message}`); return 0; }
-  console.log(`[expiry] deactivated ${data.length} jobs older than ${FRESH_DAYS}d`);
-  return data.length;
-}
-
-// ── Pass 2: hh.kz source verification ────────────────────────────────────────
-async function verifyHhJobs() {
-  const cutoff = new Date(Date.now() - FRESH_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  // Only check jobs still within the freshness window (older ones already expired).
-  const { data: jobs, error } = await db.from('jobs')
-    .select('id, source_id')
-    .eq('status', 'active')
-    .in('source', HH_SOURCES)
-    .gte('posted_at', cutoff)
-    .limit(HH_CHECK_LIMIT);
-  if (error || !jobs) { console.log(`[hh-verify] fetch error: ${error && error.message}`); return 0; }
-
-  // Collect verdicts FIRST, apply writes AFTER the circuit breaker.
-  const deadIds = [];
-  let unknown = 0, checked = 0;
-  for (const job of jobs) {
-    const hhId = (job.source_id || '').replace(/^hh_|^youth_hh_/, '');
-    if (!/^\d+$/.test(hhId)) continue;
-    checked++;
-    const status = await hhVacancyStatus(hhId);
-    if (status === 'dead') deadIds.push(job.id);
-    else if (status === 'unknown') unknown++;
-    await sleep(400); // be gentle with hh.kz
-  }
-
-  // ── MASS-KILL CIRCUIT BREAKER ─────────────────────────────────────────
-  // Real-world archival is gradual. If more than 40% of a meaningful sample
-  // tests dead, the far likelier explanation is a broken check (page shape
-  // change, soft-block, bad regex — it has happened TWICE). Refuse to write
-  // and fail the run so a human looks at it. Losing one night of cleanup is
-  // cheap; mass-deactivating a healthy board is not.
-  const deadRatio = checked > 0 ? deadIds.length / checked : 0;
-  if (checked >= 20 && deadRatio > 0.4) {
-    console.error(`[hh-verify] CIRCUIT BREAKER: ${deadIds.length}/${checked} (${Math.round(deadRatio * 100)}%) tested dead — almost certainly a broken liveness check, not real archivals. NOT deactivating anything.`);
-    process.exit(1);
-  }
-
-  let removed = 0;
-  for (const id of deadIds) {
-    await db.from('jobs').update({ status: 'inactive' }).eq('id', id);
-    removed++;
-  }
-  console.log(`[hh-verify] checked ${checked}, deactivated ${removed} dead/archived, ${unknown} unverifiable (left active)`);
-  return removed;
-}
-
-// ── Pass 3: self-heal — resurrect wrongly deactivated jobs ───────────────────
-// Any inactive hh-sourced job still within the freshness window gets re-checked
-// against hh.kz. If the vacancy is demonstrably alive, it's re-activated.
-// This automatically recovers from bugs/outages that mass-killed listings
-// (like the api.hh.ru 403 incident) with zero manual intervention.
-async function healWronglyKilledJobs() {
-  if (DRY_RUN) { console.log('[heal] DRY: skipped'); return 0; }
-  const cutoff = new Date(Date.now() - FRESH_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  const { data: jobs, error } = await db.from('jobs')
-    .select('id, source_id')
-    .eq('status', 'inactive')
-    .in('source', HH_SOURCES)
-    .gte('posted_at', cutoff)
-    .limit(HEAL_CHECK_LIMIT);
-  if (error || !jobs) { console.log(`[heal] fetch error: ${error && error.message}`); return 0; }
-  if (jobs.length === 0) { console.log('[heal] nothing to check'); return 0; }
-
-  let revived = 0;
-  for (const job of jobs) {
-    const hhId = (job.source_id || '').replace(/^hh_|^youth_hh_/, '');
-    if (!/^\d+$/.test(hhId)) continue;
-    const status = await hhVacancyStatus(hhId);
-    if (status === 'alive') {
-      await db.from('jobs').update({ status: 'active' }).eq('id', job.id);
-      revived++;
-    }
-    await sleep(400);
-  }
-  console.log(`[heal] checked ${jobs.length} recently-deactivated, revived ${revived} still-live jobs`);
-  return revived;
-}
-
-// Tiny REST helper used only in dry-run (anon-readable) so --dry-run needs no key.
-async function db_dry(table, qs) {
-  const SB = 'https://wiijdddhzddqgntfdbsx.supabase.co';
-  const KEY = process.env.SUPABASE_ANON_KEY ||
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndpaWpkZGRoemRkcWdudGZkYnN4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE1NDI0NjIsImV4cCI6MjA4NzExODQ2Mn0.rQyTBlIA1WVU-KfFyF8sXK8GVZUL9m9yFIHTydXPHe0';
-  const res = await fetch(`${SB}/rest/v1/${table}?${qs}`, { headers: { apikey: KEY, Authorization: 'Bearer ' + KEY } });
-  return res.ok ? res.json() : [];
-}
+const log = (...a) => console.log(...a);
 
 async function main() {
-  console.log('═══════════════════════════════════════════');
-  console.log('  SteppeUp Stale-Job Cleanup');
-  console.log(`  ${new Date().toISOString()} | Mode: ${DRY_RUN ? 'DRY RUN' : 'LIVE'} | fresh<=${FRESH_DAYS}d`);
-  console.log('═══════════════════════════════════════════\n');
+  log('═══════════════════════════════════════════');
+  log('  SteppeUp Cleanup v2');
+  log(`  ${new Date().toISOString()}  |  ${DRY_RUN ? 'DRY RUN' : 'LIVE'}`);
+  log('═══════════════════════════════════════════\n');
 
-  const expired = await expireOldJobs();
-  const verified = DRY_RUN ? 0 : await verifyHhJobs();
-  const revived = DRY_RUN ? 0 : await healWronglyKilledJobs();
+  const http = createHttp({ log, budget: 600 });
+  const health = createHealth({ log });
+  const db = createDb({ url: SUPABASE_URL, key: SUPABASE_KEY, log });
+  if (!db) { console.error('No DB client (dry-run needs SUPABASE_* too for cleanup)'); process.exit(1); }
+  const ctx = { http, log, filter, normalize, limits: {}, dryRun: DRY_RUN };
+  const client = db.client;
 
-  // ── Health gate ─────────────────────────────────────────────────────────
-  // The active count in Supabase is exactly what the website shows. If it has
-  // decayed below the floor, fail the run loudly so GitHub emails immediately —
-  // silent decay is how the board rotted to 12 jobs once. Never again.
-  if (!DRY_RUN) {
-    const { count, error } = await db.from('jobs')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'active');
-    if (error) {
-      console.error('[health] could not read active count: ' + error.message);
-      process.exit(1);
-    }
-    console.log(`[health] active jobs on the board: ${count}`);
-    if ((count || 0) < MIN_ACTIVE_HEALTHY) {
-      console.error(`[health-gate] FAIL: only ${count} active jobs (< ${MIN_ACTIVE_HEALTHY}). ` +
-        'A source is broken or cleanup is over-deleting. See per-pass logs above.');
-      process.exit(1);
+  const counts = { expired: 0, dead: 0, revived: 0, swept: 0, unknown: 0 };
+
+  // ── Pass 1: per-source TTL expiry ─────────────────────────────────────────
+  for (const src of SOURCES) {
+    const ttl = src.ttlDays || DEFAULT_TTL_DAYS;
+    const cutoff = new Date(Date.now() - ttl * 864e5).toISOString();
+    const { data, error } = DRY_RUN
+      ? await client.from('jobs').select('id').eq('status', 'active').eq('source', src.name).lt('posted_at', cutoff)
+      : await client.from('jobs').update({ status: 'inactive' }).eq('status', 'active').eq('source', src.name).lt('posted_at', cutoff).select('id');
+    if (error) { health.problem(`expiry ${src.name}: ${error.message}`); continue; }
+    counts.expired += (data || []).length;
+    log(`[expiry] ${src.name}: ${(data || []).length} older than ${ttl}d ${DRY_RUN ? 'would be' : ''} deactivated`);
+  }
+  // Sources no longer in SOURCES (retired scrapers) still need retiring.
+  {
+    const cutoff = new Date(Date.now() - DEFAULT_TTL_DAYS * 864e5).toISOString();
+    let q = client.from('jobs');
+    q = DRY_RUN ? q.select('id') : q.update({ status: 'inactive' });
+    q = q.eq('status', 'active').lt('posted_at', cutoff);
+    for (const s of [...Object.keys(BY_NAME), ...EXEMPT_SOURCES]) q = q.neq('source', s);
+    const { data, error } = DRY_RUN ? await q : await q.select('id');
+    if (!error && (data || []).length) {
+      counts.expired += data.length;
+      log(`[expiry] legacy sources: ${data.length} deactivated`);
     }
   }
 
-  if (!DRY_RUN) {
-    try {
-      await db.from('scraping_logs').insert({
-        source: 'cleanup', jobs_found: revived, jobs_removed: expired + verified,
-        status: 'success', details: { time_expired: expired, hh_archived: verified, revived, fresh_days: FRESH_DAYS },
-      });
-    } catch (e) { /* logs optional */ }
+  // ── Pass 2: liveness verification ─────────────────────────────────────────
+  for (const src of SOURCES) {
+    if (typeof src.verify !== 'function') continue;
+    const ttl = src.ttlDays || DEFAULT_TTL_DAYS;
+    const cutoff = new Date(Date.now() - ttl * 864e5).toISOString();
+    const { data: rows, error } = await client.from('jobs')
+      .select('id, source_id, source_url')
+      .eq('status', 'active').eq('source', src.name).gte('posted_at', cutoff)
+      .limit(VERIFY_LIMIT);
+    if (error) { health.problem(`verify fetch ${src.name}: ${error.message}`); continue; }
+    if (!rows || !rows.length) continue;
+
+    const deadIds = [];
+    let checked = 0, unknown = 0;
+    for (const row of rows) {
+      let verdict;
+      try { verdict = await src.verify(ctx, row); } catch (_e) { verdict = 'unknown'; }
+      if (verdict === 'dead') deadIds.push(row.id);
+      else if (verdict === 'unknown') unknown++;
+      if (verdict !== 'unknown') checked++;
+      await http.sleep(350);
+    }
+    counts.unknown += unknown;
+
+    // Circuit breaker — see the header note. Two separate incidents came from
+    // a liveness check that broke and reported everything dead.
+    const ratio = checked ? deadIds.length / checked : 0;
+    if (checked >= BREAKER_MIN_SAMPLE && ratio > BREAKER_DEAD_RATIO) {
+      const msg = `${src.name}: CIRCUIT BREAKER — ${deadIds.length}/${checked} (${Math.round(ratio * 100)}%) tested dead. Almost certainly a broken liveness check, not real archivals. Nothing deactivated.`;
+      log(`[verify] ${msg}`);
+      health.problem(msg);
+      await notify(msg, { level: 'error', log });
+      continue;
+    }
+
+    if (!DRY_RUN) for (const id of deadIds) await client.from('jobs').update({ status: 'inactive' }).eq('id', id);
+    counts.dead += deadIds.length;
+    log(`[verify] ${src.name}: checked ${rows.length}, ${deadIds.length} dead, ${unknown} unverifiable (left active)`);
   }
-  console.log(`\nDone. Deactivated ${expired + verified}, revived ${revived}.`);
+
+  // ── Pass 3: self-heal ─────────────────────────────────────────────────────
+  // Recovers automatically from any bug or outage that wrongly killed listings.
+  for (const src of SOURCES) {
+    if (typeof src.verify !== 'function') continue;
+    const ttl = src.ttlDays || DEFAULT_TTL_DAYS;
+    const cutoff = new Date(Date.now() - ttl * 864e5).toISOString();
+    const { data: rows, error } = await client.from('jobs')
+      .select('id, source_id, source_url, title')
+      .eq('status', 'inactive').eq('source', src.name).gte('posted_at', cutoff)
+      .limit(HEAL_LIMIT);
+    if (error || !rows || !rows.length) continue;
+
+    let revived = 0;
+    for (const row of rows) {
+      // Never resurrect something today's rules would reject — that would undo
+      // the garbage sweep every night.
+      if (normalize.validateJob(row) || filter.studentRejectReason(row.title, '')) continue;
+      let verdict;
+      try { verdict = await src.verify(ctx, row); } catch (_e) { verdict = 'unknown'; }
+      if (verdict === 'alive') {
+        if (!DRY_RUN) await client.from('jobs').update({ status: 'active' }).eq('id', row.id);
+        revived++;
+      }
+      await http.sleep(350);
+    }
+    counts.revived += revived;
+    if (revived) log(`[heal] ${src.name}: revived ${revived} still-live jobs`);
+  }
+
+  // ── Pass 4: garbage sweep ─────────────────────────────────────────────────
+  // Retire active rows that today's normalizer/filter would never have accepted.
+  {
+    const { data: rows, error } = await client.from('jobs')
+      .select('id, title, company, source, source_url, description')
+      .eq('status', 'active').limit(SWEEP_LIMIT);
+    if (error) health.problem('sweep fetch: ' + error.message);
+    else {
+      const bad = [];
+      const reasons = {};
+      for (const row of rows || []) {
+        if (EXEMPT_SOURCES.includes(row.source)) continue;
+        const reason = normalize.validateJob(row) || filter.studentRejectReason(row.title, row.description || '');
+        if (reason) { bad.push(row.id); reasons[reason] = (reasons[reason] || 0) + 1; }
+      }
+      const ratio = rows.length ? bad.length / rows.length : 0;
+      if (bad.length && ratio > SWEEP_MAX_KILL_RATIO) {
+        // The sweep reading most of the board as junk means the RULES broke,
+        // not the board. Same lesson as the liveness breaker.
+        const msg = `garbage sweep would retire ${bad.length}/${rows.length} (${Math.round(ratio * 100)}%) — refusing, filter rules likely broken. Reasons: ${JSON.stringify(reasons)}`;
+        log('[sweep] ' + msg);
+        health.problem(msg);
+        await notify(msg, { level: 'error', log });
+      } else if (bad.length) {
+        if (!DRY_RUN) {
+          for (let i = 0; i < bad.length; i += 50) {
+            await client.from('jobs').update({ status: 'inactive' }).in('id', bad.slice(i, i + 50));
+          }
+        }
+        counts.swept = bad.length;
+        log(`[sweep] retired ${bad.length}/${rows.length} rows failing current rules: ${JSON.stringify(reasons)}`);
+      } else {
+        log(`[sweep] all ${rows.length} checked rows pass current rules`);
+      }
+    }
+  }
+
+  // ── Health ────────────────────────────────────────────────────────────────
+  let activeTotal = 0, bySource = {};
+  try { activeTotal = await db.activeCount(); bySource = await db.activeCountsBySource(); }
+  catch (e) { health.problem('active count: ' + e.message); }
+  log(`\n[health] active on board: ${activeTotal}  ${JSON.stringify(bySource)}`);
+
+  const fatal = !DRY_RUN && activeTotal < MIN_ACTIVE_HEALTHY;
+  if (fatal) health.problem(`board has only ${activeTotal} active jobs (floor ${MIN_ACTIVE_HEALTHY}) after cleanup`);
+  const verdict = health.verdict({ fatal });
+
+  if (!DRY_RUN) {
+    await db.logRun({
+      source: 'cleanup', jobs_found: counts.revived,
+      jobs_removed: counts.expired + counts.dead + counts.swept,
+      status: verdict.status, details: { ...counts, activeTotal, bySource },
+    });
+  }
+
+  writeStepSummary(`## Cleanup ${verdict.status.toUpperCase()}\n\n` +
+    `expired ${counts.expired} · dead ${counts.dead} · swept ${counts.swept} · revived ${counts.revived}\n\n` +
+    `Board: **${activeTotal}** active\n` +
+    (verdict.problems.length ? `\n### Problems\n- ${verdict.problems.join('\n- ')}\n` : ''));
+
+  log(`\nDone. expired ${counts.expired}, dead ${counts.dead}, swept ${counts.swept}, revived ${counts.revived}.`);
+  log(`VERDICT: ${verdict.status.toUpperCase()}`);
+
+  if (verdict.status !== 'ok') {
+    await notify(`Cleanup ${verdict.status}\nBoard: ${activeTotal} active\n` +
+      verdict.problems.map((p) => '• ' + p).join('\n'),
+      { level: verdict.status === 'failed' ? 'error' : 'warn', log });
+  }
+  if (verdict.status === 'failed') process.exit(1);
 }
 
-main().catch((e) => { console.error('Fatal:', e); process.exit(1); });
+main().catch(async (e) => {
+  console.error('Fatal:', e);
+  await notify(`Cleanup crashed: ${e.message}`, { level: 'error' });
+  process.exit(1);
+});

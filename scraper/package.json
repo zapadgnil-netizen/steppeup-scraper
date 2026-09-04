@@ -1,11 +1,13 @@
 {
   "name": "steppeup-scraper",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "description": "Daily job scraper for SteppeUp",
   "main": "scrape-jobs.js",
   "scripts": {
     "scrape": "node scrape-jobs.js",
-    "test": "node scrape-jobs.js --dry-run"
+    "cleanup": "node cleanup-jobs.js",
+    "dry": "node scrape-jobs.js --dry-run",
+    "test": "node --test tests/*.test.js"
   },
   "engines": {
     "node": ">=20"
