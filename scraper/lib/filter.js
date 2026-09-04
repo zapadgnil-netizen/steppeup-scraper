@@ -38,6 +38,8 @@ const NOT_A_JOB = [
   /(?:онлайн-|online\s+)курс|курс(?:ы|ов)\s+(?:по|программирован|английск|дизайн|аналитик)|записаться\s+на\s+курс|bootcamp|буткемп/i,
   /обучени[ея]\s+(?:в|на|по)\s|школ[аы]\s+(?:программирован|дизайн|аналитик)/i,
   /набор\s+в\s+(?:клуб|организаци|команду\s+aiesec|волонт)|recruitment\s+(?:fall|spring|summer)|волонт[её]р/i,
+  // Student clubs run branded "sprints"/"programs" that are not vacancies.
+  /\baiesec\b|\benactus\b|\bsife\b|talent\s+sprint|\bsprint\s+by\b/i,
   /ярмарка\s+вакансий|career\s+fair|день\s+открытых\s+дверей|open\s+day/i,
   w('розыгрыш\\w*|giveaway|скидк\\w*'),
   /(резюме\s+(?:за|под)\s+\d|поможем\s+с\s+резюме|консультаци[яи]\s+по\s+карьер|карьерн\w+\s+консульт)/i,

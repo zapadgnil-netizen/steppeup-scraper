@@ -97,6 +97,23 @@ function cleanCompany(raw) {
   return s.slice(0, 80);
 }
 
+// Tokens that legitimately start a lowercase job title.
+const LOWERCASE_OK = /^(ios|android|frontend|front-end|backend|back-end|fullstack|full-stack|qa|ux|ui|smm|seo|php|node|nodejs|react|vue|python|java|javascript|typescript|devops|hr|it|b2b|b2c|1c|1с|erp|crm|seo-|smm-)\b/i;
+
+/**
+ * Checks that must run on the RAW title, before cleanTitle() strips the
+ * punctuation they depend on. Returns a reject reason or null.
+ */
+function rawTitleProblem(raw) {
+  const t = String(raw || '').trim();
+  if (!t) return null;
+  const letters = t.replace(/[^\p{L}]/gu, '');
+  // Slogans: "ХВАТИТ ИСКАТЬ РАБОТУ — ПУСТЬ ОНА НАЙДЁТ ТЕБЯ!"
+  if (letters.length > 8 && letters === letters.toUpperCase() && /[!?]/.test(t)) return 'title-shouty';
+  if (/\?\s*$/.test(t) && t.split(/\s+/).length > 3) return 'title-question';
+  return null;
+}
+
 /**
  * Title sanity: does this look like a job title (not a sentence fragment)?
  * Returns a reject reason or null.
@@ -128,6 +145,10 @@ function titleProblem(title) {
   if (letters.length > 8 && letters === letters.toUpperCase() && /[!?]/.test(t)) return 'title-shouty';
   // Instructions to the reader rather than a role
   if (/(направлять|отправляйте|прошу\s+направ|присылайте)\s|резюме\s+(hr|на\s+почт)/i.test(t)) return 'title-instruction';
+  // Real job titles are capitalised. A lowercase opener is almost always a
+  // mid-sentence fragment lifted out of a post body — except for tech tokens
+  // that are genuinely written lowercase (iOS, frontend, QA…).
+  if (/^[a-zа-яё]/.test(t) && !LOWERCASE_OK.test(t)) return 'title-lowercase-fragment';
   return null;
 }
 
@@ -153,6 +174,8 @@ function makeJob(raw) {
   const reject = (r) => { makeJob.lastReject = r; return null; };
   if (!raw || !raw.source || !raw.source_id || !raw.source_url) return reject('missing-ids');
 
+  const rtp = rawTitleProblem(raw.title);
+  if (rtp) return reject(rtp);
   const title = cleanTitle(raw.title);
   const tp = titleProblem(title);
   if (tp) return reject(tp);
@@ -192,6 +215,8 @@ function makeJob(raw) {
 /** Validate an existing DB row under current rules (used by cleanup's garbage sweep). */
 function validateJob(row) {
   if (!row) return 'empty';
+  const rtp = rawTitleProblem(row.title);
+  if (rtp) return rtp;
   const tp = titleProblem(cleanTitle(row.title));
   if (tp) return tp;
   if (!row.source_url) return 'missing-url';
@@ -204,4 +229,4 @@ function toRow(job) {
   return row;
 }
 
-module.exports = { makeJob, validateJob, toRow, cleanTitle, cleanCompany, cleanLocation, canonicalCity, titleProblem, JOB_COLUMNS, CITIES };
+module.exports = { makeJob, validateJob, toRow, cleanTitle, cleanCompany, cleanLocation, canonicalCity, titleProblem, rawTitleProblem, JOB_COLUMNS, CITIES };
