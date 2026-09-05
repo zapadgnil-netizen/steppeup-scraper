@@ -2875,6 +2875,210 @@ html,body{font-family:'Golos Text',system-ui,-apple-system,sans-serif!important}
 .testi-title{font-family:'Unbounded',sans-serif!important}
 </style>
 <!--/V5-FONTS-->
+<!-- V5-REFINEMENT: a single final layer for the landing page.  This deliberately
+     owns the visual language instead of relying on the older theme overrides. -->
+<style id="v5-refinement">
+:root{--ref-bg:#fbfaf6;--ref-surface:#fffefb;--ref-ink:#20201d;--ref-muted:#696860;--ref-line:rgba(32,32,29,.12);--ref-accent:#547a61;--ref-accent-soft:#dceadf}
+html.dark{--ref-bg:#121511;--ref-surface:#191d18;--ref-ink:#f4f2eb;--ref-muted:#b7b8af;--ref-line:rgba(244,242,235,.13);--ref-accent:#a7d2ae;--ref-accent-soft:#233c2a}
+
+/* Keep the header stable. The old scroll script continually replaced these
+   values inline, which is what made the deployed navigation lose its chrome. */
+#v5-header{position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:100!important;padding:0!important;background:rgba(251,250,246,.88)!important;border-bottom:1px solid var(--ref-line)!important;backdrop-filter:blur(18px) saturate(130%)!important}
+html.dark #v5-header{background:rgba(18,21,17,.9)!important}
+#v5-bar{position:relative!important;display:flex!important;align-items:center!important;max-width:1200px!important;height:68px!important;margin:0 auto!important;padding:0 24px!important;gap:28px!important;overflow:visible!important;background:none!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+#v5-brand{display:flex!important;align-items:center!important;gap:10px!important;color:var(--ref-ink)!important;text-decoration:none!important}
+#v5-mark{display:grid!important;place-items:center!important;width:32px!important;height:32px!important;border-radius:9px!important;background:var(--ref-ink)!important;color:#f4d889!important;font:700 15px/1 'Unbounded',sans-serif!important}
+#v5-word{font:700 17px/1 'Unbounded',sans-serif!important;letter-spacing:-.04em!important}
+#v5-nav{display:flex!important;align-items:center!important;gap:22px!important;flex:1!important}
+.v5-navlink,.v5-navlink2{font:500 14px 'Golos Text',sans-serif!important;color:var(--ref-muted)!important;text-decoration:none!important;transition:color .18s ease!important}.v5-navlink:hover,.v5-navlink2:hover{color:var(--ref-ink)!important}
+#v5-search{display:none!important}#v5-actions{display:flex!important;align-items:center!important;gap:9px!important;margin-left:auto!important}.v5-appear{display:none!important}
+#v5-actions .lang-sw{background:transparent!important;border:1px solid var(--ref-line)!important;border-radius:9px!important;padding:2px!important}.v5 .lang-btn{color:var(--ref-muted)!important}.v5 .lang-btn.active{background:var(--ref-ink)!important;color:var(--ref-surface)!important}
+#v5-actions .dark-toggle{border-color:var(--ref-line)!important;color:var(--ref-ink)!important;border-radius:9px!important;background:transparent!important}
+#v5-ghost{display:block!important;max-width:none!important;opacity:1!important;height:38px!important;padding:0 13px!important;border:1px solid var(--ref-line)!important;border-radius:9px!important;background:transparent!important;color:var(--ref-ink)!important;font:600 13.5px 'Golos Text',sans-serif!important}
+#v5-cta{height:38px!important;padding:0 15px!important;border-radius:9px!important;background:var(--ref-ink)!important;color:var(--ref-surface)!important;font:600 13.5px 'Golos Text',sans-serif!important}
+#v5-progress{display:none!important}
+
+/* On scroll the navigation becomes a compact control island. Only a class is
+   toggled in JavaScript, so the interpolation stays smooth and resize-safe. */
+#v5-header,#v5-bar,#v5-brand,#v5-mark,#v5-word,#v5-cta,#v5-ghost,#v5-actions .dark-toggle{transition:background-color .34s ease,border-color .34s ease,box-shadow .34s ease,border-radius .42s cubic-bezier(.22,.8,.24,1),max-width .42s cubic-bezier(.22,.8,.24,1),height .42s cubic-bezier(.22,.8,.24,1),padding .42s cubic-bezier(.22,.8,.24,1),transform .42s cubic-bezier(.22,.8,.24,1),font-size .42s cubic-bezier(.22,.8,.24,1)}
+#v5-header.is-scrolled{top:12px!important;padding:0 20px!important;background:transparent!important;border-color:transparent!important;backdrop-filter:none!important;pointer-events:none}
+#v5-header.is-scrolled #v5-bar{height:74px!important;max-width:1040px!important;padding:0 28px!important;background:var(--ref-surface)!important;border:1px solid var(--ref-line)!important;border-radius:19px!important;box-shadow:0 16px 38px rgba(28,30,26,.16)!important;pointer-events:auto}
+html.dark #v5-header.is-scrolled #v5-bar{box-shadow:0 18px 44px rgba(0,0,0,.38)!important}
+#v5-header.is-scrolled #v5-brand{transform:scale(1.08);transform-origin:left center}
+#v5-header.is-scrolled #v5-mark{width:36px!important;height:36px!important;border-radius:11px!important;font-size:17px!important}
+#v5-header.is-scrolled #v5-word{font-size:18px!important}
+#v5-header.is-scrolled #v5-cta{height:43px!important;padding:0 18px!important;font-size:14px!important;transform:scale(1.04);box-shadow:0 8px 18px rgba(32,32,29,.12)!important}
+#v5-header.is-scrolled #v5-ghost,#v5-header.is-scrolled #v5-actions .dark-toggle{height:42px!important;transform:scale(1.03)}
+
+/* One calm, readable backdrop replaces the yellow-to-green-to-brown wash. */
+#v5-hero{margin-top:0!important;padding:180px 24px 94px!important;background:radial-gradient(760px 420px at 50% 8%,#e7f0e8 0%,rgba(231,240,232,.62) 34%,transparent 71%),var(--ref-bg)!important;border-bottom:1px solid var(--ref-line)}
+html.dark #v5-hero{background:radial-gradient(780px 440px at 50% 5%,#203328 0%,rgba(32,51,40,.6) 34%,transparent 72%),var(--ref-bg)!important}
+#v5-h1{max-width:16ch!important;font:700 clamp(34px,4.7vw,60px)/1.08 'Unbounded',sans-serif!important;letter-spacing:-.055em!important;color:var(--ref-ink)!important}
+#v5-sub{max-width:50ch!important;color:var(--ref-muted)!important}
+#v5-searchwrap{background:var(--ref-surface)!important;border:1px solid var(--ref-line)!important;box-shadow:0 14px 34px rgba(32,32,29,.08)!important}
+html.dark #v5-searchwrap{background:var(--ref-surface)!important;box-shadow:0 16px 38px rgba(0,0,0,.24)!important}
+#hero-search-input{background:transparent!important;border-color:transparent!important;color:var(--ref-ink)!important}
+#v5-herobtn{background:var(--ref-accent)!important;color:#fff!important;border-radius:16px!important;transition:transform .18s ease,box-shadow .18s ease!important}#v5-herobtn:hover{opacity:1!important;transform:translateY(-50%) scale(1.015)!important;box-shadow:0 8px 18px rgba(84,122,97,.25)!important}
+#v5-herobtn svg{stroke:#fff!important}.v5 .v5-chip-off{background:var(--ref-surface)!important;border-color:var(--ref-line)!important;color:var(--ref-ink)!important}.v5 .v5-chip-off:hover{border-color:var(--ref-accent)!important;background:var(--ref-accent-soft)!important}
+#v5-marquee{animation-duration:60s!important}.v5 .bg-\[\#F4EFE6\]{background-color:var(--ref-bg)!important}
+/* The source strip belongs to the same calm field as the hero rather than
+   starting a second hard-edged background. */
+#sources{position:relative;padding:76px 0 4px!important;background:var(--ref-bg)!important}#sources::before{content:"";position:absolute;left:0;right:0;top:-1px;height:88px;background:linear-gradient(to bottom,rgba(251,250,246,0),var(--ref-bg));pointer-events:none}html.dark #sources::before{background:linear-gradient(to bottom,rgba(18,21,17,0),var(--ref-bg))}#sources>div{position:relative}#sources .overflow-hidden{background:rgba(84,122,97,.055)!important;border-color:var(--ref-line)!important}html.dark #sources .overflow-hidden{background:rgba(167,210,174,.06)!important}
+
+/* App navigation uses an explicit width budget so search is never crushed into
+   a random empty capsule between tabs and account controls. */
+.app-nav{height:64px!important;padding:0 clamp(16px,2.6vw,32px)!important;gap:clamp(10px,1.8vw,22px)!important;background:rgba(251,250,246,.94)!important;border-bottom:1px solid var(--ref-line)!important}.app-nav-logo{white-space:nowrap!important;font-size:clamp(15px,1.5vw,18px)!important}.app-nav-tabs{gap:clamp(10px,1.6vw,18px)!important;margin-left:0!important;min-width:0}.app-nav-tab{font-size:14px!important;white-space:nowrap!important}.nav-search{flex:0 1 250px!important;width:clamp(170px,22vw,250px)!important;min-width:0!important;margin:0!important;height:40px!important;border:1px solid var(--ref-line)!important;border-radius:10px!important;background:var(--ref-surface)!important}.nav-search-input{height:100%!important;padding:0 12px 0 37px!important;background:transparent!important;border:0!important;font-size:13.5px!important}.nav-search-icon{left:13px!important;font-size:16px!important}.app-nav-right{gap:8px!important;flex-shrink:0}.app-nav .lang-sw{border:1px solid var(--ref-line)!important;background:var(--ref-surface)!important}.app-nav .dark-toggle,.nav-bell{border-color:var(--ref-line)!important;background:var(--ref-surface)!important}.app-nav-avatar{border-radius:10px!important;background:var(--ref-ink)!important;color:var(--ref-surface)!important}html.dark .app-nav{background:rgba(18,21,17,.94)!important}
+@media (max-width:1080px){.app-nav-tab[data-view="saved"]{display:none!important}.nav-search{width:clamp(160px,21vw,220px)!important}}
+@media (max-width:900px){.app-nav-tab[data-view="home"]{display:none!important}.nav-search{width:170px!important}.app-nav .lang-sw{display:none!important}}
+
+/* Browse is a working surface, not another landing page: the quiet yellow
+   lives in the search band, sage carries positive states, and the content
+   area stays deliberately spacious. */
+#page-browse,.route-browse .app-content{background:radial-gradient(760px 620px at 5% 42%,rgba(241,211,130,.12),transparent 68%),radial-gradient(800px 700px at 96% 58%,rgba(195,220,196,.16),transparent 70%),var(--ref-bg)!important}
+#page-browse .v5>section:first-child{background:radial-gradient(720px 380px at 10% 0%,rgba(241,211,130,.54),transparent 66%),radial-gradient(680px 360px at 88% 12%,rgba(195,220,196,.7),transparent 68%),var(--ref-bg)!important;border-color:var(--ref-line)!important}
+#page-browse .v5 main{max-width:1240px!important}
+#page-browse .v5-browse-layout{grid-template-columns:1fr!important}
+#browse-filter-rail{display:none!important}
+#page-browse .v5 aside{background:linear-gradient(155deg,rgba(230,241,231,.94),rgba(255,254,251,.98) 52%,rgba(247,237,204,.74))!important;border-color:rgba(84,122,97,.22)!important;box-shadow:0 14px 34px rgba(32,32,29,.055)!important}
+#page-browse .v5-filter-rail::before{content:"ПОИСК ВАКАНСИЙ";display:block;margin:-2px 0 12px;color:var(--ref-accent);font:700 10px/1 'Golos Text',sans-serif;letter-spacing:.13em}
+#page-browse .v5 aside input{accent-color:var(--ref-accent)!important}
+#page-browse .v5 aside label{border-radius:9px;padding:7px 8px!important;margin:0 -8px!important;transition:background-color .18s ease,color .18s ease!important}
+#page-browse .v5 aside label:hover{background:var(--ref-accent-soft)!important}
+#page-browse #browse-alert-banner{background:rgba(220,234,223,.48)!important;border-color:rgba(84,122,97,.24)!important}
+#page-browse #browse-grid{gap:13px!important}
+#page-browse .v5chip.active{background:var(--ref-accent)!important;border-color:var(--ref-accent)!important;color:#fff!important}
+#page-browse #chip-bar .v5chip{background:rgba(255,254,251,.68)!important;border-color:rgba(84,122,97,.18)!important}
+#page-browse #chip-bar .v5chip:hover{background:var(--ref-accent-soft)!important;border-color:var(--ref-accent)!important}
+
+/* Let the actual filter board become part of the browsing experience before
+   desktop width. At small sizes the intent remains in the quick-filter chips,
+   so result cards never get squeezed into an unusable column. */
+@media (min-width:800px){#page-browse .v5-browse-layout{grid-template-columns:232px minmax(0,1fr)!important;gap:22px!important}#browse-filter-rail{display:block!important;padding:20px!important}#page-browse .v5-filter-rail label{font-size:13px!important}}
+
+/* A card reads in three beats: employer and role, compensation, then the
+   action. The slim match dock gives each result a recognisable silhouette
+   without turning the page into a dashboard of boxes. */
+.v5-job-card{position:relative;isolation:isolate;overflow:hidden;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;background:var(--ref-surface);border:1px solid var(--ref-line);border-radius:20px;padding:20px 20px 18px 25px;box-shadow:0 5px 16px rgba(32,32,29,.025);cursor:pointer;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
+.v5-job-card::before{content:"";position:absolute;z-index:-1;left:0;top:0;bottom:0;width:5px;background:#c4b076}
+.v5-job-card.is-strong::before{background:var(--ref-accent)}.v5-job-card.is-ready::before{background:#d1ad52}.v5-job-card.is-explore::before{background:#9aa39a}
+.v5-job-card:hover{transform:translateY(-2px);border-color:rgba(84,122,97,.55);box-shadow:0 16px 30px rgba(32,32,29,.09)}
+.v5-card-main{min-width:0}.v5-card-heading{min-width:0}.v5-card-eyebrow{margin:0 0 6px;color:var(--ref-muted);font:600 11px/1.2 'Golos Text',sans-serif;letter-spacing:.08em;text-transform:uppercase}.v5-card-title{margin:0;color:var(--ref-ink);font:700 clamp(17px,1.7vw,21px)/1.2 'Unbounded',sans-serif;letter-spacing:-.05em}.v5-card-title a{color:inherit;text-decoration:none}.v5-card-title a:focus-visible,.v5-card-detail:focus-visible{outline:2px solid var(--ref-accent);outline-offset:3px;border-radius:6px}.v5-card-meta{margin-top:8px;color:var(--ref-muted);font:500 13.5px/1.35 'Golos Text',sans-serif}.v5-card-source{margin-top:5px;color:var(--ref-muted);font:500 12px/1.2 'Golos Text',sans-serif;opacity:.72}.v5-card-salary{margin-top:19px;color:var(--ref-ink);font:700 24px/1 'Unbounded',sans-serif;letter-spacing:-.06em}.v5-card-salary small{margin-left:5px;color:var(--ref-muted);font:500 12px 'Golos Text',sans-serif;letter-spacing:0}.v5-card-salary.is-missing{font:600 14px/1.3 'Golos Text',sans-serif;color:var(--ref-muted);letter-spacing:0}.v5-card-foot{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--ref-line)}.v5-card-tags{display:flex;gap:6px;flex-wrap:wrap;min-width:0}.v5-card-tag{padding:5px 9px;border-radius:999px;background:rgba(84,122,97,.1);color:#3f604a;font:600 12px/1 'Golos Text',sans-serif}.v5-card-time{margin-left:auto;color:var(--ref-muted);font:500 12px 'Golos Text',sans-serif}.v5-card-detail{height:34px;padding:0 13px;border:1px solid var(--ref-line);border-radius:9px;display:inline-flex;align-items:center;color:var(--ref-ink);background:transparent;font:600 13px 'Golos Text',sans-serif;text-decoration:none;transition:background-color .18s ease,border-color .18s ease}.v5-card-detail:hover{background:var(--ref-accent-soft);border-color:var(--ref-accent)}
+.v5-card-dock{display:flex;flex-direction:column;align-items:flex-end;gap:10px}.v5-card-score{min-width:67px;padding:9px 8px 8px;border:1px solid var(--ref-line);border-radius:13px;background:rgba(84,122,97,.075);text-align:center}.v5-card-score b{display:block;color:var(--ref-ink);font:700 17px/1 'Unbounded',sans-serif;letter-spacing:-.065em}.v5-card-score span{display:block;margin-top:4px;color:var(--ref-muted);font:600 9px/1 'Golos Text',sans-serif;letter-spacing:.08em;text-transform:uppercase}.v5-card-dock [data-heart]{background:transparent!important;border-color:var(--ref-line)!important}.v5-job-card .v5-why-box{margin-top:14px;padding:10px 12px;border-radius:12px;background:rgba(220,234,223,.58)!important;border:1px solid rgba(84,122,97,.18)!important}.v5-job-card .v5-why-box svg{stroke:var(--ref-accent)!important}.v5-job-card .v5-why-box div,.v5-job-card .v5-why-box span{color:#365440!important}
+html.dark #page-browse,html.dark .route-browse .app-content{background:radial-gradient(760px 620px at 5% 42%,rgba(156,124,46,.12),transparent 68%),radial-gradient(800px 700px at 96% 58%,rgba(56,96,67,.2),transparent 70%),var(--ref-bg)!important}html.dark #page-browse .v5>section:first-child{background:radial-gradient(720px 380px at 8% 0%,rgba(177,140,50,.28),transparent 67%),radial-gradient(620px 360px at 88% 0%,rgba(56,96,67,.56),transparent 68%),var(--ref-bg)!important}html.dark #page-browse .v5 aside{background:linear-gradient(155deg,rgba(35,60,42,.96),rgba(25,29,24,.98) 52%,rgba(55,48,29,.8))!important;box-shadow:0 14px 34px rgba(0,0,0,.2)!important}html.dark #page-browse #browse-alert-banner{background:rgba(37,65,43,.7)!important;border-color:rgba(167,210,174,.2)!important}html.dark .v5-job-card{box-shadow:0 8px 20px rgba(0,0,0,.16)}html.dark .v5-card-tag{background:rgba(167,210,174,.13);color:#b9e1bf}html.dark .v5-card-score{background:rgba(167,210,174,.1)}html.dark .v5-card-dock [data-heart] svg{stroke:var(--ref-ink)!important}html.dark .v5-job-card .v5-why-box{background:rgba(42,73,49,.62)!important;border-color:rgba(167,210,174,.17)!important}html.dark .v5-job-card .v5-why-box div,html.dark .v5-job-card .v5-why-box span{color:#c7e8cb!important}
+@media(max-width:1023px){.v5-job-card{border-radius:18px}.v5-card-title{font-size:18px}.v5-card-score{min-width:59px}.v5-card-salary{font-size:21px}}
+@media(max-width:620px){#page-browse .v5>section:first-child{background:linear-gradient(145deg,rgba(241,211,130,.34),rgba(220,234,223,.45)),var(--ref-bg)!important}.v5-job-card{grid-template-columns:minmax(0,1fr) auto;padding:17px 15px 15px 21px;border-radius:17px;gap:9px}.v5-card-title{font-size:16px;letter-spacing:-.045em}.v5-card-meta{font-size:12.5px}.v5-card-salary{margin-top:15px;font-size:19px}.v5-card-foot{margin-top:13px;padding-top:12px;gap:8px}.v5-card-time{display:none}.v5-card-detail{height:32px;padding:0 11px;font-size:12px}.v5-card-score{min-width:51px;padding:8px 5px}.v5-card-score b{font-size:14px}.v5-card-score span{font-size:8px}.v5-card-dock{gap:7px}.v5-card-dock [data-heart]{width:32px!important;height:32px!important}}
+/* A full-width floating submit button is useful on roomy screens, but it must
+   never cover a vacancy at tablet widths. It condenses to the already familiar
+   plus affordance as space gets tight. */
+@media(max-width:1320px){.route-browse .fab-submit{width:48px!important;height:48px!important;padding:0!important;border-radius:14px!important;justify-content:center!important}.route-browse .fab-label{display:none!important}.route-browse .fab-plus{margin:0!important}}
+@media(min-width:1024px){.route-browse .fab-submit{display:none!important}}
+/* Browse owns its actions in the filter rail; a fixed action cannot be allowed
+   to sit on top of a result at compact widths. */
+.route-browse .fab-submit{display:none!important}
+
+@media (max-width:1120px){#v5-nav{display:none!important}#v5-burger{display:grid!important;place-items:center!important;width:38px!important;height:38px!important;border:1px solid var(--ref-line)!important;border-radius:9px!important;color:var(--ref-ink)!important}#v5-menu{background:var(--ref-surface)!important;border-bottom:1px solid var(--ref-line)!important}html.dark #v5-menu{background:var(--ref-surface)!important}}
+@media (max-width:640px){#v5-header,#v5-header.is-scrolled{position:relative!important;top:0!important;padding:0!important;background:var(--ref-bg)!important;border-bottom:1px solid var(--ref-line)!important}#v5-header.is-scrolled #v5-bar{max-width:none!important;height:60px!important;padding:0 16px!important;border:0!important;border-radius:0!important;box-shadow:none!important}#v5-bar{height:60px!important;padding:0 16px!important;gap:10px!important}#v5-brand,#v5-header.is-scrolled #v5-brand{transform:none!important}#v5-word,#v5-header.is-scrolled #v5-word{font-size:15px!important}#v5-actions{gap:7px!important}#v5-ghost,#v5-actions .lang-sw{display:none!important}#v5-cta,#v5-header.is-scrolled #v5-cta{height:36px!important;padding:0 12px!important;font-size:12.5px!important;transform:none!important}#v5-header.is-scrolled #v5-mark{width:32px!important;height:32px!important;font-size:15px!important}#v5-hero{padding:70px 16px 64px!important}#v5-h1{font-size:clamp(31px,10vw,42px)!important}#v5-searchwrap{padding:7px!important}#v5-herobtn{position:static!important;transform:none!important}#v5-herobtn:hover{transform:scale(1.01)!important}#sources{padding-top:54px!important}}
+
+/* Home is an editorial weekly selection, deliberately calmer than Browse's
+   practical search surface. The card body stays opaque; colour only guides
+   attention through the field, score chip, and a narrow rail. */
+#page-home,.route-home .app-content{background:radial-gradient(740px 520px at 8% 0%,rgba(241,211,130,.28),transparent 66%),radial-gradient(660px 520px at 96% 16%,rgba(220,234,223,.55),transparent 68%),var(--ref-bg)!important}
+.home-feed{max-width:1180px;margin:0 auto;padding:54px 24px 72px}.home-intro{position:relative;padding:0 0 28px;border-bottom:1px solid var(--ref-line)}.home-eyebrow,.home-section-label{color:var(--ref-accent);font:700 10px/1 'Golos Text',sans-serif;letter-spacing:.14em}.home-eyebrow{margin-bottom:14px}.home-intro-row{display:flex;align-items:flex-end;justify-content:space-between;gap:28px}.feed-greeting{margin:0!important;color:var(--ref-ink)!important;font:700 clamp(30px,4vw,48px)/1.05 'Unbounded',sans-serif!important;letter-spacing:-.065em!important}.feed-greeting em{color:#d1ad52!important;background:none!important;-webkit-text-fill-color:currentColor!important;font-style:normal!important;animation:none!important}.feed-sub{max-width:48ch;margin:11px 0 0!important;color:var(--ref-muted)!important;font:500 15px/1.5 'Golos Text',sans-serif!important}.home-browse-link,.home-feature-detail{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 15px;border:1px solid var(--ref-line);border-radius:10px;background:rgba(255,254,251,.7);color:var(--ref-ink);font:600 13px 'Golos Text',sans-serif;text-decoration:none;white-space:nowrap;transition:background-color .2s ease,border-color .2s ease,transform .2s ease}.home-browse-link:hover,.home-feature-detail:hover{background:var(--ref-accent-soft);border-color:var(--ref-accent);transform:translateY(-1px)}.home-status{display:flex;align-items:center;gap:7px;margin-top:19px;color:var(--ref-muted);font:500 12px 'Golos Text',sans-serif}.home-status strong{color:var(--ref-ink);font:700 14px 'Unbounded',sans-serif;letter-spacing:-.05em}.home-status-dot{width:8px;height:8px;border-radius:50%;background:var(--ref-accent)}.home-alerts{margin:18px 0 0!important}.home-feature-section{margin-top:32px}.home-section-label{margin-bottom:12px}.home-feature-card{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:28px;overflow:hidden;padding:28px 29px 27px 33px;border:1px solid var(--ref-line);border-radius:24px;background:linear-gradient(128deg,rgba(255,254,251,.98),rgba(255,254,251,.84));box-shadow:0 15px 35px rgba(32,32,29,.065);cursor:pointer;isolation:isolate;transition:transform .22s ease,border-color .22s ease,box-shadow .22s ease}.home-feature-card::before,.home-job-card::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:#b3b0a5}.home-feature-card.home-match-strong::before,.home-job-card.home-match-strong::before{background:var(--ref-accent)}.home-feature-card.home-match-good::before,.home-job-card.home-match-good::before{background:#d7b85a}.home-feature-card:hover{transform:translateY(-2px);border-color:rgba(84,122,97,.5);box-shadow:0 20px 40px rgba(32,32,29,.1)}.home-feature-main,.home-card-identity{min-width:0}.home-card-source{margin-bottom:7px;color:var(--ref-muted);font:700 10px/1.2 'Golos Text',sans-serif;letter-spacing:.1em;text-transform:uppercase}.home-feature-title{max-width:23ch;margin:0;color:var(--ref-ink);font:700 clamp(24px,3.1vw,38px)/1.1 'Unbounded',sans-serif;letter-spacing:-.065em}.home-feature-title a{color:inherit;text-decoration:none}.home-feature-title a:focus-visible,.home-card-title:focus-visible,.home-feature-detail:focus-visible,.home-browse-link:focus-visible{outline:2px solid var(--ref-accent);outline-offset:3px}.home-feature-meta,.home-card-meta{color:var(--ref-muted);font:500 14px/1.45 'Golos Text',sans-serif}.home-feature-meta{margin-top:11px}.home-feature-salary{margin-top:30px;color:var(--ref-ink);font:700 clamp(23px,3vw,34px)/1 'Unbounded',sans-serif;letter-spacing:-.065em}.home-feature-salary small{margin-left:6px;color:var(--ref-muted);font:500 12px 'Golos Text',sans-serif;letter-spacing:0}.home-feature-salary.is-missing,.home-card-salary.is-missing{font:600 14px/1.35 'Golos Text',sans-serif;color:var(--ref-muted);letter-spacing:0}.home-feature-tags,.home-card-tags{display:flex;gap:6px;flex-wrap:wrap}.home-feature-tags{margin-top:19px}.home-card-tag{display:inline-flex;align-items:center;min-height:27px;padding:4px 9px;border-radius:999px;background:rgba(84,122,97,.1);color:#3f604a;font:600 11.5px/1 'Golos Text',sans-serif}.home-feature-dock{display:flex;flex-direction:column;align-items:flex-end;gap:11px;min-width:128px}.home-feature-dock [data-heart],.home-job-card [data-heart]{border-color:var(--ref-line)!important;background:transparent!important}.home-match-chip{display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:5px 8px;border-radius:9px;font:600 10px/1 'Golos Text',sans-serif;letter-spacing:.005em;white-space:nowrap}.home-match-chip b{font:700 12px/1 'Unbounded',sans-serif;letter-spacing:-.06em}.home-match-chip.home-match-strong{background:#dceadf;color:#31563b}.home-match-chip.home-match-good{background:#f5e3a4;color:#665015}.home-match-chip.home-match-explore{background:#efeee8;color:#5e5d57}.home-match-chip.is-feature{min-height:38px;padding:8px 10px;gap:7px}.home-match-chip.is-feature b{font-size:15px}.feed-rail{margin-top:44px!important;margin-bottom:0!important}.rail-head{margin-bottom:15px!important}.rail-title{font:700 clamp(20px,2.5vw,28px)/1.12 'Unbounded',sans-serif!important;letter-spacing:-.06em!important;color:var(--ref-ink)!important}.rail-sub{margin-top:6px!important;color:var(--ref-muted)!important;font:500 13px/1.4 'Golos Text',sans-serif!important}.rail-link{color:var(--ref-accent)!important;font:600 13px 'Golos Text',sans-serif!important}.rail-link:hover{color:var(--ref-ink)!important}.home-feed .rail-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:13px}.home-support-grid{grid-template-columns:repeat(3,minmax(0,1fr))!important}.home-job-card{position:relative;display:flex;flex-direction:column;min-width:0;min-height:230px;overflow:hidden;padding:19px 18px 17px 23px;border:1px solid var(--ref-line);border-radius:18px;background:rgba(255,254,251,.94);box-shadow:0 5px 15px rgba(32,32,29,.025);cursor:pointer;transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}.home-job-card:hover{transform:translateY(-2px);border-color:rgba(84,122,97,.5);box-shadow:0 13px 26px rgba(32,32,29,.085)}.home-card-top{display:flex;align-items:flex-start;gap:10px}.home-card-top [data-heart]{margin-left:auto}.home-card-title{margin:0;color:var(--ref-ink);font:700 16px/1.23 'Unbounded',sans-serif;letter-spacing:-.055em;overflow-wrap:anywhere}.home-card-meta{margin-top:7px;font-size:12.5px}.home-card-salary{margin-top:22px;color:var(--ref-ink);font:700 20px/1.05 'Unbounded',sans-serif;letter-spacing:-.065em}.home-card-foot{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;margin-top:auto;padding-top:17px}.home-card-tags{justify-content:flex-end}.home-card-tags:empty{display:none}.home-card-tags .home-card-tag{min-height:24px;padding:4px 8px;font-size:10.5px}.home-job-card .home-match-chip span{display:none}.home-job-card .home-match-chip{min-width:43px;justify-content:center}.home-job-card .home-match-chip b{font-size:12px}.home-job-card .home-match-chip::after{content:"";width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.55}.home-job-card .home-match-chip.is-feature::after{display:none}html.dark #page-home,html.dark .route-home .app-content{background:radial-gradient(760px 540px at 8% 0%,rgba(159,125,48,.18),transparent 67%),radial-gradient(650px 520px at 96% 16%,rgba(53,91,62,.42),transparent 68%),var(--ref-bg)!important}html.dark .home-intro{border-color:var(--ref-line)}html.dark .home-browse-link,html.dark .home-feature-detail{background:rgba(25,29,24,.72);color:var(--ref-ink)}html.dark .home-feature-card,html.dark .home-job-card{background:rgba(25,29,24,.96);box-shadow:0 13px 30px rgba(0,0,0,.2)}html.dark .home-feature-card{background:linear-gradient(128deg,rgba(30,39,30,.97),rgba(24,29,24,.98))}html.dark .home-card-tag{background:rgba(167,210,174,.13);color:#b9e1bf}html.dark .home-match-chip.home-match-strong{background:rgba(75,123,88,.42);color:#ccebd1}html.dark .home-match-chip.home-match-good{background:rgba(157,125,47,.38);color:#f0db98}html.dark .home-match-chip.home-match-explore{background:rgba(244,242,235,.11);color:#d5d5cd}html.dark .home-feature-dock [data-heart] svg,html.dark .home-job-card [data-heart] svg{stroke:var(--ref-ink)!important}
+@media(max-width:1024px){.home-feed{padding:42px 20px 64px}.home-feed .rail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-support-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}.home-feature-title{max-width:18ch}.home-feature-card{padding:25px 24px 24px 29px}}
+.home-feature-dock [data-heart],.home-job-card [data-heart]{width:44px!important;height:44px!important}
+@media(max-width:780px){.home-feed{padding:30px 14px 54px}.home-intro{padding-bottom:23px}.home-intro-row{align-items:flex-start;flex-direction:column;gap:17px}.home-browse-link{width:100%}.feed-greeting{font-size:clamp(27px,9vw,38px)!important}.feed-sub{font-size:14px!important}.home-feature-section{margin-top:27px}.home-feature-card{grid-template-columns:1fr;gap:22px;padding:23px 20px 20px 25px;border-radius:20px}.home-feature-title{font-size:clamp(23px,7.3vw,31px)}.home-feature-salary{margin-top:24px}.home-feature-dock{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px}.home-feature-dock .home-feature-detail{grid-column:1/-1;width:100%}.home-feature-dock [data-heart]{grid-column:2;grid-row:1}.home-feature-dock .home-match-chip{justify-self:start}.feed-rail{margin-top:35px!important}.home-feed .rail-grid,.home-support-grid{display:flex!important;gap:11px;overflow-x:auto;padding:2px 14px 8px 0;margin-right:-14px;scroll-snap-type:x mandatory;scrollbar-width:none}.home-feed .rail-grid::-webkit-scrollbar{display:none}.home-feed .rail-grid>.home-job-card{flex:0 0 min(80vw,310px);min-height:220px;scroll-snap-align:start}.home-card-title{font-size:16px}.home-card-salary{font-size:19px}}
+@media(prefers-reduced-motion:reduce){.home-feature-card,.home-job-card,.home-browse-link,.home-feature-detail{transition:none!important}}
+.home-job-card .home-match-chip{min-width:0;padding:5px 8px}.home-job-card .home-match-chip span{display:inline}.home-job-card .home-match-chip::after{display:none}
+/* Browse borrows the landing's sunlit yellow-to-sage field, but every working
+   control remains opaque so the search surface is still fast to read. */
+#page-browse .v5>section:first-child{background:radial-gradient(68% 125% at 50% 14%,rgba(205,229,207,.9) 0%,rgba(220,235,215,.52) 38%,transparent 74%),radial-gradient(58% 120% at 1% 22%,rgba(246,218,143,.9) 0%,transparent 74%),radial-gradient(56% 120% at 100% 22%,rgba(244,221,157,.84) 0%,transparent 72%),linear-gradient(180deg,#f7e2a3 0%,#edf2dd 43%,rgba(251,250,246,0) 100%)!important;border-bottom-color:transparent!important}
+#page-browse,.route-browse .app-content{background:radial-gradient(720px 560px at 4% 33%,rgba(244,214,134,.16),transparent 69%),radial-gradient(760px 610px at 97% 48%,rgba(198,222,198,.23),transparent 69%),var(--ref-bg)!important}
+#page-browse #chip-bar .v5chip:not(.active){background:rgba(255,254,251,.82)!important;border-color:rgba(84,122,97,.26)!important;color:var(--ref-ink)!important}
+#page-browse #chip-bar .v5chip.active,#page-browse #chip-bar .v5chip.v5-chip-on{background:#486f55!important;border-color:#486f55!important;color:#fff!important;box-shadow:0 5px 12px rgba(55,91,65,.18)!important}
+#page-browse #chip-bar .v5chip:hover{border-color:var(--ref-accent)!important;background:var(--ref-accent-soft)!important;color:#284a34!important}
+#page-browse #chip-bar .v5chip.active:hover,#page-browse #chip-bar .v5chip.v5-chip-on:hover{background:#3c6249!important;color:#fff!important}
+#page-browse #chip-bar .v5chip:focus-visible{outline:3px solid rgba(235,199,94,.75)!important;outline-offset:3px!important}
+#page-browse #browse-count{background:rgba(220,234,223,.68)!important;border-color:rgba(84,122,97,.23)!important;color:#365440!important}
+#page-browse #browse-city,#page-browse #browse-cat{background:rgba(255,254,251,.9)!important;border-color:rgba(84,122,97,.22)!important}
+html.dark #page-browse .v5>section:first-child{background:radial-gradient(72% 125% at 50% 10%,rgba(52,89,62,.74) 0%,rgba(31,49,35,.48) 42%,transparent 75%),radial-gradient(55% 120% at 0% 20%,rgba(161,124,39,.32) 0%,transparent 74%),radial-gradient(55% 120% at 100% 20%,rgba(156,121,39,.26) 0%,transparent 74%),var(--ref-bg)!important}html.dark #page-browse #chip-bar .v5chip:not(.active){background:rgba(25,29,24,.88)!important;border-color:rgba(167,210,174,.25)!important;color:var(--ref-ink)!important}html.dark #page-browse #chip-bar .v5chip.active,html.dark #page-browse #chip-bar .v5chip.v5-chip-on{background:#8fbd98!important;border-color:#8fbd98!important;color:#102016!important;box-shadow:none!important}html.dark #page-browse #chip-bar .v5chip.active:hover,html.dark #page-browse #chip-bar .v5chip.v5-chip-on:hover{background:#a7d2ae!important;color:#102016!important}html.dark #page-browse #browse-count{background:rgba(48,83,58,.62)!important;border-color:rgba(167,210,174,.25)!important;color:#d2ecd7!important}html.dark #page-browse #browse-city,html.dark #page-browse #browse-cat{background:rgba(25,29,24,.94)!important;border-color:rgba(167,210,174,.25)!important;color:var(--ref-ink)!important}html.dark #browse-toolbar>.relative svg{stroke:var(--ref-muted)!important}
+@media(max-width:840px){#browse-toolbar>.browse-toolbar-meta{width:100%!important;margin-left:0!important;justify-content:space-between!important;padding-top:3px}}
+@media(max-width:620px){#page-browse .v5 main{padding-left:16px!important;padding-right:16px!important}#browse-toolbar{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important;padding-bottom:18px!important}#browse-toolbar>.relative{min-width:0!important;width:100%}#browse-city,#browse-cat{width:100%!important;min-width:0!important;padding-left:12px!important;padding-right:30px!important}#sort-match-btn{grid-column:1/-1!important;width:100%!important;height:44px!important;justify-content:center!important;background:rgba(255,254,251,.78)!important;border-color:rgba(84,122,97,.24)!important}#sort-match-btn[aria-pressed="true"]{background:#20201d!important;border-color:#20201d!important;color:#fff!important}#browse-toolbar>.browse-toolbar-meta{grid-column:1/-1!important;padding-top:8px!important;border-top:1px solid var(--ref-line)}#browse-count{min-height:34px!important}html.dark #sort-match-btn{background:rgba(25,29,24,.88)!important;border-color:rgba(167,210,174,.25)!important}html.dark #sort-match-btn[aria-pressed="true"]{background:#8fbd98!important;border-color:#8fbd98!important;color:#102016!important}}
+
+/* The palette is one continuous field, not a color strip that stops above a
+   white page.  The header, search, chips, and cards remain opaque reading
+   surfaces; the yellow and sage belong to the atmosphere behind them. */
+#v5-header{background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important}
+html.dark #v5-header{background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+#v5-header:not(.is-scrolled) #v5-bar{background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+#landing-page{background:
+  radial-gradient(74rem 52rem at -12% 11%,rgba(247,215,132,.94) 0%,rgba(247,215,132,.45) 39%,transparent 71%),
+  radial-gradient(69rem 50rem at 111% 14%,rgba(196,222,196,.96) 0%,rgba(196,222,196,.48) 42%,transparent 73%),
+  radial-gradient(62rem 43rem at 50% 22%,rgba(231,241,218,.98) 0%,rgba(231,241,218,.58) 46%,transparent 78%),
+  linear-gradient(180deg,#f7dfa0 0%,#edf1d9 40%,#fbfaf6 76%)!important}
+#v5-hero{background:transparent!important;border-bottom:0!important}
+#sources{background:transparent!important}
+#sources{padding:40px 0 34px!important;border-top:1px solid rgba(47,56,43,.12)!important}
+#sources::before{display:none!important}
+#sources>div:first-child{margin-bottom:13px!important}
+#sources .overflow-hidden{max-width:1200px!important;margin:0 auto!important;border:1px solid rgba(47,56,43,.14)!important;border-radius:16px!important;background:rgba(255,254,249,.54)!important;padding:17px 0!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.46)!important}
+#sources .overflow-hidden span{color:rgba(47,56,43,.62)!important;font-size:17px!important}
+#sources #v5-marquee{gap:48px!important}
+#sources>div:last-child{margin-top:12px!important;color:rgba(47,56,43,.62)!important}
+html.dark #landing-page{background:
+  radial-gradient(72rem 50rem at -10% 12%,rgba(150,113,35,.42) 0%,transparent 71%),
+  radial-gradient(66rem 50rem at 111% 16%,rgba(54,92,64,.7) 0%,transparent 73%),
+  radial-gradient(59rem 42rem at 50% 20%,rgba(39,69,47,.86) 0%,transparent 76%),
+  linear-gradient(180deg,#18251b 0%,#121511 78%)!important}
+html.dark #v5-hero,html.dark #sources{background:transparent!important}
+html.dark #sources{border-top-color:rgba(202,230,204,.14)!important}
+html.dark #sources .overflow-hidden{background:rgba(20,31,22,.56)!important;border-color:rgba(202,230,204,.18)!important;box-shadow:inset 0 1px 0 rgba(202,230,204,.05)!important}
+html.dark #sources .overflow-hidden span,html.dark #sources>div:last-child{color:rgba(222,236,221,.7)!important}
+
+/* Browse continues the same landscape through the filters and toolbar, then
+   eases into the neutral card canvas—there is no section edge to catch the eye. */
+#page-browse,.route-browse .app-content{background:var(--ref-bg)!important}
+#page-browse .v5{background:
+  radial-gradient(72rem 50rem at -13% 0%,rgba(247,215,132,.93) 0%,rgba(247,215,132,.42) 42%,transparent 72%),
+  radial-gradient(66rem 51rem at 111% 6%,rgba(196,222,196,.95) 0%,rgba(196,222,196,.46) 44%,transparent 74%),
+  radial-gradient(61rem 41rem at 50% 11%,rgba(232,241,216,.92) 0%,rgba(232,241,216,.44) 49%,transparent 78%),
+  linear-gradient(180deg,#f7dfa0 0%,#edf1d9 34%,#f8f8e9 55%,#fbfaf6 76%)!important}
+#page-browse .v5>section:first-child,#page-browse .v5 main{background:transparent!important;border-color:transparent!important}
+html.dark #page-browse .v5{background:
+  radial-gradient(70rem 50rem at -12% 0%,rgba(151,113,33,.38) 0%,transparent 72%),
+  radial-gradient(65rem 50rem at 112% 7%,rgba(52,92,63,.7) 0%,transparent 74%),
+  radial-gradient(58rem 40rem at 50% 9%,rgba(36,66,45,.82) 0%,transparent 77%),
+  linear-gradient(180deg,#19271c 0%,#121511 77%)!important}
+html.dark #page-browse .v5>section:first-child,html.dark #page-browse .v5 main{background:transparent!important;border-color:transparent!important}
+@media(max-width:620px){#v5-header,#v5-header.is-scrolled{position:fixed!important;top:0!important;padding:0!important;background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important}#v5-header.is-scrolled{top:8px!important;padding:0 12px!important;pointer-events:none!important}#v5-header.is-scrolled #v5-bar{height:58px!important;padding:0 16px!important;background:var(--ref-surface)!important;border:1px solid var(--ref-line)!important;border-radius:15px!important;box-shadow:0 12px 30px rgba(28,30,26,.15)!important;pointer-events:auto!important}html.dark #v5-header.is-scrolled #v5-bar{box-shadow:0 14px 34px rgba(0,0,0,.34)!important}#v5-hero{padding-top:128px!important}#landing-page{background-position:-180px 0,calc(100% + 160px) 0,50% 5%,0 0!important}#page-browse .v5{background-position:-220px 0,calc(100% + 190px) 0,50% 4%,0 0!important}#sources{padding:32px 0 28px!important}#sources .overflow-hidden{margin:0 16px!important;border-radius:14px!important}#sources>div:first-child,#sources>div:last-child{padding-left:16px!important;padding-right:16px!important}}
+
+/* The signed-in app uses the landing's navigation rhythm too: its yellow–sage
+   field shows through at rest, then its own controls collect into a readable
+   island after the user starts scanning a page. */
+.app-nav{left:0!important;right:0!important;width:auto!important;max-width:none!important;margin:0 auto!important;transform:none!important;transition:background-color .26s ease,border-color .26s ease,box-shadow .26s ease,top .28s cubic-bezier(.22,1,.36,1),left .28s cubic-bezier(.22,1,.36,1),right .28s cubic-bezier(.22,1,.36,1),max-width .28s cubic-bezier(.22,1,.36,1),border-radius .26s ease!important}
+body.route-browse #app-shell,body.route-home #app-shell{min-height:100vh;background:
+  radial-gradient(72rem 50rem at -13% 0%,rgba(247,215,132,.93) 0%,rgba(247,215,132,.42) 42%,transparent 72%),
+  radial-gradient(66rem 51rem at 111% 6%,rgba(196,222,196,.95) 0%,rgba(196,222,196,.46) 44%,transparent 74%),
+  radial-gradient(61rem 41rem at 50% 11%,rgba(232,241,216,.92) 0%,rgba(232,241,216,.44) 49%,transparent 78%),
+  linear-gradient(180deg,#f7dfa0 0%,#edf1d9 34%,#f8f8e9 55%,#fbfaf6 76%)!important}
+body.route-browse .app-content,body.route-home .app-content,body.route-browse #page-browse,body.route-home #page-home,body.route-browse #page-browse .v5{background:transparent!important}
+body.route-browse .app-nav:not(.is-scrolled),body.route-home .app-nav:not(.is-scrolled){background:transparent!important;border-color:transparent!important;box-shadow:none!important;backdrop-filter:none!important}
+body.route-browse .app-nav:not(.is-scrolled) .dark-toggle,body.route-browse .app-nav:not(.is-scrolled) .nav-bell,body.route-home .app-nav:not(.is-scrolled) .dark-toggle,body.route-home .app-nav:not(.is-scrolled) .nav-bell{background:rgba(255,254,249,.38)!important;border-color:rgba(47,56,43,.2)!important}
+.app-nav.is-scrolled{top:10px!important;left:16px!important;right:16px!important;width:auto!important;max-width:1180px!important;transform:none!important;height:64px!important;padding:0 clamp(16px,2.6vw,28px)!important;background:rgba(255,254,249,.96)!important;border:1px solid var(--ref-line)!important;border-radius:18px!important;box-shadow:0 15px 36px rgba(28,30,26,.16)!important;backdrop-filter:blur(18px) saturate(130%)!important}
+html.dark body.route-browse #app-shell,html.dark body.route-home #app-shell{background:
+  radial-gradient(70rem 50rem at -12% 0%,rgba(151,113,33,.38) 0%,transparent 72%),
+  radial-gradient(65rem 50rem at 112% 7%,rgba(52,92,63,.7) 0%,transparent 74%),
+  radial-gradient(58rem 40rem at 50% 9%,rgba(36,66,45,.82) 0%,transparent 77%),
+  linear-gradient(180deg,#19271c 0%,#121511 77%)!important}
+html.dark body.route-browse .app-nav:not(.is-scrolled),html.dark body.route-home .app-nav:not(.is-scrolled){background:transparent!important;border-color:transparent!important;box-shadow:none!important}
+html.dark body.route-browse .app-nav:not(.is-scrolled) .dark-toggle,html.dark body.route-browse .app-nav:not(.is-scrolled) .nav-bell,html.dark body.route-home .app-nav:not(.is-scrolled) .dark-toggle,html.dark body.route-home .app-nav:not(.is-scrolled) .nav-bell{background:rgba(18,27,19,.42)!important;border-color:rgba(202,230,204,.24)!important}
+html.dark .app-nav.is-scrolled{background:rgba(18,23,18,.96)!important;border-color:var(--ref-line)!important;box-shadow:0 17px 40px rgba(0,0,0,.38)!important}
+@media(max-width:620px){.app-nav.is-scrolled{top:8px!important;left:12px!important;right:12px!important;width:auto!important;height:56px!important;padding:0 14px!important;border-radius:15px!important}}
+@media(prefers-reduced-motion:reduce){.app-nav{transition:none!important}}
+
+/* The wordmark remains a single strong mark. */
+#app-shell .app-nav-logo,#app-shell .app-nav-logo span{color:var(--ref-ink)!important}
+@media (prefers-reduced-motion:reduce){#v5-marquee{animation:none!important}}
+</style>
 </head>
 <body>
   <div id="landing-page" class="v5"><!--V5-START-->
@@ -3220,7 +3424,46 @@ html,body{font-family:'Golos Text',system-ui,-apple-system,sans-serif!important}
       </footer>
     </div>
     <div class="app-content">
-      <div class="app-page" id="page-home"><div class="feed-wrap"><div class="feed-header"><div class="feed-greeting" data-i18n-html="feed_greeting">Привет, <em id="feed-name">студент</em> 👋</div><div class="feed-sub" data-i18n="greet_sub">Вот вакансии, подобранные специально для тебя</div></div><div class="alerts-row" id="home-alerts-row" role="region" aria-label="Saved job alerts"></div><div class="match-legend" role="note" aria-label="Match score legend"><span class="match-legend-label" data-i18n="match_legend_label">Match score</span><span class="match-legend-item"><span class="match-legend-dot high"></span><span data-i18n="match_legend_high">80+ strong</span></span><span class="match-legend-item"><span class="match-legend-dot mid"></span><span data-i18n="match_legend_mid">60–79 partial</span></span><span class="match-legend-item"><span class="match-legend-dot low"></span><span data-i18n="match_legend_low">&lt;60 stretch</span></span><a class="feed-refine-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="feed_refine">Нужно искать? → Все вакансии</a></div><section class="feed-rail" data-rail="top-matches"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_top_t">Топ совпадения для тебя</h2><div class="rail-sub" data-i18n="rail_top_s">Вакансии с высоким баллом совпадения</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-top-matches"></div></section><section class="feed-rail" data-rail="fresh"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_fresh_t">Новые на этой неделе</h2><div class="rail-sub" data-i18n="rail_fresh_s">Свежие вакансии от проверенных работодателей</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-fresh"></div></section><section class="feed-rail" data-rail="remote"><header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_remote_t">Можно работать удалённо</h2><div class="rail-sub" data-i18n="rail_remote_s">Гибкий график — можно совмещать с учёбой</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header><div class="rail-grid" id="rail-remote"></div></section></div></div>
+      <div class="app-page" id="page-home">
+        <main class="home-feed" aria-label="Персональная подборка вакансий">
+          <header class="home-intro">
+            <div class="home-eyebrow" data-i18n="home_eyebrow">ПОДБОРКА НА ЭТУ НЕДЕЛЮ</div>
+            <div class="home-intro-row">
+              <div>
+                <h1 class="feed-greeting"><span data-i18n="greet">Привет,</span> <em id="feed-name">студент</em></h1>
+                <p class="feed-sub" data-i18n="home_intro">Несколько сильных вариантов — без бесконечной ленты.</p>
+              </div>
+              <a class="home-browse-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="home_browse">Смотреть все вакансии</a>
+            </div>
+            <div class="home-status"><span class="home-status-dot" aria-hidden="true"></span><strong id="home-job-count">—</strong> <span data-i18n="home_job_count">актуальных вакансий</span></div>
+          </header>
+
+          <div class="alerts-row home-alerts" id="home-alerts-row" role="region" aria-label="Saved job alerts"></div>
+
+          <section class="home-feature-section" aria-labelledby="home-feature-title">
+            <div class="home-section-label" id="home-feature-title" data-i18n="home_feature_title">ВЫБОР НА СЕГОДНЯ</div>
+            <div id="home-feature-card"></div>
+          </section>
+
+          <section class="feed-rail home-support" data-rail="top-matches" aria-labelledby="home-more-title">
+            <header class="rail-head">
+              <div><h2 class="rail-title" id="home-more-title" data-i18n="home_more_title">Ещё стоит посмотреть</h2><div class="rail-sub" data-i18n="home_more_sub">Сильные варианты, которые не хочется пропускать</div></div>
+              <a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a>
+            </header>
+            <div class="rail-grid home-support-grid" id="rail-top-matches"></div>
+          </section>
+
+          <section class="feed-rail" data-rail="fresh">
+            <header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_fresh_t">Новые на этой неделе</h2><div class="rail-sub" data-i18n="rail_fresh_s">Свежие вакансии от проверенных работодателей</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header>
+            <div class="rail-grid" id="rail-fresh"></div>
+          </section>
+
+          <section class="feed-rail" data-rail="remote">
+            <header class="rail-head"><div><h2 class="rail-title" data-i18n="rail_remote_t">Можно работать удалённо</h2><div class="rail-sub" data-i18n="rail_remote_s">Гибкий график — можно совмещать с учёбой</div></div><a class="rail-link" href="#/browse" onclick="navigate('browse');return false;" data-i18n="rail_see_all">Все вакансии →</a></header>
+            <div class="rail-grid" id="rail-remote"></div>
+          </section>
+        </main>
+      </div>
       <div class="app-page" id="page-browse"><div class="v5"><!--V5-START-->
 
       <!-- ===== SEARCH BAND ===== -->
@@ -3266,7 +3509,7 @@ html,body{font-family:'Golos Text',system-ui,-apple-system,sans-serif!important}
       <!-- ===== BODY ===== -->
       <main class="max-w-[1200px] mx-auto px-6 pt-8 pb-24">
 
-        <div class="flex flex-wrap items-center gap-3 pb-5 border-b border-[rgba(24,20,15,.1)]">
+        <div id="browse-toolbar" class="flex flex-wrap items-center gap-3 pb-5 border-b border-[rgba(24,20,15,.1)]">
           <div class="relative">
             <select id="browse-city" onchange="onBrowseSelect('city')" aria-label="Город" class="h-10 pl-[14px] pr-9 rounded-lg bg-[#FEFCF7] border border-[rgba(24,20,15,.16)] text-[13.5px] font-semibold text-[#18140F] cursor-pointer outline-none hover:border-[rgba(24,20,15,.4)] transition-colors">
               <option value="" data-i18n="city_all">Все города</option>
@@ -3294,7 +3537,7 @@ html,body{font-family:'Golos Text',system-ui,-apple-system,sans-serif!important}
             <span data-i18n="sort_match_label">По совпадению</span>
           </button>
 
-          <div class="flex items-center gap-3 ml-auto flex-wrap">
+          <div class="browse-toolbar-meta flex items-center gap-3 ml-auto flex-wrap">
             <span id="browse-count" class="inline-flex items-center gap-2 rounded-full bg-[#F4EFE6] border border-[rgba(24,20,15,.11)] px-[13px] py-[6px] text-[13px] font-semibold text-[rgba(24,20,15,.7)]"></span>
             <span id="browse-filter-meta" class="flex items-center gap-3">
               <span class="filter-count text-[13.5px] font-medium text-[rgba(24,20,15,.62)]"></span>
@@ -3316,10 +3559,10 @@ html,body{font-family:'Golos Text',system-ui,-apple-system,sans-serif!important}
 
         <div class="alerts-row" id="browse-alerts-row" role="region" aria-label="Saved job alerts"></div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-[268px_minmax(0,1fr)] gap-8 mt-8 items-start">
+        <div class="grid grid-cols-1 gap-6 mt-8 items-start v5-browse-layout">
 
           <!-- ===== FILTER RAIL ===== -->
-          <aside class="hidden lg:block sticky top-[92px] rounded-[22px] bg-[#FEFCF7] border border-[rgba(24,20,15,.12)] p-6">
+          <aside id="browse-filter-rail" class="hidden sticky top-[84px] rounded-[22px] bg-[#FEFCF7] border border-[rgba(24,20,15,.12)] p-6 v5-filter-rail">
             <div class="flex items-center justify-between mb-5">
               <h2 class="u m-0 text-[17px] font-semibold tracking-[-.035em]" data-i18n="filters_title">Фильтры</h2>
               <button class="filter-clear text-[13px] font-semibold text-[#8A6520] hover:text-[#5F4514] cursor-pointer" data-target="browse" data-i18n="filter_clear">Сбросить</button>
@@ -3355,6 +3598,7 @@ html,body{font-family:'Golos Text',system-ui,-apple-system,sans-serif!important}
               <label class="flex items-center gap-[10px] py-[6px] cursor-pointer text-[14px] font-medium text-[rgba(24,20,15,.78)]"><input type="checkbox" class="w-[17px] h-[17px] accent-[#18140F] cursor-pointer" data-rail="flag" value="no-exp" onchange="onRailToggle(this)"><span data-i18n="f_noexp">Без опыта</span></label>
               <label class="flex items-center gap-[10px] py-[6px] cursor-pointer text-[14px] font-medium text-[rgba(24,20,15,.78)]"><input type="checkbox" class="w-[17px] h-[17px] accent-[#18140F] cursor-pointer" data-rail="flag" value="has-salary" onchange="onRailToggle(this)"><span data-i18n="f_hassalary">Только с зарплатой</span></label>
             </div>
+            <button onclick="openSubmitModal()" class="mt-5 w-full h-10 rounded-lg border border-[rgba(84,122,97,.34)] bg-[rgba(220,234,223,.58)] text-[13.5px] font-semibold text-[#2E4432] cursor-pointer hover:bg-[#CFE2D0] transition-colors" data-i18n="fab_submit">Предложить вакансию</button>
           </aside>
 
           <section id="browse-grid" class="flex flex-col gap-4"></section>
@@ -3912,15 +4156,18 @@ function v5Heart(jobId, isSaved, big) {
          '" stroke="#18140F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + HEART_PATH + '</svg></button>';
 }
 
-// Gold badge above 85, quiet sand badge below — the design's way of saying
-// "this one is worth your attention" without inventing precision.
-function v5MatchBadge(score) {
-  var strong = score >= 85;
-  var cls = strong
-    ? 'bg-[#EBD08A] text-[#18140F]'
-    : 'bg-[#F2EBDA] border border-[rgba(24,20,15,.14)] text-[rgba(24,20,15,.7)]';
-  return '<span class="rounded-lg ' + cls + ' px-[10px] py-[5px] text-[12px] font-semibold whitespace-nowrap">' +
-         score + '% ' + t('match_word') + '</span>';
+// Match calculations stay independent from their presentation. These tiers give
+// the home feed an understandable signal without turning it into a rainbow.
+function v5MatchTier(score) {
+  if (score >= 85) return { key:'strong', label:t('match_excellent') };
+  if (score >= 70) return { key:'good', label:t('match_good') };
+  return { key:'explore', label:t('match_explore') };
+}
+
+function v5MatchBadge(score, feature) {
+  var tier = v5MatchTier(score);
+  return '<span class="home-match-chip home-match-' + tier.key + (feature ? ' is-feature' : '') + '">'
+       + '<b>' + score + '%</b><span>' + escapeHtml(tier.label) + '</span></span>';
 }
 
 function v5Tag(label) {
@@ -3967,7 +4214,7 @@ function v5WhyBox(job, score) {
   var ink  = strong ? 'text-[#2E4432]' : 'text-[rgba(24,20,15,.7)]';
   var lead = strong ? 'text-[#2E4432]' : 'text-[#18140F]';
   var strokeC = strong ? '#2E4432' : '#18140F';
-  return '<div class="mt-4 flex items-start gap-[10px] rounded-[14px] ' + wrap + ' p-[12px_14px]">' +
+  return '<div class="v5-why-box mt-4 flex items-start gap-[10px] rounded-[14px] ' + wrap + ' p-[12px_14px]">' +
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="' + strokeC + '" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" class="shrink-0 mt-[2px]" aria-hidden="true"><path d="M4 12.5l5 5L20 6.5"></path></svg>' +
     '<div class="text-[13.5px] leading-[1.5] font-medium ' + ink + '"><span class="font-semibold ' + lead + '">' +
     t('why_fits') + '</span> ' + escapeHtml(reasons.slice(0, 3).join(', ')) + '.</div></div>';
@@ -3989,58 +4236,61 @@ function buildJobCard(job, score, variant) {
   var open    = 'goToJob(\'' + job.id + '\')';
 
   if (variant === 'grid') {
+    var gridTier = v5MatchTier(score);
+    var gridSource = v5SourceLabel(job) || t('src_community');
+    var gridSalary = (job.salary && job.salary !== '—')
+      ? escapeHtml(job.salary)
+      : t('salary_warn');
+    var gridTags = v5TagsFor(job).slice(0, 2).map(function(label){
+      return '<span class="home-card-tag">' + escapeHtml(label) + '</span>';
+    }).join('');
     return '' +
 '<article onclick="' + open + '" role="link" tabindex="0" onkeydown="if(event.key===\'Enter\'){' + open + '}" ' +
-        'class="bg-[#FEFCF7] border border-[rgba(24,20,15,.12)] rounded-[22px] p-5 cursor-pointer transition-all duration-200 hover:border-[rgba(24,20,15,.34)] hover:-translate-y-[2px] flex flex-col gap-3">' +
-  '<div class="flex items-start gap-3">' +
-    '<span class="u grid place-items-center w-[44px] h-[44px] rounded-[13px] bg-[#F4EFE6] text-[14px] font-bold tracking-[-.03em] shrink-0">' + escapeHtml(job.logo || '') + '</span>' +
-    '<div class="min-w-0 flex-1">' +
-      '<h3 class="u m-0 text-[16px] leading-[1.28] font-semibold tracking-[-.035em]">' + escapeHtml(job.title) + '</h3>' +
-      '<div class="mt-[5px] text-[12.5px] font-medium text-[rgba(24,20,15,.62)]">' + v5MetaLine(job) + '</div>' +
+        'class="home-job-card home-match-' + gridTier.key + '"> ' +
+  '<div class="home-card-top">' +
+    '<div class="home-card-identity">' +
+      '<div class="home-card-source">' + escapeHtml(gridSource) + '</div>' +
+      '<h3 class="home-card-title">' + escapeHtml(job.title) + '</h3>' +
+      '<div class="home-card-meta">' + v5MetaLine(job) + '</div>' +
     '</div>' +
     v5Heart(job.id, isSaved, false) +
   '</div>' +
-  v5MatchBadgeRow(score) +
-  ((job.salary && job.salary !== '—')
-    ? '<div class="u text-[18px] font-bold tracking-[-.04em]">' + escapeHtml(job.salary) + '</div>'
-    : '<div class="text-[13.5px] font-medium text-[rgba(24,20,15,.5)]">' + t('salary_warn') + '</div>') +
-  '<div class="flex flex-wrap gap-2">' + v5TagsFor(job).slice(0, 2).map(v5Tag).join('') + '</div>' +
+  '<div class="home-card-salary' + (job.salary && job.salary !== '—' ? '' : ' is-missing') + '">' + gridSalary + '</div>' +
+  '<div class="home-card-foot">' + v5MatchBadge(score, false) + '<div class="home-card-tags">' + gridTags + '</div></div>' +
 '</article>';
   }
 
+  var tier = score >= 85 ? 'is-strong' : score >= 65 ? 'is-ready' : 'is-explore';
+  var salary = (job.salary && job.salary !== '—')
+    ? '<div class="v5-card-salary">' + escapeHtml(job.salary) + '<small>' + t('per_month') + '</small></div>'
+    : '<div class="v5-card-salary is-missing">' + t('salary_warn') + '</div>';
+  var tags = v5TagsFor(job).map(function(label){ return '<span class="v5-card-tag">' + label + '</span>'; }).join('');
+  var source = v5SourceLabel(job);
   return '' +
-'<article class="bg-[#FEFCF7] border border-[rgba(24,20,15,.12)] rounded-[22px] p-6 transition-all duration-200 hover:border-[rgba(24,20,15,.34)] hover:-translate-y-[2px]">' +
-  '<div class="flex items-start gap-4">' +
-    '<span class="u grid place-items-center w-[52px] h-[52px] rounded-[15px] bg-[#F4EFE6] text-[16px] font-bold tracking-[-.03em] shrink-0" aria-hidden="true">' + escapeHtml(job.logo || '') + '</span>' +
-    '<div class="min-w-0 flex-1">' +
-      '<div class="flex items-start justify-between gap-3">' +
-        '<div class="min-w-0">' +
-          '<h3 class="u m-0 text-[20px] leading-[1.28] font-semibold tracking-[-.038em]">' +
-            '<a href="#/job/' + job.id + '" onclick="goToJob(\'' + job.id + '\');return false;">' + escapeHtml(job.title) + '</a>' +
-          '</h3>' +
-          '<div class="mt-[5px] text-[13.5px] font-medium text-[rgba(24,20,15,.62)]">' + v5MetaLine(job) + '</div>' +
-          v5SourceLine(job) +
-        '</div>' +
-        '<div class="flex items-center gap-2 shrink-0">' + v5MatchBadge(score) + v5Heart(job.id, isSaved, false) + '</div>' +
-      '</div>' +
-      v5SalaryBlock(job) +
-      v5WhyBox(job, score) +
-      '<div class="mt-4 pt-4 border-t border-[rgba(24,20,15,.1)] flex flex-wrap items-center gap-3">' +
-        '<div class="flex flex-wrap gap-2">' + v5TagsFor(job).map(v5Tag).join('') + '</div>' +
-        '<div class="flex items-center gap-4 ml-auto">' +
-          '<span class="text-[12.5px] font-medium text-[rgba(24,20,15,.45)]">' + timeAgo(job.posted_at) + '</span>' +
-          '<a href="#/job/' + job.id + '" onclick="goToJob(\'' + job.id + '\');return false;" ' +
-             'class="h-9 px-[18px] rounded-lg border border-[rgba(24,20,15,.28)] inline-flex items-center text-[14px] font-semibold text-[#18140F] hover:border-[#18140F] transition-colors">' +
-             t('details_btn') + '</a>' +
-        '</div>' +
-      '</div>' +
+'<article class="v5-job-card ' + tier + '" onclick="' + open + '" role="link" tabindex="0" onkeydown="if(event.key===\'Enter\'){' + open + '}">' +
+  '<div class="v5-card-main">' +
+    '<div class="v5-card-heading">' +
+      '<div class="v5-card-eyebrow">' + escapeHtml(source || t('src_community')) + '</div>' +
+      '<h3 class="v5-card-title"><a href="#/job/' + job.id + '" onclick="event.stopPropagation();goToJob(\'' + job.id + '\');return false;">' + escapeHtml(job.title) + '</a></h3>' +
+      '<div class="v5-card-meta">' + v5MetaLine(job) + '</div>' +
     '</div>' +
+    salary +
+    v5WhyBox(job, score) +
+    '<div class="v5-card-foot">' +
+      '<div class="v5-card-tags">' + tags + '</div>' +
+      '<span class="v5-card-time">' + timeAgo(job.posted_at) + '</span>' +
+      '<a href="#/job/' + job.id + '" onclick="event.stopPropagation();goToJob(\'' + job.id + '\');return false;" class="v5-card-detail">' + t('details_btn') + '</a>' +
+    '</div>' +
+  '</div>' +
+  '<div class="v5-card-dock">' +
+    '<div class="v5-card-score"><b>' + score + '%</b><span>' + t('match_word') + '</span></div>' +
+    v5Heart(job.id, isSaved, false) +
   '</div>' +
 '</article>';
 }
 
 function v5MatchBadgeRow(score) {
-  return '<div>' + v5MatchBadge(score) + '</div>';
+  return '<div>' + v5MatchBadge(score, false) + '</div>';
 }
 
 // ── Search helpers: hero + top-nav search inputs ─────────────────────────────
@@ -4139,6 +4389,7 @@ function navigate(view, jobId) {
   }
   // Scroll to top
   window.scrollTo(0, 0);
+  if (window._appNavScroll) window._appNavScroll();
 }
 
 function goToJob(jobId) {
@@ -4159,6 +4410,51 @@ function enterApp(target) {
 }
 
 // ── Feed ────────────────────────────────────────────────────────────────────
+function buildHomeFeatureCard(job, score) {
+  var isSaved = savedJobs.map(String).indexOf(String(job.id)) !== -1;
+  var open = 'goToJob(\'' + job.id + '\')';
+  var source = v5SourceLabel(job) || t('src_community');
+  var salary = (job.salary && job.salary !== '—')
+    ? escapeHtml(job.salary) + '<small>' + t('per_month') + '</small>'
+    : t('salary_warn');
+  var tags = v5TagsFor(job).slice(0, 3).map(function(label){
+    return '<span class="home-card-tag">' + escapeHtml(label) + '</span>';
+  }).join('');
+  var tier = v5MatchTier(score);
+
+  return '<article class="home-feature-card home-match-' + tier.key + '" onclick="' + open + '" role="link" tabindex="0" onkeydown="if(event.key===\'Enter\'){' + open + '}">' +
+    '<div class="home-feature-main">' +
+      '<div class="home-card-source">' + escapeHtml(source) + '</div>' +
+      '<h2 class="home-feature-title"><a href="#/job/' + job.id + '" onclick="event.stopPropagation();goToJob(\'' + job.id + '\');return false;">' + escapeHtml(job.title) + '</a></h2>' +
+      '<div class="home-feature-meta">' + v5MetaLine(job) + '</div>' +
+      '<div class="home-feature-salary' + (job.salary && job.salary !== '—' ? '' : ' is-missing') + '">' + salary + '</div>' +
+      '<div class="home-feature-tags">' + tags + '</div>' +
+    '</div>' +
+    '<div class="home-feature-dock">' +
+      v5MatchBadge(score, true) +
+      v5Heart(job.id, isSaved, false) +
+      '<a class="home-feature-detail" href="#/job/' + job.id + '" onclick="event.stopPropagation();goToJob(\'' + job.id + '\');return false;">' + t('details_btn') + '</a>' +
+    '</div>' +
+  '</article>';
+}
+
+function renderHomeFeature(job) {
+  var el = document.getElementById('home-feature-card');
+  var section = document.querySelector('.home-feature-section');
+  if (!el || !section) return;
+  if (!job) {
+    el.innerHTML = '<div class="rail-empty">' + t('empty_rail_top') + '</div>';
+    section.hidden = false;
+    return;
+  }
+  section.hidden = false;
+  el.innerHTML = buildHomeFeatureCard(job, job._score);
+}
+
+function withoutRenderedJobs(jobs, seen, limit) {
+  return jobs.filter(function(job){ return !seen.has(String(job.id)); }).slice(0, limit);
+}
+
 function renderFeed() {
   // Update greeting
   if (profile && profile.name) {
@@ -4175,20 +4471,30 @@ function renderFeed() {
   });
   scored = sortPartnersFirst(scored);
 
-  // Rail 1 — top matches: highest match scores (fallback: partners-first)
-  var topMatches = scored.slice().sort(function(a,b){ return b._score - a._score; }).slice(0, 8);
+  var homeCount = document.getElementById('home-job-count');
+  if (homeCount) homeCount.textContent = scored.length.toLocaleString(LANG === 'en' ? 'en' : 'ru');
 
-  // Rail 2 — fresh: use posted_at / created_at if available, else reverse order
-  var fresh = scored.slice().sort(function(a,b){
+  // The Home feed is an edit: one lead recommendation, three supporting
+  // options, then distinct rails. Ranking remains calcMatch()-driven.
+  var ranked = scored.slice().sort(function(a,b){ return b._score - a._score; });
+  var featured = ranked[0];
+  var seen = new Set(featured ? [String(featured.id)] : []);
+  var topMatches = withoutRenderedJobs(ranked, seen, 3);
+  topMatches.forEach(function(job){ seen.add(String(job.id)); });
+  renderHomeFeature(featured);
+
+  // Fresh and remote rails deliberately avoid jobs already surfaced above.
+  var fresh = withoutRenderedJobs(scored.slice().sort(function(a,b){
     var ad = a.posted_at || a.created_at || a.createdAt || 0;
     var bd = b.posted_at || b.created_at || b.createdAt || 0;
     return new Date(bd) - new Date(ad);
-  }).slice(0, 8);
+  }), seen, 4);
+  fresh.forEach(function(job){ seen.add(String(job.id)); });
 
-  // Rail 3 — remote / flexible (real filter; if empty, fall back to "no-exp" picks)
-  var remote = scored.filter(function(j){ return j.remote || isFlexible(j); }).slice(0, 8);
+  var remoteCandidates = scored.filter(function(j){ return j.remote || isFlexible(j); });
+  var remote = withoutRenderedJobs(remoteCandidates, seen, 4);
   if (!remote.length) {
-    remote = scored.filter(function(j){ return isNoExp(j); }).slice(0, 8);
+    remote = withoutRenderedJobs(scored.filter(function(j){ return isNoExp(j); }), seen, 4);
   }
 
   renderRail('rail-top-matches', topMatches, 'empty_rail_top');
@@ -4370,6 +4676,7 @@ function syncFilterUI() {
     c.classList.toggle('active', on);
     c.classList.toggle('v5-chip-on', on);
     c.classList.toggle('v5-chip-off', !on);
+    c.setAttribute('aria-pressed', on ? 'true' : 'false');
   });
   document.querySelectorAll('[data-rail]').forEach(function(cb) {
     var kind = cb.getAttribute('data-rail'), v = cb.value;
@@ -5021,8 +5328,7 @@ async function renderJobDetail(jobId) {
     '<section class="mt-5 rounded-[28px] bg-[#18140F] text-[#FEFCF7] p-8 sm:p-10 relative overflow-hidden">' +
       '<div class="absolute inset-0 pointer-events-none opacity-[.24] bg-[radial-gradient(120%_120%_at_86%_-12%,#EBD08A_0%,rgba(235,208,138,0)_58%)]"></div>' +
       '<div class="relative">' +
-        '<span class="u grid place-items-center w-[58px] h-[58px] rounded-[17px] bg-[#EBD08A] text-[#18140F] text-[19px] font-bold tracking-[-.03em]" aria-hidden="true">' + escapeHtml(job.logo || '') + '</span>' +
-        '<h1 class="u mt-6 mb-0 text-[clamp(26px,3.6vw,42px)] leading-[1.09] font-extrabold tracking-[-.045em] text-[#FEFCF7] max-w-[26ch]">' + escapeHtml(job.title) + '</h1>' +
+        '<h1 class="u m-0 text-[clamp(26px,3.6vw,42px)] leading-[1.09] font-extrabold tracking-[-.045em] text-[#FEFCF7] max-w-[26ch]">' + escapeHtml(job.title) + '</h1>' +
         '<div class="u mt-3 text-[16.5px] font-semibold tracking-[-.03em] text-[rgba(254,252,247,.82)]">' + escapeHtml(job.company) + '</div>' +
         '<div class="flex flex-wrap items-center gap-2 mt-6">' + srcBadge + heroTags + '</div>' +
       '</div>' +
@@ -5997,24 +6303,42 @@ function v5HeroChip(key) {
   filterBrowse();
 }
 
-function v5LandingInit() {
-  if (!document.getElementById('v5-header')) return;
-  var raf = null;
-  function onScroll() {
-    if (raf) return;
-    raf = requestAnimationFrame(function() {
-      raf = null;
-      var y = window.scrollY || document.documentElement.scrollTop || 0;
-      var max = Math.max(1, (document.documentElement.scrollHeight || 0) - window.innerHeight);
-      v5State.p = Math.round(Math.min(1, y / 460) * 250) / 250;
-      v5State.prog = Math.round(Math.min(1, y / max) * 200) / 2;
-      v5Header();
+function initAppNavScroll() {
+  var nav = document.querySelector('.app-nav');
+  if (!nav) return;
+  if (window._appNavScroll) window.removeEventListener('scroll', window._appNavScroll);
+  var scheduled = false;
+  window._appNavScroll = function() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(function() {
+      scheduled = false;
+      nav.classList.toggle('is-scrolled', window.scrollY > 56);
     });
-  }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('resize', v5Header);
-  onScroll();
-  v5Header();
+  };
+  window.addEventListener('scroll', window._appNavScroll, { passive:true });
+  window._appNavScroll();
+}
+
+function v5LandingInit() {
+  var header = document.getElementById('v5-header');
+  if (!header) return;
+  // The initial v5 header rewrote almost every layout value on each scroll.
+  // Besides causing layout work, those inline styles won against the responsive
+  // rules and left the navigation visibly unstyled after a load or resize.
+  // Its layout is now CSS-owned; JavaScript only switches the island state.
+  if (window._v5HeaderScroll) window.removeEventListener('scroll', window._v5HeaderScroll);
+  var scheduled = false;
+  window._v5HeaderScroll = function() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(function() {
+      scheduled = false;
+      header.classList.toggle('is-scrolled', window.scrollY > 56);
+    });
+  };
+  window.addEventListener('scroll', window._v5HeaderScroll, { passive:true });
+  window._v5HeaderScroll();
 
   // Typed example queries. Skipped entirely under prefers-reduced-motion —
   // the field then just shows the first example.
@@ -6176,7 +6500,7 @@ async function init() {
     }).join('');
   }
   // Landing numbers + hero preview cards come from the real job list
-  try { updateLiveStats(); v5LandingInit(); } catch(_e) { console.warn('[SteppeUp] live stats', _e); }
+  try { updateLiveStats(); v5LandingInit(); initAppNavScroll(); } catch(_e) { console.warn('[SteppeUp] live stats', _e); }
 
   // ── Multi-select chip toggle helper ────────────────────────────────────
   // key: 'data-filter' (feed) or 'data-bfilter' (browse)
@@ -6500,6 +6824,9 @@ var T = {
     // feed
     greet:'Привет,', greet_sub:'Вот вакансии, подобранные специально для тебя',
     student:'студент',
+    home_eyebrow:'ПОДБОРКА НА ЭТУ НЕДЕЛЮ', home_intro:'Несколько сильных вариантов — без бесконечной ленты.', home_browse:'Смотреть все вакансии', home_job_count:'актуальных вакансий',
+    home_feature_title:'ВЫБОР НА СЕГОДНЯ', home_more_title:'Ещё стоит посмотреть', home_more_sub:'Сильные варианты, которые не хочется пропускать',
+    match_excellent:'Отлично подходит', match_good:'Хороший вариант', match_explore:'Можно попробовать',
     // browse
     browse_title:'Все вакансии', found:'Найдено', vacancies:'вакансий',
     search_ph:'Поиск по названию или компании...', hero_search_ph:'Например: дизайнер, Алматы, маркетинг…', nav_search_ph:'Найти вакансию…', search_btn:'Найти',
@@ -6735,6 +7062,9 @@ var T = {
     ft_employers:'Жұмыс берушілерге', ft_post:'Жұмыс орналастыру', ft_pricing:'Бағалар', ft_help:'Көмек',
     ft_social:'Әлеуметтік желілер', ft_rights:'Барлық құқықтар қорғалған.',
     greet:'Сәлем,', greet_sub:'Сізге арнайы іріктелген жұмыстар', student:'студент',
+    home_eyebrow:'ОСЫ АПТАДАҒЫ ТАҢДАУЫҢ', home_intro:'Шексіз лентесіз — назар аударуға тұрарлық бірнеше нұсқа.', home_browse:'Барлық вакансияларды көру', home_job_count:'өзекті вакансия',
+    home_feature_title:'БҮГІНГІ ТАҢДАУ', home_more_title:'Тағы да қарап шық', home_more_sub:'Жіберіп алмауға тұрарлық мықты нұсқалар',
+    match_excellent:'Өте жақсы сәйкеседі', match_good:'Жақсы нұсқа', match_explore:'Қарап көруге болады',
     browse_title:'Барлық жұмыстар', found:'Табылды', vacancies:'жұмыс',
     search_ph:'Атауы немесе компания бойынша іздеу...', hero_search_ph:'Мысалы: дизайнер, Алматы, маркетинг…', nav_search_ph:'Жұмыс іздеу…', search_btn:'Іздеу',
     saved_title:'Сақталған', vac1:'жұмыс', vac24:'жұмыс', vac5:'жұмыс',
@@ -6956,6 +7286,9 @@ var T = {
     ft_employers:'For Employers', ft_post:'Post a job', ft_pricing:'Pricing', ft_help:'Help',
     ft_social:'Social', ft_rights:'All rights reserved.',
     greet:'Hi,', greet_sub:'Jobs picked just for you', student:'student',
+    home_eyebrow:'YOUR EDIT FOR THE WEEK', home_intro:'A few strong options, without an endless feed.', home_browse:'Browse all jobs', home_job_count:'live opportunities',
+    home_feature_title:'PICK FOR TODAY', home_more_title:'Also worth a look', home_more_sub:'Strong opportunities you may not want to miss',
+    match_excellent:'Excellent fit', match_good:'Good option', match_explore:'Worth exploring',
     browse_title:'All Jobs', found:'Found', vacancies:'jobs',
     search_ph:'Search by title or company...', hero_search_ph:'Try: designer, Almaty, marketing…', nav_search_ph:'Search jobs…', search_btn:'Search',
     saved_title:'Saved Jobs', vac1:'job', vac24:'jobs', vac5:'jobs',
@@ -7106,9 +7439,9 @@ function applyLang(lang) {
       if (dict[pair[1]]) el.textContent = dict[pair[1]];
     });
   });
-  // Update feed subtitle
+  // Update the editorial home intro.
   var feedSub = document.querySelector('.feed-sub');
-  if (feedSub) feedSub.textContent = dict.greet_sub || '';
+  if (feedSub) feedSub.textContent = dict.home_intro || dict.greet_sub || '';
   // Update greeting word — resolve name from user profile, else locale default.
   // (Previously used nameEl.textContent as fallback, which left stale Russian "студент"
   //  in place when the user switched to EN without a profile name set.)
@@ -7123,7 +7456,7 @@ function applyLang(lang) {
     var safeName = String(name).replace(/[&<>"']/g, function(c){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
     });
-    greetEl.innerHTML = (dict.greet||'Привет,') + ' <em id="feed-name">' + safeName + '</em> 👋';
+    greetEl.innerHTML = (dict.greet||'Привет,') + ' <em id="feed-name">' + safeName + '</em>';
   }
   // Lang buttons
   document.querySelectorAll('.lang-btn').forEach(function(btn) {
