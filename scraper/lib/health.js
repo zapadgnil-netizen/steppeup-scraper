@@ -38,6 +38,32 @@ function createHealth({ log = console.log } = {}) {
   return { source, problem, verdict, sources, problems };
 }
 
+/**
+ * Board-wide floor. Unknown (null/NaN) is fatal and must not be displayed as 0:
+ * v2's catch left activeTotal=0, then claimed "board has only 0 (floor 25)"
+ * while production still had thousands of active jobs.
+ */
+function evaluateBoardCount(activeTotal, { minHealthy = 25 } = {}) {
+  if (activeTotal == null || !Number.isFinite(Number(activeTotal))) {
+    return {
+      known: false,
+      fatal: true,
+      display: 'unknown',
+      problem: 'board active count is unknown — failing closed (not treating as 0)',
+    };
+  }
+  const n = Number(activeTotal);
+  if (n < minHealthy) {
+    return {
+      known: true,
+      fatal: true,
+      display: String(n),
+      problem: `board has only ${n} active jobs (floor ${minHealthy})`,
+    };
+  }
+  return { known: true, fatal: false, display: String(n), problem: null };
+}
+
 async function notify(text, { level = 'info', log = console.log } = {}) {
   const prefix = level === 'error' ? '🚨' : level === 'warn' ? '⚠️' : 'ℹ️';
   const msg = `${prefix} SteppeUp scraper\n${text}`;
@@ -62,4 +88,4 @@ function writeStepSummary(markdown) {
   try { require('fs').appendFileSync(p, markdown + '\n'); } catch (_e) { /* ignore */ }
 }
 
-module.exports = { createHealth, notify, writeStepSummary };
+module.exports = { createHealth, notify, writeStepSummary, evaluateBoardCount };

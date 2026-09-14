@@ -26,7 +26,7 @@ const { createHttp } = require('./lib/http');
 const filter = require('./lib/filter');
 const normalize = require('./lib/normalize');
 const { createDb } = require('./lib/db');
-const { createHealth, notify, writeStepSummary } = require('./lib/health');
+const { createHealth, notify, writeStepSummary, evaluateBoardCount } = require('./lib/health');
 
 const SOURCES = [require('./sources/hh'), require('./sources/enbek'), require('./sources/telegram')];
 const BY_NAME = Object.fromEntries(SOURCES.map((s) => [s.name, s]));
@@ -215,33 +215,39 @@ async function main() {
   }
 
   // ── Health ────────────────────────────────────────────────────────────────
-  let activeTotal = 0, bySource = {};
-  try { activeTotal = await db.activeCount(); bySource = await db.activeCountsBySource(); }
-  catch (e) { health.problem('active count: ' + e.message); }
-  log(`\n[health] active on board: ${activeTotal}  ${JSON.stringify(bySource)}`);
+  let activeTotal = null, bySource = {};
+  try {
+    activeTotal = await db.activeCount();
+    bySource = await db.activeCountsBySource();
+  } catch (e) { health.problem('could not read active counts: ' + e.message); }
+  const board = evaluateBoardCount(activeTotal, { minHealthy: MIN_ACTIVE_HEALTHY });
+  log(`\n[health] active on board: ${board.display}  ${JSON.stringify(bySource)}`);
 
-  const fatal = !DRY_RUN && activeTotal < MIN_ACTIVE_HEALTHY;
-  if (fatal) health.problem(`board has only ${activeTotal} active jobs (floor ${MIN_ACTIVE_HEALTHY}) after cleanup`);
+  const fatal = !DRY_RUN && board.fatal;
+  if (fatal && board.problem) {
+    health.problem(board.known ? `${board.problem} after cleanup` : board.problem);
+  }
   const verdict = health.verdict({ fatal });
 
   if (!DRY_RUN) {
     await db.logRun({
       source: 'cleanup', jobs_found: counts.revived,
       jobs_removed: counts.expired + counts.dead + counts.swept,
-      status: verdict.status, details: { ...counts, activeTotal, bySource },
+      status: verdict.status,
+      details: { ...counts, activeTotal: board.known ? activeTotal : null, board: board.display, bySource },
     });
   }
 
   writeStepSummary(`## Cleanup ${verdict.status.toUpperCase()}\n\n` +
     `expired ${counts.expired} · dead ${counts.dead} · swept ${counts.swept} · revived ${counts.revived}\n\n` +
-    `Board: **${activeTotal}** active\n` +
+    `Board: **${board.display}** active\n` +
     (verdict.problems.length ? `\n### Problems\n- ${verdict.problems.join('\n- ')}\n` : ''));
 
   log(`\nDone. expired ${counts.expired}, dead ${counts.dead}, swept ${counts.swept}, revived ${counts.revived}.`);
   log(`VERDICT: ${verdict.status.toUpperCase()}`);
 
   if (verdict.status !== 'ok') {
-    await notify(`Cleanup ${verdict.status}\nBoard: ${activeTotal} active\n` +
+    await notify(`Cleanup ${verdict.status}\nBoard: ${board.display} active\n` +
       verdict.problems.map((p) => '• ' + p).join('\n'),
       { level: verdict.status === 'failed' ? 'error' : 'warn', log });
   }

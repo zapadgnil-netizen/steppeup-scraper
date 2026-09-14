@@ -23,7 +23,7 @@ const { createHttp } = require('./lib/http');
 const filter = require('./lib/filter');
 const normalize = require('./lib/normalize');
 const { createDb } = require('./lib/db');
-const { createHealth, notify, writeStepSummary } = require('./lib/health');
+const { createHealth, notify, writeStepSummary, evaluateBoardCount } = require('./lib/health');
 
 const SOURCES = [
   require('./sources/hh'),
@@ -160,20 +160,20 @@ async function main() {
   }
 
   // ── Health ───────────────────────────────────────────────────────────────
-  let activeTotal = 0, bySource = {};
+  // Fail closed if the board count cannot be read, but never display that as 0.
+  let activeTotal = null, bySource = {};
   try {
     activeTotal = await db.activeCount();
     bySource = await db.activeCountsBySource();
   } catch (e) {
     health.problem('could not read active counts: ' + e.message);
   }
-  log(`\n[health] active on board: ${activeTotal}  ${JSON.stringify(bySource)}`);
+  const board = evaluateBoardCount(activeTotal, { minHealthy: MIN_ACTIVE_HEALTHY });
+  log(`\n[health] active on board: ${board.display}  ${JSON.stringify(bySource)}`);
 
-  const fatal = activeTotal < MIN_ACTIVE_HEALTHY ||
-                (upsert.verified && upsert.verified.present === 0 && deduped.length > 0);
-  if (activeTotal < MIN_ACTIVE_HEALTHY) {
-    health.problem(`board has only ${activeTotal} active jobs (floor ${MIN_ACTIVE_HEALTHY})`);
-  }
+  const writeFailed = upsert.verified && upsert.verified.present === 0 && deduped.length > 0;
+  const fatal = board.fatal || writeFailed;
+  if (board.problem) health.problem(board.problem);
   const verdict = health.verdict({ fatal });
 
   // Per-source log rows, then the summary row. Each is best-effort.
@@ -182,12 +182,12 @@ async function main() {
   }
   await db.logRun({
     source: 'all', jobs_found: deduped.length, status: verdict.status,
-    details: { bySource, activeTotal, crossDupes, upserted: upsert.ok, errors: upsert.errors, http: http.stats, seconds: (Date.now() - t0) / 1000 },
+    details: { bySource, activeTotal: board.known ? activeTotal : null, board: board.display, crossDupes, upserted: upsert.ok, errors: upsert.errors, http: http.stats, seconds: (Date.now() - t0) / 1000 },
   });
 
   writeStepSummary(
     `## Scrape ${verdict.status.toUpperCase()}\n\n${verdict.summary}\n\n` +
-    `Board: **${activeTotal}** active · upserted ${upsert.ok} · ${((Date.now() - t0) / 1000).toFixed(0)}s\n` +
+    `Board: **${board.display}** active · upserted ${upsert.ok} · ${((Date.now() - t0) / 1000).toFixed(0)}s\n` +
     (verdict.problems.length ? `\n### Problems\n- ${verdict.problems.join('\n- ')}\n` : ''));
 
   log('\n═══════════════════════════════════════════');
@@ -198,7 +198,7 @@ async function main() {
 
   if (verdict.status !== 'ok') {
     await notify(
-      `Scrape ${verdict.status}\n${verdict.summary}\n\nBoard: ${activeTotal} active\n` +
+      `Scrape ${verdict.status}\n${verdict.summary}\n\nBoard: ${board.display} active\n` +
       verdict.problems.map((p) => '• ' + p).join('\n'),
       { level: verdict.status === 'failed' ? 'error' : 'warn', log });
   }
