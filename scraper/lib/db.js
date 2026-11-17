@@ -169,6 +169,21 @@ function createDb({ url, key, log = console.log, client = null } = {}) {
     return res.data || [];
   }
 
+  /**
+   * Mark stored rows inactive (re-judge mode). Scoped to ONE source and to rows
+   * still active, so it can never touch another source. Returns rows changed.
+   */
+  async function deactivateRows(source, sourceIds, { batchSize = 50 } = {}) {
+    let n = 0;
+    for (let i = 0; i < sourceIds.length; i += batchSize) {
+      const res = await client.from('jobs').update({ status: 'inactive' })
+        .eq('source', source).eq('status', 'active').in('source_id', sourceIds.slice(i, i + batchSize)).select('id');
+      if (res.error) throw new Error('deactivateRows: ' + formatPgError(res.error));
+      n += (res.data || []).length;
+    }
+    return n;
+  }
+
   /** Write one scraping_logs row; failures are reported but never fatal. */
   async function logRun(row) {
     try {
@@ -178,7 +193,7 @@ function createDb({ url, key, log = console.log, client = null } = {}) {
     } catch (e) { log(`[db] scraping_logs insert threw: ${e.message}`); return false; }
   }
 
-  return { client, upsertJobs, activeCount, activeCountsBySource, recentRows, logRun };
+  return { client, upsertJobs, activeCount, activeCountsBySource, recentRows, deactivateRows, logRun };
 }
 
 module.exports = {

@@ -17,6 +17,8 @@
  *   node scrape-jobs.js              # live  (SUPABASE_URL + SUPABASE_SERVICE_KEY)
  *   node scrape-jobs.js --dry-run    # no DB writes, prints everything
  *   node scrape-jobs.js --only=hh_kz # one source (repeatable, comma-separated)
+ *   node scrape-jobs.js --only=telegram_career --rejudge   # one-off: re-judge stored telegram rows with Jev
+ *                                    # (also REJUDGE=1); refuses unless Jev is available
  */
 
 const { createHttp } = require('./lib/http');
@@ -32,6 +34,7 @@ const SOURCES = [
 ];
 
 const DRY_RUN = process.argv.includes('--dry-run');
+const REJUDGE = process.argv.includes('--rejudge') || /^(1|true)$/i.test(process.env.REJUDGE || '');
 const ONLY = (process.argv.find((a) => a.startsWith('--only=')) || '').replace('--only=', '')
   .split(',').map((s) => s.trim()).filter(Boolean);
 
@@ -103,9 +106,11 @@ async function main() {
     http, log, filter, normalize, limits: { maxJobs: 400, maxPages: 6, maxAgeDays: 21 }, dryRun: DRY_RUN,
     // Telegram repost check + "keep earlier decisions". Dry runs have no DB, so
     // the source simply checks within the batch (and says so).
+    rejudge: REJUDGE, rejudgeState: { deactivate: [], refused: false },
     loadExisting: db ? () => db.recentRows('telegram_career', { sinceDays: 21 }) : null,
   };
 
+  if (REJUDGE && ONLY.length && !ONLY.includes('telegram_career')) { console.error('--rejudge only applies to telegram_career'); process.exit(1); }
   const active = SOURCES.filter((s) => !ONLY.length || ONLY.includes(s.name));
   if (!active.length) { console.error(`No sources matched --only=${ONLY.join(',')}`); process.exit(1); }
 
@@ -116,6 +121,11 @@ async function main() {
     perSource[src.name] = await runSource(src, ctx, health);
   }
 
+  // Re-judge refused (no Jev): change nothing at all, fail loudly so it is noticed.
+  if (ctx.rejudgeState.refused) {
+    log('\n[rejudge] refused: Jev is not available. No writes were made.');
+    process.exit(1);
+  }
   const allJobs = Object.values(perSource).flat();
 
   // Cross-source dedupe: the same vacancy often appears on hh.kz AND in a
@@ -167,6 +177,14 @@ async function main() {
       health.problem('write verification failed: none of the sampled rows reached the DB');
     }
   }
+
+  // ── Re-judge: retire stored telegram rows Jev now rejects ───────────────
+  if (REJUDGE && ctx.rejudgeState.deactivate.length) {
+    try {
+      const n = await db.deactivateRows('telegram_career', [...new Set(ctx.rejudgeState.deactivate)]);
+      log(`[rejudge] marked ${n} telegram_career row(s) inactive (Jev rejected them)`);
+    } catch (e) { health.problem('rejudge deactivation failed: ' + e.message); }
+  } else if (REJUDGE) log('[rejudge] no stored rows were rejected by Jev');
 
   // ── Health ───────────────────────────────────────────────────────────────
   // Fail closed if the board count cannot be read, but never display that as 0.

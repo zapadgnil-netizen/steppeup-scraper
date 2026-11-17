@@ -25,6 +25,11 @@
  *                                     (source_id, source_channel, title, company,
  *                                     apply_url, source_type); absent in dry runs
  *
+ * Re-judge mode (ctx.rejudge, one-off): rows the router already stored are judged
+ * again and the fresh Jev fields overwrite the stored ones. It refuses (returns
+ * nothing, changes nothing) unless Jev is on. Stored rows Jev now rejects are
+ * reported in ctx.rejudgeState.deactivate for the orchestrator to mark inactive.
+ *
  * Freshness: posts older than `maxAgeDays` are skipped entirely. Channels pin
  * old posts and repost, and the old pipeline happily re-upserted a 358-day-old
  * post as a fresh job (there is one on the live board right now).
@@ -82,6 +87,17 @@ async function scrape(ctx) {
     ? '[telegram] judgments: Jev (TypeSafe) will judge posts that pass the rules; rules remain the fallback'
     : `[telegram] judgments: RULES ONLY — Jev not used (${judge.reason})`);
 
+  const rejudge = !!ctx.rejudge;
+  const state = ctx.rejudgeState || (ctx.rejudgeState = {});
+  state.deactivate = state.deactivate || [];
+  if (rejudge && judge.mode !== 'jev') {
+    state.refused = true;
+    const msg = `[telegram] REJUDGE REFUSED: Jev is not available (${judge.reason}); nothing judged, nothing changed`;
+    log(msg);
+    return { jobs: [], stats: { channels: channels.length, emptyChannels: 0, rejects: {}, perChannel: {}, deduped: 0, jev: { mode: judge.mode, reason: judge.reason }, rejudge: { refused: true } }, notes: [msg] };
+  }
+  if (rejudge) log('[telegram] REJUDGE: stored rows of fetched posts are judged again; Jev output overwrites stored title/company/apply');
+
   // Rows already stored: used to keep earlier (possibly Jev-improved) fields
   // stable across the 8 runs a day, and to drop reposts.
   let existingRows = [];
@@ -127,7 +143,9 @@ async function scrape(ctx) {
           const known = existingById.get(item.parsed.source_id);
           // A row the router already wrote keeps its fields: no second Jev call
           // and no flapping between runs. (Rows from the old logic are re-derived.)
-          if (known && SOURCE_TYPES.includes(known.source_type)) {
+          if (known && rejudge) item.known = known; // judged again below, stored values are the fallback
+          const keepStored = known && SOURCE_TYPES.includes(known.source_type);
+          if (keepStored && !rejudge) {
             item.parsed.title = known.title || item.parsed.title;
             item.parsed.company = known.company || item.parsed.company;
             item.parsed.apply_url = known.apply_url || item.parsed.apply_url;
@@ -136,7 +154,18 @@ async function scrape(ctx) {
             item.reused = true;
             return;
           }
-          verdicts.set(item, await judge.assess(item.post, item.parsed));
+          const verdict = await judge.assess(item.post, item.parsed);
+          verdicts.set(item, verdict);
+          // Re-judge, but Jev failed for this post: keep what is stored rather
+          // than replacing it with plain rule output.
+          if (rejudge && !verdict && keepStored) {
+            item.parsed.title = known.title || item.parsed.title;
+            item.parsed.company = known.company || item.parsed.company;
+            item.parsed.apply_url = known.apply_url || item.parsed.apply_url;
+            item.parsed.source_type = known.source_type;
+            item.parsed._companyFromPost = true;
+            item.reused = true;
+          }
         }));
       }
 
@@ -148,7 +177,13 @@ async function scrape(ctx) {
         else if (verdict) stat.jev++; else stat.rules++;
 
         const vr = applyVerdict(parsed, verdict, judge);
-        if (vr) { stat.rejected++; bump(vr); continue; }
+        if (vr) {
+          stat.rejected++; bump(vr);
+          // Only Jev's rejection of a row this source stored (and whose post we
+          // fetched this run) retires it, and only in re-judge mode.
+          if (rejudge && item.known && /^jev-/.test(vr)) state.deactivate.push(item.known.source_id);
+          continue;
+        }
 
         // Big general channels: only 30–40% suit students, so a POSITIVE student
         // signal is required. Jev's studentFit (already checked) counts as one;
@@ -211,12 +246,14 @@ async function scrape(ctx) {
     const n = jevDrops.reduce((a, [, c]) => a + c, 0);
     notes.push(`Jev dropped ${n} post(s) the rules had kept: ${jevDrops.map(([k, c]) => `${k}=${c}`).join(', ')}`);
   }
+  if (rejudge) log(`[telegram] REJUDGE: ${state.deactivate.length} stored row(s) now rejected by Jev and due to be marked inactive`);
   if (judge.mode !== 'jev') notes.push(`Jev not used: ${judge.reason}`);
   else if (judge.stats.failed) notes.push(`Jev: ${judge.stats.failed} call(s) failed, those posts fell back to rules (${judge.firstError || 'unknown error'})`);
 
   return {
     jobs: finalJobs,
-    stats: { channels: channels.length, emptyChannels, rejects, perChannel, deduped: entries.length - finalJobs.length, jev: jevStats },
+    stats: { channels: channels.length, emptyChannels, rejects, perChannel, deduped: entries.length - finalJobs.length, jev: jevStats,
+      ...(rejudge ? { rejudge: { refused: false, deactivated: state.deactivate.length } } : {}) },
     notes,
   };
 }

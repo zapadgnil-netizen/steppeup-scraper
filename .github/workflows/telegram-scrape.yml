@@ -7,7 +7,12 @@ name: SteppeUp Telegram Career Scraper
 on:
   schedule:
     - cron: '0 4,10,16,22 * * *'
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      rejudge:
+        description: 'One-off: re-judge stored telegram rows with Jev (overwrites title/company/apply, deactivates rows Jev rejects). Refuses if Jev is unavailable.'
+        type: boolean
+        default: false
 
 concurrency:
   group: steppeup-telegram
@@ -32,4 +37,5 @@ jobs:
           ALERT_TELEGRAM_CHAT_ID: ${{ secrets.ALERT_TELEGRAM_CHAT_ID }}
           # Optional: Jev (TypeSafe) judgments. Unset = the scraper runs on rules and says so in its log.
           TYPESAFE_API_KEY: ${{ secrets.TYPESAFE_API_KEY }}
+          REJUDGE: ${{ inputs.rejudge && '1' || '' }}
         run: cd scraper && node scrape-jobs.js --only=telegram_career
