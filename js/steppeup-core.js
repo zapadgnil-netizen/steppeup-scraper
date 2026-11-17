@@ -274,7 +274,9 @@
       reasons.push('remote');
     }
 
-    var raw = skillScore + fieldScore + cityScore;
+    // Location alone is not a fit: without any skill or field/interest evidence
+    // the city bonus must not turn an unrelated job into a "15% match".
+    var raw = (skillScore + fieldScore > 0) ? skillScore + fieldScore + cityScore : 0;
     if (raw <= 0) {
       return {
         score: null,
@@ -325,6 +327,16 @@
     return { iso: posted, kind: 'published', checkedIso: checked };
   }
 
+  // Calendar day (Almaty, UTC+5) of a job's publication date. enbek.kz stamps
+  // posts at midnight while hh.kz carries exact times; comparing whole days
+  // stops the exact timestamp from always ranking hh above enbek.
+  var DAY_MS = 86400000;
+  var ALMATY_OFFSET_MS = 5 * 3600000;
+  function recencyDay(job) {
+    var ms = parseTime(publicationDate(job).iso);
+    return ms ? Math.floor((ms + ALMATY_OFFSET_MS) / DAY_MS) : 0;
+  }
+
   function guestSortKey(job) {
     var boost = 0;
     if (job && job.type === 'internship') boost += 3;
@@ -333,7 +345,7 @@
     if (job && job.salary && job.salary !== '—' && !job.salaryUncertain) boost += 1;
     if (job && job.remote) boost += 1;
     var pub = publicationDate(job);
-    var recency = parseTime(pub.iso);
+    var recency = recencyDay(job);
     return { boost: boost, recency: recency, idRank: stableIdRank(job && job.id) };
   }
 
@@ -370,10 +382,85 @@
       return ga.idRank - gb.idRank;
     }
 
-    var at = parseTime(publicationDate(a).iso);
-    var bt = parseTime(publicationDate(b).iso);
+    var at = recencyDay(a);
+    var bt = recencyDay(b);
     if (bt !== at) return bt - at;
     return stableIdRank(a && a.id) - stableIdRank(b && b.id);
+  }
+
+  // Source-diversity interleave for the default (non-match) ordering. Takes a
+  // list already sorted by compareJobs and returns a permutation of it:
+  //  - the leading Featured / partner block stays exactly where it is;
+  //  - no more than maxRun consecutive cards share a source while another
+  //    source still has cards;
+  //  - Telegram jobs take telegramSlots (positions after the pinned block);
+  //  - every source with cards appears within the first `window` cards;
+  //  - the relative order inside each source is unchanged.
+  // With opts.tier (a number, e.g. 10) the list is a match ranking: only cards
+  // whose match score falls in the same tier (floor(score / tier)) as the best
+  // remaining card are interleaved, so a weaker tier is never lifted above a
+  // stronger one and ranking is preserved across tiers.
+  function diversifyBySource(list, opts) {
+    var rows = Array.isArray(list) ? list : [];
+    opts = opts || {};
+    var maxRun = opts.maxRun > 0 ? opts.maxRun : 2;
+    var win = opts.window > 0 ? opts.window : 8;
+    var slots = Array.isArray(opts.telegramSlots) ? opts.telegramSlots : [1, 4];
+    var tgKey = 'telegram_career';
+    var srcOf = function (row) { return String((row && row.source) || ''); };
+    var tierSize = opts.tier > 0 ? opts.tier : 0;
+    var tierOf = function (row) {
+      var sc = displayableScore(row && row._match);
+      return sc == null ? -1 : Math.floor(sc / tierSize);
+    };
+    var pinned = 0;
+    while (pinned < rows.length && (isFeatured(rows[pinned], opts.now) || srcOf(rows[pinned]) === 'partner')) pinned++;
+    var out = rows.slice(0, pinned);
+    var order = [];
+    var queues = {};
+    rows.slice(pinned).forEach(function (row, rank) {
+      var key = srcOf(row);
+      if (!queues[key]) { queues[key] = []; order.push(key); }
+      queues[key].push({ row: row, rank: rank });
+    });
+    var placed = {};
+    var lastKey = null;
+    var run = 0;
+    out.forEach(function (row) {
+      var k = srcOf(row);
+      placed[k] = (placed[k] || 0) + 1;
+      if (k === lastKey) run++; else { lastKey = k; run = 1; }
+    });
+    function head(key) { return queues[key].length ? queues[key][0] : null; }
+    while (out.length < rows.length) {
+      var pos = out.length - pinned;
+      var avail = order.filter(head);
+      if (tierSize && avail.length > 1) {
+        var bestKey = avail.reduce(function (best, k) {
+          return head(k).rank < head(best).rank ? k : best;
+        }, avail[0]);
+        var bestTier = tierOf(head(bestKey).row);
+        avail = avail.filter(function (k) { return tierOf(head(k).row) === bestTier; });
+      }
+      var allowed = avail.filter(function (k) { return !(k === lastKey && run >= maxRun); });
+      if (!allowed.length) allowed = avail;
+      var pick = null;
+      if (allowed.indexOf(tgKey) >= 0 && slots.indexOf(pos) >= 0) pick = tgKey;
+      if (!pick && out.length < win) {
+        var missing = avail.filter(function (k) { return !placed[k]; });
+        var allowedMissing = allowed.filter(function (k) { return !placed[k]; });
+        if (allowedMissing.length && missing.length >= win - out.length) pick = allowedMissing[0];
+      }
+      if (!pick) {
+        pick = allowed.reduce(function (best, k) {
+          return best == null || head(k).rank < head(best).rank ? k : best;
+        }, null);
+      }
+      out.push(queues[pick].shift().row);
+      placed[pick] = (placed[pick] || 0) + 1;
+      if (pick === lastKey) run++; else { lastKey = pick; run = 1; }
+    }
+    return out;
   }
 
   function listingRejectReason(title, description, tags) {
@@ -385,7 +472,50 @@
     return null;
   }
 
-  function isStudentSuitable(title, description, tags) {
+  // Work that takes place in another country. hh.kz location is the hiring
+  // office (often a Kazakhstan city), so the announcement in the text decides.
+  var ABROAD_COUNTRY = '(?:россию|россии|рф|корею|корее|польшу|польше|германию|германии|чехию|чехии|литву|литве|латвию|латвии|эстонию|эстонии|финляндию|финляндии|швецию|швеции|норвегию|норвегии|европу|европе|оаэ|дубай|дубае|турцию|турции|китай|китае|сша|америку|америке|канаду|канаде|японию|японии|израиль|израиле|великобританию|великобритании|англию|англии|италию|италии|испанию|испании|сербию|сербии|болгарию|болгарии|венгрию|венгрии|словакию|словакии|францию|франции|грецию|греции|кипр|кипре|москву|москве|подмосковье|петербург|петербурге|узбекистан|узбекистане)';
+  var NOT_WORD_BEFORE = '(?<![а-яёa-z])';
+  var NOT_WORD_AFTER = '(?![а-яёa-z])';
+  var ABROAD_TITLE = new RegExp(
+    NOT_WORD_BEFORE + '(?:в|на)\\s+' + ABROAD_COUNTRY + NOT_WORD_AFTER +
+    '|' + NOT_WORD_BEFORE + '(?:работа|работать|вахта|вахтой|вахтов\\w+|трудоустройство|выезд|выездн\\w+|релокация)\\s+(?:в|на|за)\\s+' + ABROAD_COUNTRY + NOT_WORD_AFTER +
+    '|' + NOT_WORD_BEFORE + '(?:работа|работать|вахта|вахтой|трудоустройство|выезд\\w*)\\s+за\\s+(?:границ\\w+|рубеж\\w+)' +
+    '|' + NOT_WORD_BEFORE + 'за\\s+(?:границ[уей]\\w*|рубеж\\w*)' +
+    '|' + NOT_WORD_BEFORE + '(?:work|job|jobs|working|relocation|warehouse\\s+worker)\\s+(?:in|to)\\s+(?:russia|poland|korea|germany|europe|uae|dubai|usa|canada|japan|turkey|china|finland|czechia|lithuania)\\b' +
+    '|' + NOT_WORD_BEFORE + '(?:work|job|jobs)\\s+abroad\\b|' + NOT_WORD_BEFORE + 'worker\\s+in\\s+(?:russia|poland|korea|germany|europe|uae|dubai|usa|canada|japan|turkey|china|finland)\\b',
+    'i'
+  );
+  var ABROAD_BODY = new RegExp(
+    NOT_WORD_BEFORE + '(?:работа|работать|вахта|вахтой|вахтов\\w+|трудоустройство|выезд\\w*|релокация)\\s+(?:в|на|за)\\s+' + ABROAD_COUNTRY + NOT_WORD_AFTER +
+    '|' + NOT_WORD_BEFORE + '(?:работа|работать|вахта|вахтой|трудоустройство)\\s+за\\s+(?:границ\\w+|рубеж\\w+)' +
+    '|' + NOT_WORD_BEFORE + 'вахт\\w*\\s+(?:в|на)\\s+' + ABROAD_COUNTRY + NOT_WORD_AFTER +
+    '|' + NOT_WORD_BEFORE + 'в\\s+' + ABROAD_COUNTRY + '\\s+на\\s+вахту',
+    'i'
+  );
+
+  function isAbroadListing(title, description, ctx) {
+    if (ctx && ctx.remote) return false;
+    if (ABROAD_TITLE.test(String(title || ''))) return true;
+    return ABROAD_BODY.test(String(description || ''));
+  }
+
+  // Entry-level pay in Kazakhstan is a few hundred thousand tenge. Lower bounds
+  // of 600k+/month, or very wide ranges up to 1.5M+, are MLM / commission pitches.
+  function implausibleEntryPay(ctx) {
+    if (!ctx) return false;
+    var cur = String(ctx.currency || ctx.salaryCurrency || '').toUpperCase();
+    if (cur && cur !== 'KZT') return false;
+    var period = ctx.period || ctx.salaryPeriod || null;
+    if (period && period !== 'month') return false;
+    var min = Number(ctx.salary_min);
+    var max = Number(ctx.salary_max);
+    if (!(min > 0)) return false;
+    if (min >= 600000) return true;
+    return max >= 1500000 && max / min >= 2.5;
+  }
+
+  function isStudentSuitable(title, description, tags, ctx) {
     var titleLow = String(title || '').toLowerCase();
     var t = (titleLow + ' ' + String(description || '') + ' ' + (Array.isArray(tags) ? tags.join(' ') : '')).toLowerCase();
     if (/студент\w*[^.]{0,25}(не\s*беспоко|не\s*обраща|не\s*подход|не\s*рассматр)|без\s*студент|не\s*для\s*студент/.test(t)) {
@@ -404,12 +534,21 @@
     if (count(/зарплата/g) >= 2 || count(/обязанности/g) >= 2 || count(/требовани[ея]/g) >= 3) {
       return { ok: false, reason: 'multi-job-digest' };
     }
+    if (isAbroadListing(title, description, ctx)) return { ok: false, reason: 'abroad' };
+    if (implausibleEntryPay(ctx)) return { ok: false, reason: 'implausible-pay' };
     return { ok: true, reason: '' };
   }
 
   function listingEligibleForFeed(job) {
     if (!job || job.hiddenAsNonJob) return false;
-    return isStudentSuitable(job.title, job.description, job.tags).ok;
+    return isStudentSuitable(job.title, job.description, job.tags, {
+      remote: !!job.remote,
+      city: job.city || job.location || '',
+      salary_min: job.salary_min,
+      salary_max: job.salary_max,
+      currency: job.salaryCurrency || job.currency,
+      period: job.salaryPeriod || job.salary_period
+    }).ok;
   }
 
   function compareFeedWindow(a, b) {
@@ -426,10 +565,98 @@
     return 'select=*&status=eq.active&order=posted_at.desc,id.desc&limit=' + FEED_WINDOW;
   }
 
+  // Columns the browser needs for cards, filters, eligibility and match (see
+  // mapSupabaseJob / normalizeListing). The detail page re-reads the full row.
+  // jobsFeedQuery stays select=* for api/alerts.js.
+  var LIST_COLUMNS = 'id,source,source_url,source_type,source_channel,title,company,location,description,' +
+    'salary_min,salary_max,currency,tags,posted_at,apply_url,featured_until';
+
+  function jobsListQuery() {
+    return 'select=' + LIST_COLUMNS + '&status=eq.active&order=posted_at.desc,id.desc&limit=' + FEED_WINDOW;
+  }
+
   // Telegram-sourced rows are few and old; a second small query keeps them out
   // of the 500-row recency window. Merge without duplicates (first wins).
   function telegramFeedQuery() {
     return 'select=*&source=eq.telegram_career&status=eq.active&order=posted_at.desc,id.desc&limit=' + TELEGRAM_FEED_LIMIT;
+  }
+
+  function telegramListQuery() {
+    return 'select=' + LIST_COLUMNS + '&source=eq.telegram_career&status=eq.active&order=posted_at.desc,id.desc&limit=' + TELEGRAM_FEED_LIMIT;
+  }
+
+  // ── Search: whole-database lookup when local results are thin ───────────
+  var SEARCH_MIN_CHARS = 3;
+  var SEARCH_THIN_RESULTS = 12;
+  var SEARCH_DB_LIMIT = 60;
+  var SEARCH_MAX_LEN = 60;
+
+  // Strip everything that could change the meaning of a PostgREST or=() value
+  // (separators, parens, wildcards, escapes, quotes, URL delimiters).
+  function sanitizeSearchQuery(q) {
+    return String(q == null ? '' : q)
+      .replace(/[*,()\\"'%_&#=?;:<>{}\[\]|^`~+]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, SEARCH_MAX_LEN)
+      .trim();
+  }
+
+  function searchDbQuery(q) {
+    var clean = sanitizeSearchQuery(q);
+    if (clean.length < SEARCH_MIN_CHARS) return null;
+    var term = '*' + encodeURIComponent(clean) + '*';
+    return 'select=' + LIST_COLUMNS + '&status=eq.active' +
+      '&or=(title.ilike.' + term + ',company.ilike.' + term + ')' +
+      '&order=posted_at.desc,id.desc&limit=' + SEARCH_DB_LIMIT;
+  }
+
+  function shouldSearchDatabase(q, localCount) {
+    return sanitizeSearchQuery(q).length >= SEARCH_MIN_CHARS && localCount < SEARCH_THIN_RESULTS;
+  }
+
+  // 0 = one, 1 = few, 2 = many (en: 0 / 1; kz: no agreement).
+  function pluralIndex(n, lang) {
+    n = Math.abs(Math.floor(Number(n) || 0));
+    if (lang === 'en') return n === 1 ? 0 : 1;
+    if (lang === 'kz') return 2;
+    var n10 = n % 10, n100 = n % 100;
+    if (n10 === 1 && n100 !== 11) return 0;
+    if (n10 >= 2 && n10 <= 4 && (n100 < 10 || n100 >= 20)) return 1;
+    return 2;
+  }
+
+  // Local rows first, then remote rows not already present; eligibility applies
+  // to the remote rows only (local rows already passed it).
+  function mergeSearchResults(local, remote, eligible) {
+    var seen = {};
+    var out = [];
+    (Array.isArray(local) ? local : []).forEach(function (row) {
+      if (!row) return;
+      var key = String(row.id);
+      if (seen[key]) return;
+      seen[key] = true;
+      out.push(row);
+    });
+    (Array.isArray(remote) ? remote : []).forEach(function (row) {
+      if (!row) return;
+      var key = String(row.id);
+      if (seen[key]) return;
+      if (typeof eligible === 'function' && !eligible(row)) return;
+      seen[key] = true;
+      out.push(row);
+    });
+    return out;
+  }
+
+  // Latest-wins token: a response is applied only if its token is still current.
+  function createRequestGuard() {
+    var current = 0;
+    return {
+      next: function () { return ++current; },
+      isCurrent: function (token) { return token === current; },
+      cancel: function () { current++; }
+    };
   }
 
   function mergeFeedRows(primary, extra) {
@@ -660,16 +887,29 @@
     return '';
   }
 
+  // Non-breaking spaces keep "от 950 000 ₸" together: the number never loses
+  // its currency (or its "от"/"до") to a new line.
+  var NBSP = '\u00A0';
+
+  function nbspMoney(text) {
+    return String(text == null ? '' : text)
+      .replace(/^(от|до|from|up to)\s+/i, function (m, w) { return w + NBSP; })
+      .replace(/(\d)[ \u2009\u202F](?=\d{3}(?!\d))/g, '$1' + NBSP)
+      .replace(/(\d)\s+(?=[₸$€₽])/g, '$1' + NBSP)
+      .replace(/(\d)\s+(?=(?:тг|тенге|kzt)(?![а-яёa-z]))/gi, '$1' + NBSP)
+      .replace(/\s+(?=[₸$€₽](?![а-яёa-z]))/g, NBSP);
+  }
+
   function formatSalary(min, max, meta) {
     var currency = meta && meta.currency;
     var period = meta && meta.period;
     var mark = currencySuffix(currency);
     var per = periodSuffix(period);
-    var unit = (mark ? ' ' + mark : '') + per;
+    var unit = (mark ? NBSP + mark : '') + per;
     if (min && max && min !== max) return min.toLocaleString('ru') + '–' + max.toLocaleString('ru') + unit;
     if (min && max && min === max) return min.toLocaleString('ru') + unit;
-    if (min) return 'от ' + min.toLocaleString('ru') + unit;
-    if (max) return 'до ' + max.toLocaleString('ru') + unit;
+    if (min) return 'от' + NBSP + min.toLocaleString('ru') + unit;
+    if (max) return 'до' + NBSP + max.toLocaleString('ru') + unit;
     return '—';
   }
 
@@ -1153,6 +1393,75 @@
     return mailto(EMPLOYER_EMAIL, fillTemplate(t.subject, vars), fillTemplate(t.body, vars));
   }
 
+  // ── Resume upload progress ────────────────────────────────────────────────
+  // Pure helpers: the page drives them from requestAnimationFrame and turns the
+  // step descriptors into ru/kz/en text. Nothing here is a hard-coded stop point.
+  var PROGRESS_MIN_FIRST_MS = 2200;
+  var PROGRESS_MIN_REPEAT_MS = 1000;
+  var PROGRESS_MIN_REDUCED_MS = 800;
+  var PROGRESS_CEILING = 94.9;
+  var PROGRESS_MAX_CHIPS = 8;
+
+  // Minimum wait for one run and the total the user actually waits: when the
+  // real work is slower than the minimum, the bar follows it and adds nothing.
+  function progressDuration(opts) {
+    opts = opts || {};
+    var minMs = opts.reducedMotion ? PROGRESS_MIN_REDUCED_MS
+      : (opts.firstRun ? PROGRESS_MIN_FIRST_MS : PROGRESS_MIN_REPEAT_MS);
+    var real = typeof opts.realMs === 'number' && isFinite(opts.realMs) && opts.realMs > 0 ? opts.realMs : 0;
+    return { minMs: minMs, totalMs: Math.max(minMs, real), shimmer: !opts.reducedMotion };
+  }
+
+  // Asymptotic ease: a fast component (~72%) plus a slow one that crawls toward
+  // a 95% ceiling. Reaches 100 only when the real work has resolved AND the
+  // minimum time has elapsed.
+  function progressAt(elapsedMs, opts) {
+    opts = opts || {};
+    var t = Math.max(0, Number(elapsedMs) || 0);
+    if (opts.resolved && t >= (opts.minMs || 0)) return 100;
+    var p = 72 * (1 - Math.exp(-t / 250)) + 23 * (1 - Math.exp(-t / 1400));
+    return Math.min(p, PROGRESS_CEILING);
+  }
+
+  function skillChips(skills, max) {
+    var limit = max > 0 ? max : PROGRESS_MAX_CHIPS;
+    var seen = {};
+    var list = [];
+    (Array.isArray(skills) ? skills : []).forEach(function (s) {
+      var label = String(s == null ? '' : s).trim();
+      var key = label.toLowerCase();
+      if (!label || seen[key]) return;
+      seen[key] = true;
+      list.push(label);
+    });
+    return { shown: list.slice(0, limit), more: Math.max(0, list.length - limit) };
+  }
+
+  // Step descriptors with the real numbers; text lives in the page's T dictionary.
+  function buildProgressSteps(counts) {
+    counts = counts || {};
+    var chips = skillChips(counts.skills);
+    var jobs = Math.max(0, Number(counts.jobCount) || 0);
+    var matches = Math.max(0, Number(counts.matchCount) || 0);
+    var hasSkills = chips.shown.length > 0;
+    return [
+      { key: 'read' },
+      hasSkills ? { key: 'skills', chips: chips } : { key: 'skills_none', chips: chips },
+      jobs > 0 ? { key: 'compare', n: jobs } : { key: 'compare_none', n: 0 },
+      matches > 0 ? { key: 'done', n: matches } : { key: 'done_none', n: 0 }
+    ];
+  }
+
+  function countDisplayableMatches(jobs, scoreFn) {
+    var n = 0;
+    (Array.isArray(jobs) ? jobs : []).forEach(function (job) {
+      if (!job) return;
+      var s = scoreFn(job);
+      if (typeof s === 'number' && isFinite(s) && s > 0) n += 1;
+    });
+    return n;
+  }
+
   return {
     BROWSE_PAGE_SIZE: BROWSE_PAGE_SIZE,
     FEED_WINDOW: FEED_WINDOW,
@@ -1163,6 +1472,11 @@
     profileSignals: profileSignals,
     calcMatch: calcMatch,
     displayableScore: displayableScore,
+    progressDuration: progressDuration,
+    progressAt: progressAt,
+    skillChips: skillChips,
+    buildProgressSteps: buildProgressSteps,
+    countDisplayableMatches: countDisplayableMatches,
     emptyMatch: emptyMatch,
     skillsAlign: skillsAlign,
     skillInText: skillInText,
@@ -1170,6 +1484,8 @@
     isFieldStem: isFieldStem,
     canonicalizeSkill: canonicalizeSkill,
     compareJobs: compareJobs,
+    diversifyBySource: diversifyBySource,
+    recencyDay: recencyDay,
     isFeatured: isFeatured,
     telegramFeedQuery: telegramFeedQuery,
     mergeFeedRows: mergeFeedRows,
@@ -1198,6 +1514,18 @@
     listingEligibleForFeed: listingEligibleForFeed,
     compareFeedWindow: compareFeedWindow,
     jobsFeedQuery: jobsFeedQuery,
+    jobsListQuery: jobsListQuery,
+    SEARCH_MIN_CHARS: SEARCH_MIN_CHARS,
+    SEARCH_THIN_RESULTS: SEARCH_THIN_RESULTS,
+    SEARCH_DB_LIMIT: SEARCH_DB_LIMIT,
+    sanitizeSearchQuery: sanitizeSearchQuery,
+    searchDbQuery: searchDbQuery,
+    shouldSearchDatabase: shouldSearchDatabase,
+    pluralIndex: pluralIndex,
+    mergeSearchResults: mergeSearchResults,
+    createRequestGuard: createRequestGuard,
+    nbspMoney: nbspMoney,
+    telegramListQuery: telegramListQuery,
     takeFeedWindow: takeFeedWindow,
     selectFeedListings: selectFeedListings,
     inferInternship: inferInternship,
