@@ -1,0 +1,25 @@
+{
+  "name": "steppeup",
+  "version": "1.0.0",
+  "description": "A complete **single-page application (SPA)** for connecting students with internships, part-time jobs, and entry-level positions in Kazakhstan.",
+  "main": "index.js",
+  "scripts": {
+    "test": "node tests/audit.test.js && node scraper/lib/trust.test.js && node tests/alerts-api.test.js && node tests/apply-core.test.js && node tests/job-page.test.js && node tests/apply-click.test.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zapadgnil-netizen/steppeup-scraper.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/zapadgnil-netizen/steppeup-scraper/issues"
+  },
+  "homepage": "https://github.com/zapadgnil-netizen/steppeup-scraper#readme",
+  "dependencies": {
+    "@vercel/blob": "^2.3.3",
+    "formidable": "^3.5.4"
+  }
+}

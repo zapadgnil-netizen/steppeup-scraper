@@ -1,0 +1,45 @@
+{
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.steppeup.ai" }],
+      "destination": "https://steppeup.ai/$1",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "steppeup-scraper.vercel.app" }],
+      "destination": "https://steppeup.ai/$1",
+      "permanent": true
+    },
+    { "source": "/privacy", "destination": "/legal/privacy.html", "permanent": true },
+    { "source": "/terms", "destination": "/legal/terms.html", "permanent": true },
+    { "source": "/cookies", "destination": "/legal/cookies.html", "permanent": true }
+  ],
+  "rewrites": [
+    { "source": "/job/:id", "destination": "/api/job-page?id=:id" },
+    { "source": "/sitemap.xml", "destination": "/api/sitemap" }
+  ],
+  "functions": {
+    "api/job-page.js": { "includeFiles": "index.html" }
+  },
+  "crons": [
+    {
+      "path": "/api/cron-alerts",
+      "schedule": "0 6 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://va.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://wiijdddhzddqgntfdbsx.supabase.co https://vitals.vercel-insights.com; worker-src 'self' blob:; upgrade-insecure-requests" }
+      ]
+    }
+  ]
+}
