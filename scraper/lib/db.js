@@ -154,6 +154,21 @@ function createDb({ url, key, log = console.log, client = null } = {}) {
     return out;
   }
 
+  /**
+   * Active rows of one source posted inside the TTL — the repost check and the
+   * "keep what an earlier run decided" lookup. Read-only. Throws on error so the
+   * caller can say the check was skipped (never silently pretend there were none).
+   */
+  async function recentRows(source, { sinceDays = 21, limit = 3000 } = {}) {
+    const since = new Date(Date.now() - sinceDays * 864e5).toISOString();
+    const res = await client.from('jobs')
+      .select('source_id, source_channel, title, company, apply_url, source_type, posted_at')
+      .eq('source', source).eq('status', 'active').gte('posted_at', since)
+      .order('posted_at', { ascending: false }).limit(limit);
+    if (res.error) throw new Error('recentRows: ' + formatPgError(res.error));
+    return res.data || [];
+  }
+
   /** Write one scraping_logs row; failures are reported but never fatal. */
   async function logRun(row) {
     try {
@@ -163,7 +178,7 @@ function createDb({ url, key, log = console.log, client = null } = {}) {
     } catch (e) { log(`[db] scraping_logs insert threw: ${e.message}`); return false; }
   }
 
-  return { client, upsertJobs, activeCount, activeCountsBySource, logRun };
+  return { client, upsertJobs, activeCount, activeCountsBySource, recentRows, logRun };
 }
 
 module.exports = {

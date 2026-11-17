@@ -99,7 +99,12 @@ async function main() {
   const health = createHealth({ log });
   const db = DRY_RUN ? null : createDb({ url: SUPABASE_URL, key: SUPABASE_KEY, log });
 
-  const ctx = { http, log, filter, normalize, limits: { maxJobs: 400, maxPages: 6, maxAgeDays: 21 }, dryRun: DRY_RUN };
+  const ctx = {
+    http, log, filter, normalize, limits: { maxJobs: 400, maxPages: 6, maxAgeDays: 21 }, dryRun: DRY_RUN,
+    // Telegram repost check + "keep earlier decisions". Dry runs have no DB, so
+    // the source simply checks within the batch (and says so).
+    loadExisting: db ? () => db.recentRows('telegram_career', { sinceDays: 21 }) : null,
+  };
 
   const active = SOURCES.filter((s) => !ONLY.length || ONLY.includes(s.name));
   if (!active.length) { console.error(`No sources matched --only=${ONLY.join(',')}`); process.exit(1); }
@@ -120,7 +125,11 @@ async function main() {
   const deduped = [];
   let crossDupes = 0;
   for (const j of allJobs) {
-    const applyKey = j.apply_url ? 'a:' + j.apply_url.replace(/[?#].*$/, '') : null;
+    // Only real web pages identify a vacancy across sources. mailto:/tel:/wa.me
+    // contacts are shared by an HR person's many postings, and a telegram_post
+    // "target" is the post itself, so none of those may collapse jobs together.
+    const applyKey = j.apply_url && /^https:\/\//.test(j.apply_url) && !/^https:\/\/(wa\.me|t\.me)\//.test(j.apply_url)
+      ? 'a:' + j.apply_url.replace(/[?#].*$/, '') : null;
     const nameKey = 't:' + j.title.toLowerCase().replace(/\s+/g, ' ') + '|' + j.company.toLowerCase();
     if ((applyKey && seen.has(applyKey)) || seen.has(nameKey)) { crossDupes++; continue; }
     if (applyKey) seen.add(applyKey);

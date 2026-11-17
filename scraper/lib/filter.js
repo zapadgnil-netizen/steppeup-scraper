@@ -24,6 +24,19 @@ const POSITIVE = [
   'internship', 'graduate', 'student', 'no experience', 'fresh graduate', 'beginner', 'part-time',
 ];
 
+// The STRONG subset: signals that the poster is actually open to students or
+// beginners. Weak entries of POSITIVE ('помощник', 'ассистент', 'гибкий график',
+// 'молодой специалист') also describe ordinary jobs, which is fine for a career
+// centre's feed but not for big general job channels — those must show one of
+// these (see strictPositive below).
+const STRONG_POSITIVE = [
+  'стажер', 'стажёр', 'стажировк', 'практика', 'практикант', 'студент', 'выпускник', 'начинающ',
+  'без опыта', 'опыт не требуется', 'опыта не требуется', 'обучаем', 'обучение с нуля',
+  'подработк', 'частичная занятость', 'частичной занятост', 'junior', 'джуниор',
+  'тағылымдама', 'студентт', 'тәжірибесіз', 'жас маман',
+  'intern', 'trainee', 'graduate', 'student', 'no experience', 'entry level', 'entry-level', 'part-time',
+];
+
 // Things that are posted in career channels but are NOT jobs.
 // NB: JS \b does not work next to Cyrillic, so word boundaries are emulated
 // with lookarounds via w().
@@ -78,7 +91,9 @@ function studentRejectReason(title, description, tags = [], opts = {}) {
     return 'requires-licence';
 
   // 2. Senior / management role by title (\b doesn't work before Cyrillic → substrings)
-  if (/\b(senior|middle|lead|head|principal|chief|cto|cfo|ceo|expert)\b|сень[оё]р|синьор|мидл|тимлид|руководител|начальник|директор|главн(ый|ого|ая)|заведующ|управляющ|ведущий\s+специалист|эксперт|старший/.test(titleText))
+  // "Ассистент руководителя" is an assistant role, not a management one.
+  const titleForSenior = titleText.replace(/(?:ассистент\w*|помощник\w*|секретар\w*)\s+(?:генерального\s+)?руководител\w*/g, ' ');
+  if (/\b(senior|middle|lead|head|principal|chief|cto|cfo|ceo|expert)\b|сень[оё]р|синьор|мидл|тимлид|руководител|начальник|директор|главн(ый|ого|ая)|заведующ|управляющ|ведущий\s+специалист|эксперт|старший/.test(titleForSenior))
     return 'senior-title';
 
   // 3. Requires prior experience (unless it also welcomes no-experience)
@@ -102,11 +117,16 @@ function studentRejectReason(title, description, tags = [], opts = {}) {
 // only a DB row, so it infers the flag from the source name.
 const STRUCTURED_SOURCES = ['hh_kz', 'enbek_kz'];
 
-function isStudentFriendly(title, description, tags = [], { structuredEntry = false } = {}) {
+/**
+ * strictPositive — for big general job channels: a STRONG student signal is
+ * required, structuredEntry cannot waive it, and the weak keywords do not count.
+ */
+function isStudentFriendly(title, description, tags = [], { structuredEntry = false, strictPositive = false } = {}) {
   if (studentRejectReason(title, description, tags, { structuredEntry })) return false;
-  if (structuredEntry) return true;
   const fullText = `${title || ''} ${description || ''} ${(tags || []).join(' ')}`.toLowerCase();
+  if (strictPositive) return STRONG_POSITIVE.some((kw) => fullText.includes(kw));
+  if (structuredEntry) return true;
   return POSITIVE.some((kw) => fullText.includes(kw));
 }
 
-module.exports = { studentRejectReason, isStudentFriendly, POSITIVE, NOT_A_JOB, STRUCTURED_SOURCES };
+module.exports = { studentRejectReason, isStudentFriendly, POSITIVE, STRONG_POSITIVE, NOT_A_JOB, STRUCTURED_SOURCES };

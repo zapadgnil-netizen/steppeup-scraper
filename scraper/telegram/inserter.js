@@ -39,7 +39,7 @@ async function dedupe(db, jobs) {
 
   const seenInBatch = new Set();
   return jobs.filter((j) => {
-    if (j.apply_url && j.source_type === 'external_link' && existingApply.has(j.apply_url)) return false;
+    if (j.apply_url && /^https:\/\//.test(j.apply_url) && ['form', 'site'].includes(j.source_type) && existingApply.has(j.apply_url)) return false;
     const key = normalize(j.title) + '|' + normalize(j.company);
     if (existingTitleCo.has(key) || seenInBatch.has(key)) return false;
     seenInBatch.add(key);

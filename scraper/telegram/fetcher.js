@@ -6,7 +6,8 @@
  * soft anti-scraping (occasional rate limits / challenges) with retries, delays,
  * and User-Agent rotation.
  *
- * Output: array of raw posts — { channel, msgId, postUrl, dateISO, text, links[] }
+ * Output: array of raw posts — { channel, msgId, postUrl, dateISO, text, links[],
+ * textLinks[{href,label}], buttons[{href,label}], preview }
  * The parser turns each of these into a structured job; this module never
  * interprets job fields, it only acquires clean text + links.
  */
@@ -55,22 +56,52 @@ async function fetchHtml(url, { retries = 3, baseDelay = 1500 } = {}) {
 }
 
 // Pull the message text while preserving line breaks AND collecting every link
-// href found inside the post body and its link-preview block.
+// found in the post: anchors in the body (href AND label — the label is often
+// not the destination), inline URL buttons under the message
+// (.tgme_widget_message_inline_button, e.g. "Откликнуться"), and the
+// link-preview card. The apply router (telegram/apply.js) decides which of
+// them is the application target; this module never ranks.
 function extractMessage($, el) {
   const $msg = $(el);
   const $text = $msg.find('.tgme_widget_message_text').first();
 
   // Convert <br> to newlines so multi-line posts keep their structure.
   $text.find('br').replaceWith('\n');
-  const text = $text.text().replace(/ /g, ' ').trim();
+  const text = $text.text().replace(/\u00a0/g, ' ').trim();
 
-  // Links: anchors inside the message text + the link-preview card href.
-  const links = [];
-  $text.find('a').each((_, a) => { const h = $(a).attr('href'); if (h) links.push(h); });
-  const preview = $msg.find('.tgme_widget_message_link_preview').attr('href');
+  const textLinks = [];
+  $text.find('a').each((_, a) => {
+    const href = $(a).attr('href');
+    if (href) textLinks.push({ href, label: $(a).text().replace(/\s+/g, ' ').trim() });
+  });
+  const buttons = [];
+  $msg.find('.tgme_widget_message_inline_button').each((_, a) => {
+    const href = $(a).attr('href');
+    if (href) buttons.push({ href, label: $(a).text().replace(/\s+/g, ' ').trim() });
+  });
+  const preview = $msg.find('.tgme_widget_message_link_preview').attr('href') || null;
+
+  // Legacy flat list (kept for telegram/index.js and older callers).
+  const links = textLinks.map((l) => l.href).concat(buttons.map((b) => b.href));
   if (preview) links.push(preview);
 
-  return { text, links };
+  return { text, links, textLinks, buttons, preview };
+}
+
+// Parse one t.me/s/<channel> page into raw posts. Pure (no network) so page
+// shapes can be tested against saved fixtures.
+function parseChannelHtml(html, username) {
+  const $ = cheerio.load(html);
+  const posts = [];
+  $('.tgme_widget_message').each((_, el) => {
+    const dataPost = $(el).attr('data-post'); // "channel/msgId"
+    if (!dataPost) return;
+    const msgId = dataPost.split('/').pop();
+    const msg = extractMessage($, el);
+    const dateISO = $(el).find('time').attr('datetime') || null;
+    posts.push({ channel: username, msgId, postUrl: `https://t.me/${dataPost}`, dateISO, ...msg });
+  });
+  return posts;
 }
 
 // Fetch one channel's preview page and return its raw posts.
@@ -80,27 +111,7 @@ function extractMessage($, el) {
 async function fetchChannel(username, { before = null, http = null } = {}) {
   const url = `https://t.me/s/${username}` + (before ? `?before=${before}` : '');
   const html = http ? (await http.text(url)).body : await fetchHtml(url);
-  const $ = cheerio.load(html);
-
-  const posts = [];
-  $('.tgme_widget_message').each((_, el) => {
-    const dataPost = $(el).attr('data-post'); // "channel/msgId"
-    if (!dataPost) return;
-    const msgId = dataPost.split('/').pop();
-    const { text, links } = extractMessage($, el);
-    const dateISO = $(el).find('time').attr('datetime') || null;
-
-    posts.push({
-      channel: username,
-      msgId,
-      postUrl: `https://t.me/${dataPost}`,
-      dateISO,
-      text,
-      links,
-    });
-  });
-
-  return posts;
+  return parseChannelHtml(html, username);
 }
 
-module.exports = { fetchChannel, fetchHtml, sleep };
+module.exports = { fetchChannel, parseChannelHtml, fetchHtml, sleep };

@@ -68,7 +68,7 @@ test('labelled post: the explicit apply link beats link-order heuristics', () =>
   });
   assert.ok(job);
   assert.equal(job.apply_url, 'https://my.hh.kz/2tP');
-  assert.equal(job.source_type, 'external_link');
+  assert.equal(job.source_type, 'site');
 });
 
 test('company falls back to the channel label, never "Unknown"', () => {

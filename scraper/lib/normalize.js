@@ -97,6 +97,10 @@ function cleanCompany(raw) {
   return s.slice(0, 80);
 }
 
+// Short single-word titles that are genuine roles (everything else that short
+// is a stub like "работа" or "Сайт:").
+const ONE_WORD_ROLE = /^(стажер|стажёр|стажерка|intern|trainee|junior|курьер|кассир|повар|юрист|бариста|тренер|врач|уборщик|грузчик|охранник|рабочий|пекарь|сушист|мойщик|модель|няня|водитель)$/i;
+
 // Tokens that legitimately start a lowercase job title.
 const LOWERCASE_OK = /^(ios|android|frontend|front-end|backend|back-end|fullstack|full-stack|qa|ux|ui|smm|seo|php|node|nodejs|react|vue|python|java|javascript|typescript|devops|hr|it|b2b|b2c|1c|1с|erp|crm|seo-|smm-)\b/i;
 
@@ -137,7 +141,8 @@ function titleProblem(title) {
   if (t.split(/\s+/).length > 12) return 'title-sentence';
   // A single short word is a stub, not a role ("работа", "Сайт:")
   const words = t.split(/\s+/);
-  if (words.length === 1 && t.replace(/[^\p{L}]/gu, '').length < 8) return 'title-stub';
+  // (a one-word ROLE is a real title: "Стажер", "Курьер", "Кассир")
+  if (words.length === 1 && t.replace(/[^\p{L}]/gu, '').length < 8 && !ONE_WORD_ROLE.test(t)) return 'title-stub';
   // A label with nothing after it
   if (/[:：]$/.test(t)) return 'title-label-only';
   // Shouty marketing copy ("ХВАТИТ ИСКАТЬ РАБОТУ — ПУСТЬ ОНА НАЙДЁТ ТЕБЯ!")

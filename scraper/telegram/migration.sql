@@ -12,7 +12,7 @@
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS apply_url      TEXT;   -- external application link (job portal / form / email)
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS source_channel TEXT;   -- e.g. 'kbtucareer' (without @)
 ALTER TABLE jobs ADD COLUMN IF NOT EXISTS raw_text       TEXT;   -- full original post text, for reprocessing/debugging
-ALTER TABLE jobs ADD COLUMN IF NOT EXISTS source_type    TEXT;   -- 'external_link' | 'telegram_direct'
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS source_type    TEXT;   -- form | site | email | whatsapp | phone | telegram_dm | telegram_bot | telegram_post (see telegram/apply.js)
 
 -- Helpful indexes for dedup-by-apply_url and channel filtering
 CREATE INDEX IF NOT EXISTS idx_jobs_apply_url      ON jobs(apply_url);
@@ -33,7 +33,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_source_channel ON jobs(source_channel);
 --   source_channel TEXT NOT NULL,                -- 'kbtucareer'
 --   source_url     TEXT NOT NULL,                -- the t.me/<channel>/<msgId> post URL
 --   apply_url      TEXT,                          -- external application link
---   source_type    TEXT DEFAULT 'telegram_direct',-- 'external_link' | 'telegram_direct'
+--   source_type    TEXT DEFAULT 'telegram_post',-- form | site | email | whatsapp | phone | telegram_dm | telegram_bot | telegram_post (see telegram/apply.js)
 --   title          TEXT NOT NULL,
 --   company        TEXT DEFAULT 'Unknown',
 --   location       TEXT DEFAULT 'Kazakhstan',

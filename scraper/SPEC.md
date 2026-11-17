@@ -54,6 +54,19 @@ Optional: `company, location, description, salary_min, salary_max, currency,
 tags[], posted_at, apply_url, source_type, source_channel, raw_text,
 company_logo`.
 
+## Telegram apply contract (`telegram/apply.js`)
+
+`apply_url` + `source_type` carry exactly one apply action per Telegram post; the
+site derives its button from the pair (no schema change):
+`form`/`site` → `https://…`, `email` → `mailto:<addr>`, `whatsapp` →
+`https://wa.me/<digits>`, `phone` → `tel:+<digits>`, `telegram_dm`/`telegram_bot`
+→ `https://t.me/<name>`, `telegram_post` → the post URL (nothing else offered).
+Never chosen: the post's own channel, per-channel footer handles
+(`footerHandles` in `telegram/channels.js`), `t.me/addlist|joinchat|+|s/…`,
+channel-message links, hashtag links. Per-channel layouts live in
+`telegram/profiles.js`; optional Jev judgments (questions + thresholds in
+`telegram/judge-config.js`) fall back to rules and say so in the log.
+
 ## Orchestrator (`scrape-jobs.js`)
 
 - Runs `canary()` for every source first. A failed canary is reported but the

@@ -64,11 +64,27 @@ Edit the `cron` in `.github/workflows/telegram-scrape.yml`. Examples:
 
 ## The `apply_url` rule
 
-The parser extracts the **external** application link (job portal, company page,
-Google Form, etc.) and stores it as `apply_url` with `source_type: 'external_link'`.
-If a post has no external link, it stores the Telegram post URL as a fallback and
-flags it `source_type: 'telegram_direct'`. The frontend links the job card to
-`apply_url` when present.
+`telegram/apply.js` resolves ONE apply action per post and writes it to
+`apply_url` + `source_type` (no schema change; the site derives its button from
+the pair):
+
+| `source_type`   | `apply_url`                                              |
+|-----------------|----------------------------------------------------------|
+| `form`          | `https://` form (Google Forms, forms.gle, Typeform, …)   |
+| `site`          | `https://` employer / job-board / vacancy page           |
+| `email`         | `mailto:<address>`                                       |
+| `whatsapp`      | `https://wa.me/<digits>`                                 |
+| `phone`         | `tel:+<digits>`                                          |
+| `telegram_dm`   | `https://t.me/<username>` (an HR person)                 |
+| `telegram_bot`  | `https://t.me/<botname>`                                 |
+| `telegram_post` | the post URL — the post offers no other way to apply     |
+
+Candidates come from text anchors (the href, not the label), inline URL buttons,
+the preview card and plain text (emails, Kazakhstan phones, @usernames). The
+post's own channel, the channel's footer handles (`footerHandles` in
+`channels.js`), invites, `t.me/addlist/…` folders, channel messages and hashtag
+links are never chosen. The old values `external_link` / `telegram_direct` no
+longer exist.
 
 ## Student-suitability gate
 
