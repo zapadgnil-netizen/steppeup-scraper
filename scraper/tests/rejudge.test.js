@@ -79,17 +79,33 @@ test('--rejudge without Jev: refuses, logs why, returns nothing, deactivates not
   assert.ok(logs.some((l) => /REJUDGE REFUSED.*TYPESAFE_API_KEY is not set/.test(l)));
 });
 
-test('--rejudge: a stored row Jev now rejects is deactivated; default runs never do that', async () => {
-  const reject = () => ({ answers: answers({ isVacancy: { noul: 0.1 } }) });
-  const on = await jevJudge(reject);
-  const a = ctxFor({ judge: on.judge, rejudge: true });
+const GENDERED = { ...POST, text: 'Job Vacancies\n\nPOSITION\nПродавец-кассир, ДЕВУШКА, до 35 лет\n\nCOMPANY\nExample Shop\n\nLOCATION\nAlmaty\n\nОбязанности: касса. Резюме: WhatsApp +7 700 000 00 00' };
+
+test('--rejudge: a stored row is retired only when the rules reject AND Jev is very sure; default runs never do', async () => {
+  const sure = () => ({ answers: answers({ studentFit: { noul: 0.05 } }) });
+  const on = await jevJudge(sure);
+  const a = ctxFor({ judge: on.judge, rejudge: true, fetchChannel: async () => [GENDERED] });
   const ra = await scrape(a.ctx);
   assert.equal(ra.jobs.length, 0);
   assert.deepEqual(a.rejudgeState.deactivate, ['tg_kimepcareercenter_7']);
   assert.equal(ra.stats.rejudge.deactivated, 1);
+  assert.equal(ra.stats.jev.decisions[0].act, 'deactivate');
 
-  const off = await jevJudge(reject);
-  const b = ctxFor({ judge: off.judge });
+  // rules reject but Jev is only mildly negative: the live row is kept
+  const mild = await jevJudge(() => ({ answers: answers({ studentFit: { noul: 0.25 } }) }));
+  const m = ctxFor({ judge: mild.judge, rejudge: true, fetchChannel: async () => [GENDERED] });
+  await scrape(m.ctx);
+  assert.deepEqual(m.rejudgeState.deactivate, []);
+
+  // Jev very sure but the rules back the post (clean student post, career channel): kept
+  const lone = await jevJudge(() => ({ answers: answers({ studentFit: { noul: 0.02 } }) }));
+  const c = ctxFor({ judge: lone.judge, rejudge: true });
+  const rc = await scrape(c.ctx);
+  assert.deepEqual(c.rejudgeState.deactivate, []);
+  assert.equal(rc.stats.jev.decisions[0].act, 'protect');
+
+  const off = await jevJudge(sure);
+  const b = ctxFor({ judge: off.judge, fetchChannel: async () => [GENDERED] });
   await scrape(b.ctx);
   assert.deepEqual(b.rejudgeState.deactivate, []);
 });

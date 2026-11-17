@@ -66,6 +66,8 @@ const NOT_A_JOB = [
  * requirement. Without this, cleanup retired 8 genuine hh listings every night
  * and the next scrape put them straight back — a flapping board.
  */
+const AGE_GENDER_RE = /(?:женщин|мужчин|девушк|парн|парен|жен\.|муж\.)[а-яё]*[\s,:;()\-–—]{0,6}(?:(?:от|до)\s*\d{2}|\d{2}\s*(?:лет|года|[-–—]\s*\d{2}))|возраст\s*:?\s*(?:от\s*)?\d{2}/;
+
 function studentRejectReason(title, description, tags = [], opts = {}) {
   const titleText = (title || '').toLowerCase();
   const t = `${titleText} ${(description || '').toLowerCase()} ${(tags || []).join(' ').toLowerCase()}`;
@@ -80,7 +82,7 @@ function studentRejectReason(title, description, tags = [], opts = {}) {
   if (/поиск\s+работы\s+без|как\s+найти\s+работу|карьерный\s+гид/i.test(titleText)) return 'not-a-job';
 
   // 1. Explicitly excludes students
-  if (/студент\w*[^.]{0,25}(не\s*беспоко|не\s*обраща|не\s*подход|не\s*рассматр)|без\s*студент|не\s*для\s*студент/.test(t))
+  if (/студент\w*[^.]{0,25}(не\s*беспоко|не\s*обраща|не\s*подход|не\s*рассматр)|без\s*студент|не\s*для\s*студент|(?<![а-яёa-z])не\s+студент/.test(t))
     return 'excludes-students';
 
   // 1b. Roles that legally require a completed degree or licence: hh.kz marks
@@ -102,8 +104,10 @@ function studentRejectReason(title, description, tags = [], opts = {}) {
   if (requiresExp && !welcomesNoExp && !opts.structuredEntry) return 'requires-experience';
 
   // 4. Age / gender restriction (discriminatory; usually not student roles)
-  if (/(женщин\w*|мужчин\w*|девушк\w*|парн\w*|парень|жен\.|муж\.)\s*(от|до)?\s*\d{2}/.test(t))
-    return 'age-gender-restricted';
+  // NB: JS \w is ASCII-only, so the old `девушк\w*` never matched "девушка"/"женщины"
+  // and this rule was dead for Cyrillic; use [а-яё]* and allow a comma/bracket
+  // before the age ("ДЕВУШКА, до 35 лет", "Женщины от 18 до 45", "девушка 19-35лет").
+  if (AGE_GENDER_RE.test(t)) return 'age-gender-restricted';
 
   // 5. Multi-job digest (several vacancies mashed into one post)
   const c = (re) => (t.match(re) || []).length;
@@ -129,4 +133,21 @@ function isStudentFriendly(title, description, tags = [], { structuredEntry = fa
   return POSITIVE.some((kw) => fullText.includes(kw));
 }
 
-module.exports = { studentRejectReason, isStudentFriendly, POSITIVE, STRONG_POSITIVE, NOT_A_JOB, STRUCTURED_SOURCES };
+// A POSITIVE student signal found by rules, independent of Jev: student /
+// beginner wording, shift / part-time / project / freelance work, or a channel
+// whose readers are students. Channel-handle tags (`ch:studentworkz` contains
+// "student") are ignored, they say nothing about the post.
+const EXTRA_SIGNAL = /(?<![а-яё])смен[аыуео]|сменн|2\/2|проектн|фриланс|freelance|частичн|совмещ|без\s+опыта|можно\s+без/i;
+function studentSignal(title, description, tags = [], { kind } = {}) {
+  const text = `${title || ''} ${description || ''}`.toLowerCase();
+  const own = (tags || []).filter((x) => !/^(ch:|via:|telegram_career$)/.test(x)).join(' ').toLowerCase();
+  const full = `${text} ${own}`;
+  const kw = POSITIVE.find((k) => full.includes(k));
+  if (kw) return `kw:${kw}`;
+  const m = full.match(EXTRA_SIGNAL);
+  if (m) return `kw:${m[0].trim()}`;
+  if (kind === 'career' || kind === 'university') return `channel:${kind}`;
+  return null;
+}
+
+module.exports = { studentSignal, studentRejectReason, isStudentFriendly, POSITIVE, STRONG_POSITIVE, NOT_A_JOB, STRUCTURED_SOURCES };

@@ -40,7 +40,8 @@ const { fetchChannel } = require('../telegram/fetcher');
 const { parsePost } = require('../telegram/parser');
 const { SOURCE_TYPES } = require('../telegram/apply');
 const { createJudge, applyVerdict } = require('../telegram/jev');
-const { CONCURRENCY } = require('../telegram/judge-config');
+const cfgJ = require('../telegram/judge-config');
+const { CONCURRENCY } = cfgJ;
 const { dedupeReposts } = require('../telegram/dedupe');
 
 const SOURCE = 'telegram_career';
@@ -80,6 +81,18 @@ async function scrape(ctx) {
   let emptyChannels = 0;
 
   const bump = (r) => { rejects[r] = (rejects[r] || 0) + 1; };
+
+  // Compact reason lines for every Jev-influenced keep/drop (no contacts, title
+  // cut to 60 chars). Capped so scraping_logs.details stays small.
+  const decisions = [];
+  let decisionsTotal = 0;
+  const cleanTitle = (t) => String(t || '').replace(/https?:\/\/\S+|\S+@\S+|@\w+|\+?\d[\d\s().-]{6,}\d/g, '…').replace(/\s+/g, ' ').trim().slice(0, 60);
+  const logDecision = (ch, post, parsed, verdict, act, why) => {
+    decisionsTotal++;
+    if (decisions.length >= cfgJ.MAX_DECISIONS_LOGGED) return;
+    const f = (x) => (x === null || x === undefined ? null : Math.round(x * 100) / 100);
+    decisions.push({ ch: ch.username, id: String(post.msgId), t: cleanTitle(parsed.title), v: [f(verdict.vacancy), f(verdict.studentFit), f(verdict.kazakhstan)], act, why });
+  };
 
   // Optional Jev. Without a key / SDK / on API failure everything below runs on rules.
   const judge = ctx.judge || await createJudge({ log });
@@ -132,8 +145,12 @@ async function scrape(ctx) {
         if (!parsed) { stat.rejected++; bump(parsePost.lastReject || 'unparsed'); continue; }
 
         const reason = filter.studentRejectReason(parsed.title, parsed.raw_text, parsed.tags);
-        if (reason) { stat.rejected++; bump(reason); continue; }
-        pending.push({ post, parsed });
+        if (reason) {
+          // Re-judge: a LIVE row the rules reject is still shown to Jev, because
+          // retiring it needs both (rules reject AND Jev very confident).
+          if (rejudge && existingById.has(parsed.source_id)) pending.push({ post, parsed, ruleReason: reason });
+          else { stat.rejected++; bump(reason); continue; }
+        } else pending.push({ post, parsed });
       }
 
       // Pass 2 (Jev, optional): in small parallel batches.
@@ -154,7 +171,7 @@ async function scrape(ctx) {
             item.reused = true;
             return;
           }
-          const verdict = await judge.assess(item.post, item.parsed);
+          const verdict = await judge.assess(item.post, item.parsed, { kind: ch.kind, label: ch.label });
           verdicts.set(item, verdict);
           // Re-judge, but Jev failed for this post: keep what is stored rather
           // than replacing it with plain rule output.
@@ -176,14 +193,41 @@ async function scrape(ctx) {
         if (item.reused) { /* already judged on an earlier run */ }
         else if (verdict) stat.jev++; else stat.rules++;
 
-        const vr = applyVerdict(parsed, verdict, judge);
+        // A live row the rules already reject (re-judge only): retire it only when
+        // Jev is also VERY sure (any score below DEACTIVATE_BELOW), else keep it.
+        if (item.ruleReason) {
+          stat.rejected++; bump(item.ruleReason);
+          const low = verdict ? Math.min(...['vacancy', 'studentFit', 'kazakhstan'].map((k) => (verdict[k] === null || verdict[k] === undefined ? 1 : verdict[k]))) : 1;
+          if (verdict && low < cfgJ.DEACTIVATE_BELOW) {
+            state.deactivate.push(item.known.source_id);
+            logDecision(ch, item.post, parsed, verdict, 'deactivate', `rules:${item.ruleReason} + jev<${cfgJ.DEACTIVATE_BELOW}`);
+          } else if (verdict) logDecision(ch, item.post, parsed, verdict, 'protect', `rules:${item.ruleReason}, jev not very sure (min ${Math.round(low * 100) / 100})`);
+          continue;
+        }
+
+        const signal = filter.studentSignal(parsed.title, parsed.raw_text, parsed.tags, { kind: ch.kind });
+        const support = {
+          vacancy: 'parser',
+          student: signal,
+          kz: (parsed.location && !['Kazakhstan', 'Remote'].includes(parsed.location)) || /₸|тенге|тг\b/i.test(parsed.raw_text || '') ? 'city/tenge' : null,
+        };
+        const out = {};
+        const vr = applyVerdict(parsed, verdict, judge, { support, out });
+        const dec = out.decision;
         if (vr) {
           stat.rejected++; bump(vr);
           // Only Jev's rejection of a row this source stored (and whose post we
-          // fetched this run) retires it, and only in re-judge mode.
-          if (rejudge && item.known && /^jev-/.test(vr)) state.deactivate.push(item.known.source_id);
+          // fetched this run) can retire it, and only in re-judge mode, and only
+          // when Jev is very sure AND the rules do not back the post.
+          if (rejudge && item.known && /^jev-/.test(vr)) {
+            if (dec.score < cfgJ.DEACTIVATE_BELOW && dec.rulesAgree) {
+              state.deactivate.push(item.known.source_id);
+              logDecision(ch, item.post, parsed, verdict, 'deactivate', `${dec.notes.join('; ')}; rules agree (no ${dec.dim} signal)`);
+            } else logDecision(ch, item.post, parsed, verdict, 'protect', `${dec.notes.join('; ')}; live row kept (needs jev<${cfgJ.DEACTIVATE_BELOW} + rules agree)`);
+          } else logDecision(ch, item.post, parsed, verdict, 'drop', dec.notes.join('; '));
           continue;
         }
+        if (dec && dec.notes.length) logDecision(ch, item.post, parsed, verdict, 'keep', dec.notes.join('; '));
 
         // Big general channels: only 30–40% suit students, so a POSITIVE student
         // signal is required. Jev's studentFit (already checked) counts as one;
@@ -237,23 +281,36 @@ async function scrape(ctx) {
     return true;
   });
 
-  const jevStats = { mode: judge.mode, reason: judge.reason, judgedByJev: judge.stats.jev, judgedByRules: judge.stats.rules, failedCalls: judge.stats.failed, overrides: judge.stats.overrides };
+  const jevStats = { mode: judge.mode, reason: judge.reason, judgedByJev: judge.stats.jev, judgedByRules: judge.stats.rules, failedCalls: judge.stats.failed, overrides: judge.stats.overrides,
+    decisionsTotal, decisions };
   log(judge.mode === 'jev' && !judge.stats.failed
     ? `[telegram] Jev judged ${jevStats.judgedByJev} posts, rules ${jevStats.judgedByRules}; Jev changed apply/title/employer on ${jevStats.overrides.apply}/${jevStats.overrides.title}/${jevStats.overrides.company}`
     : `[telegram] judged by Jev: ${jevStats.judgedByJev}, by rules: ${jevStats.judgedByRules} (${judge.reason}${judge.firstError ? '; first error: ' + judge.firstError : ''})`);
+  decisions.filter((d) => d.act !== 'keep').slice(0, 40).forEach((d) => log(`[telegram] jev ${d.act}: @${d.ch}/${d.id} "${d.t}" v/s/kz=${d.v.join('/')} — ${d.why}`));
   const jevDrops = Object.entries(judge.stats.rejected || {});
   if (jevDrops.length) {
     const n = jevDrops.reduce((a, [, c]) => a + c, 0);
     notes.push(`Jev dropped ${n} post(s) the rules had kept: ${jevDrops.map(([k, c]) => `${k}=${c}`).join(', ')}`);
   }
-  if (rejudge) log(`[telegram] REJUDGE: ${state.deactivate.length} stored row(s) now rejected by Jev and due to be marked inactive`);
+  if (rejudge) {
+    state.deactivate = [...new Set(state.deactivate)];
+    const active = existingRows.length;
+    const allowed = Math.max(cfgJ.MIN_DEACTIVATE_ALLOWED, Math.floor(active * cfgJ.MAX_DEACTIVATE_RATIO));
+    if (state.deactivate.length > allowed) {
+      state.breaker = { wanted: state.deactivate.length, active, allowed };
+      const msg = `REJUDGE CIRCUIT BREAKER: would retire ${state.deactivate.length} of ${active} active telegram rows (limit ${allowed}, ${Math.round(cfgJ.MAX_DEACTIVATE_RATIO * 100)}%); deactivating NONE — the Jev questions or thresholds need review`;
+      log(`[telegram] !!! ${msg}`);
+      notes.push(msg);
+      state.deactivate = [];
+    } else log(`[telegram] REJUDGE: ${state.deactivate.length} of ${active} stored row(s) due to be marked inactive (limit ${allowed})`);
+  }
   if (judge.mode !== 'jev') notes.push(`Jev not used: ${judge.reason}`);
   else if (judge.stats.failed) notes.push(`Jev: ${judge.stats.failed} call(s) failed, those posts fell back to rules (${judge.firstError || 'unknown error'})`);
 
   return {
     jobs: finalJobs,
     stats: { channels: channels.length, emptyChannels, rejects, perChannel, deduped: entries.length - finalJobs.length, jev: jevStats,
-      ...(rejudge ? { rejudge: { refused: false, deactivated: state.deactivate.length } } : {}) },
+      ...(rejudge ? { rejudge: { refused: false, deactivated: state.deactivate.length, ...(state.breaker ? { breaker: state.breaker } : {}) } } : {}) },
     notes,
   };
 }

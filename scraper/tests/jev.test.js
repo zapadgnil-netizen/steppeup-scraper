@@ -6,7 +6,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { createJudge, applyVerdict, buildRequest } = require('../telegram/jev');
-const { THRESHOLDS } = require('../telegram/judge-config');
+const { CONFIDENT_NO } = require('../telegram/judge-config');
 const { parsePost } = require('../telegram/parser');
 const { scrape } = require('../sources/telegram');
 const filter = require('../lib/filter');
@@ -65,14 +65,15 @@ test('Jev verdict is read, thresholds reject, choices override the rule pick', a
   assert.equal(j.stats.overrides.apply, 1);
 
   const bad = [
-    [{ isVacancy: { noul: THRESHOLDS.vacancy - 0.01 } }, 'jev-not-vacancy'],
-    [{ studentFit: { noul: THRESHOLDS.studentFit - 0.01 } }, 'jev-not-student'],
-    [{ kzRelevant: { noul: THRESHOLDS.kazakhstan - 0.01 } }, 'jev-not-kz'],
+    [{ isVacancy: { noul: CONFIDENT_NO.vacancy - 0.01 } }, 'jev-not-vacancy'],
+    [{ studentFit: { noul: CONFIDENT_NO.studentFit - 0.01 } }, 'jev-not-student'],
+    [{ kzRelevant: { noul: CONFIDENT_NO.kazakhstan - 0.01 } }, 'jev-not-kz'],
   ];
   for (const [over, reason] of bad) {
     client.systemOne = async () => ({ answers: answers(over) });
     const verdict = await j.assess(POST, parsed());
-    assert.equal(applyVerdict(parsed(), verdict, j), reason);
+    // very confident "no" cuts even when the rules back the post
+    assert.equal(applyVerdict(parsed(), verdict, j, { support: { vacancy: 'parser', student: 'kw:студент', kz: 'city' } }), reason);
   }
 });
 
@@ -132,7 +133,7 @@ test('scrape without a key: finishes on rules and the log and stats say so', asy
 });
 
 test('scrape with Jev: verdict rejections are counted per reason', async () => {
-  const client = fakeClient(() => ({ answers: answers({ isVacancy: { noul: 0.2 } }) }));
+  const client = fakeClient(() => ({ answers: answers({ isVacancy: { noul: 0.1 } }) }));
   const judge = await createJudge({ env: { TYPESAFE_API_KEY: 'k' }, client, sdk: fakeSdk });
   const { ctx } = ctxFor({ judge });
   const r = await scrape(ctx);

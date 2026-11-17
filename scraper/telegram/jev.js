@@ -53,10 +53,10 @@ async function createJudge({ env = process.env, log = () => {}, client = null, s
     reason: 'TYPESAFE_API_KEY present',
     stats,
     /** → verdict | null (null = judged by rules). Never throws. */
-    async assess(post, parsed) {
+    async assess(post, parsed, meta) {
       if (disabled) { stats.rules++; return null; }
       try {
-        const { state, questions } = buildRequest(sdk, post, parsed);
+        const { state, questions } = buildRequest(sdk, post, parsed, meta);
         const { answers } = await client.systemOne({ state, questions });
         consecutive = 0;
         stats.jev++;
@@ -76,14 +76,18 @@ async function createJudge({ env = process.env, log = () => {}, client = null, s
   return judge;
 }
 
+/** A NOUL entry is a string, or { instructions, criteria: { true, false } }. */
+const noulQ = (sdk, def) => (typeof def === 'string' ? sdk.noul(def) : sdk.noul(def.instructions, def.criteria));
+
 /** state + questions for one post. Candidate ids are stable (c0.., t0.., e0..). */
-function buildRequest(sdk, post, parsed) {
+function buildRequest(sdk, post, parsed, meta = {}) {
   const apply = ((parsed._apply && parsed._apply.candidates) || []).slice(0, cfg.MAX_CANDIDATES);
   const titles = ((parsed._candidates && parsed._candidates.titles) || []).slice(0, cfg.MAX_CANDIDATES);
   const employers = ((parsed._candidates && parsed._candidates.companies) || []).slice(0, cfg.MAX_CANDIDATES);
 
   const state = {
     channel: post.channel,
+    channel_audience: cfg.CHANNEL_AUDIENCE[meta.kind] || cfg.CHANNEL_AUDIENCE.general,
     post: String(post.text || '').slice(0, cfg.MAX_POST_CHARS),
     candidates: apply.map(({ id, kind, value, label }) => ({ id, kind, value, label })),
     title_candidates: titles.map((text, i) => ({ id: `t${i}`, text })),
@@ -91,9 +95,9 @@ function buildRequest(sdk, post, parsed) {
   };
 
   const questions = {
-    isVacancy: sdk.noul(cfg.NOUL.isVacancy),
-    studentFit: sdk.noul(cfg.NOUL.studentFit),
-    kzRelevant: sdk.noul(cfg.NOUL.kzRelevant),
+    isVacancy: noulQ(sdk, cfg.NOUL.isVacancy),
+    studentFit: noulQ(sdk, cfg.NOUL.studentFit),
+    kzRelevant: noulQ(sdk, cfg.NOUL.kzRelevant),
   };
   if (apply.length) {
     const options = {};
@@ -129,17 +133,56 @@ function readVerdict(answers) {
   };
 }
 
+const DIMS = [
+  ['vacancy', 'vacancy', 'jev-not-vacancy'],
+  ['studentFit', 'student', 'jev-not-student'],
+  ['kazakhstan', 'kz', 'jev-not-kz'],
+];
+
+/**
+ * Combine a Jev verdict with what the rules know. Jev does NOT cut by itself
+ * unless it is very sure:
+ *   score < CONFIDENT_NO            → drop (Jev very confident, rules or not)
+ *   CONFIDENT_NO <= score < SOFT    → drop only if the rules found NO positive
+ *                                     signal for that dimension; otherwise keep
+ *   score >= SOFT                   → fine
+ * `support` = { vacancy, student, kz }: truthy when the rules back that dimension
+ * (student: a positive student signal; vacancy: the parser accepted the post;
+ * kz: a Kazakhstan city or tenge pay). Returns
+ *   { reject: reason|null, dim, score, confident, rulesAgree, notes: [..] }
+ * `notes` lists every dimension where Jev leaned "no" (for the run log).
+ */
+function decideVerdict(verdict, support = {}) {
+  const out = { reject: null, dim: null, score: null, confident: false, rulesAgree: false, notes: [] };
+  if (!verdict) return out;
+  for (const [key, dim, reason] of DIMS) {
+    const sc = verdict[key];
+    if (sc === null || sc === undefined) continue;
+    if (sc < cfg.CONFIDENT_NO[key]) {
+      out.notes.push(`${dim}=${sc.toFixed(2)}<${cfg.CONFIDENT_NO[key]} confident`);
+      if (!out.reject || sc < out.score) Object.assign(out, { reject: reason, dim, score: sc, confident: true, rulesAgree: !support[dim] });
+    } else if (sc < cfg.SOFT[key]) {
+      if (support[dim]) out.notes.push(`${dim}=${sc.toFixed(2)}<${cfg.SOFT[key]} kept: rules ${typeof support[dim] === 'string' ? support[dim] : 'support'}`);
+      else {
+        out.notes.push(`${dim}=${sc.toFixed(2)}<${cfg.SOFT[key]} no rule support`);
+        if (!out.reject) Object.assign(out, { reject: reason, dim, score: sc, confident: false, rulesAgree: true });
+      }
+    }
+  }
+  return out;
+}
+
 /**
  * Apply a verdict to a parsed job. Returns a reject reason, or null to keep.
  * Mutates `parsed` (title / company / apply) when Jev chose a candidate.
+ * opts.support feeds decideVerdict; opts.out (object) receives the decision.
  */
-function applyVerdict(parsed, verdict, judge) {
+function applyVerdict(parsed, verdict, judge, opts = {}) {
   if (!verdict) return null;
-  const T = cfg.THRESHOLDS;
   const reject = (r) => { if (judge) judge.stats.rejected[r] = (judge.stats.rejected[r] || 0) + 1; return r; };
-  if (verdict.vacancy !== null && verdict.vacancy < T.vacancy) return reject('jev-not-vacancy');
-  if (verdict.studentFit !== null && verdict.studentFit < T.studentFit) return reject('jev-not-student');
-  if (verdict.kazakhstan !== null && verdict.kazakhstan < T.kazakhstan) return reject('jev-not-kz');
+  const decision = decideVerdict(verdict, opts.support || { vacancy: true });
+  if (opts.out) opts.out.decision = decision;
+  if (decision.reject) return reject(decision.reject);
 
   const bump = (k) => { if (judge) judge.stats.overrides[k]++; };
 
@@ -172,4 +215,4 @@ function applyVerdict(parsed, verdict, judge) {
   return null;
 }
 
-module.exports = { createJudge, applyVerdict, buildRequest, scrub };
+module.exports = { createJudge, applyVerdict, decideVerdict, buildRequest, scrub };

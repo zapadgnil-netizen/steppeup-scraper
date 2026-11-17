@@ -179,6 +179,10 @@ async function main() {
   }
 
   // ── Re-judge: retire stored telegram rows Jev now rejects ───────────────
+  if (REJUDGE && ctx.rejudgeState.breaker) {
+    const b = ctx.rejudgeState.breaker;
+    health.problem(`rejudge circuit breaker tripped: would have retired ${b.wanted} of ${b.active} active telegram rows (limit ${b.allowed}); none were deactivated`);
+  }
   if (REJUDGE && ctx.rejudgeState.deactivate.length) {
     try {
       const n = await db.deactivateRows('telegram_career', [...new Set(ctx.rejudgeState.deactivate)]);
