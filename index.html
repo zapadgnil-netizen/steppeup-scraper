@@ -5575,6 +5575,17 @@ async function srchFetchRemote(q, qkey) {
   }
 }
 
+// How long the search loader stays up at minimum. The founder asked for a
+// pace that makes the search feel worked-for: longest on the first search of
+// a visit, shorter after, shortest for a repeat. Real work longer than this
+// is never padded further.
+var _srchFirstDone = false;
+function srchMinShowMs(repeated) {
+  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  if (reduced || repeated) return 500;
+  return _srchFirstDone ? 900 : 1400;
+}
+
 async function runBrowseSearch() {
   var C = coreApi();
   var q = srchTrimmed();
@@ -5588,13 +5599,7 @@ async function runBrowseSearch() {
   var needDb = C.shouldSearchDatabase(q, localCount);
   var haveDb = !!_srchRemote[qkey];
 
-  if (_srchSeen[stateKey] && (!needDb || haveDb)) {          // repeated query: no loader
-    await new Promise(function(r) { requestAnimationFrame(function() { r(); }); setTimeout(r, 40); });   // timer fallback for hidden tabs
-    if (!guard.isCurrent(token)) return;
-    _srchPending = false; _srchAnimate = true;
-    filterBrowse();
-    return;
-  }
+  var repeated = !!(_srchSeen[stateKey] && (!needDb || haveDb));   // repeated query: short loader
 
   var grid = document.getElementById('browse-grid');
   var fetching = needDb && !haveDb;
@@ -5609,12 +5614,13 @@ async function runBrowseSearch() {
   var t0 = performance.now();
   var res = fetching ? await srchFetchRemote(q, qkey) : { ok: true };
   if (res.aborted || !guard.isCurrent(token)) return;
-  var wait = 350 - (performance.now() - t0);
+  var wait = srchMinShowMs(repeated) - (performance.now() - t0);
   if (wait > 0) await rpSleep(wait);
   if (!guard.isCurrent(token)) return;
   _srchCtl = null;
   _srchNoteKey = res.error ? qkey : '';
   if (!res.error) _srchSeen[stateKey] = 1;
+  if (!repeated) _srchFirstDone = true;
   _srchPending = false; _srchAnimate = true;
   filterBrowse();
 }
