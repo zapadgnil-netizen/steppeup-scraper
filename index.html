@@ -5637,13 +5637,17 @@ function v5EmptyState() {
       pluralize(full, LANG === 'en' ? ['job','jobs','jobs'] : [t('vac1'), t('vac24'), t('vac5')]);
   }
 
+  var emptyQ = ((document.getElementById('browse-search') || {}).value || '').trim();
+  var emptyP = emptyQ
+    ? escapeHtml(t('empty_srch_p').replace('{q}', emptyQ)).replace('{tg}', escapeHtml(t('f_telegram')))
+    : t('empty_browse_p');
   var html = '' +
 '<div class="rounded-[24px] border-2 border-dashed border-[rgba(24,20,15,.22)] bg-[#FEFCF7] px-6 py-12 sm:px-12 sm:py-14 text-center flex flex-col items-center">' +
   '<span class="grid place-items-center w-[68px] h-[68px] rounded-[22px] bg-[#F4EFE6] mb-7" aria-hidden="true">' +
     '<svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#18140F" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="M20 20l-4.6-4.6"></path><path d="M8 10.5h5"></path></svg>' +
   '</span>' +
   '<h2 class="u m-0 text-[clamp(22px,2.7vw,30px)] leading-[1.14] font-bold tracking-[-.045em] max-w-[24ch]">' + t('empty_browse_t') + '</h2>' +
-  '<p class="mt-4 mb-0 text-[16px] leading-[1.6] text-[rgba(24,20,15,.65)] max-w-[48ch]">' + t('empty_browse_p') + '</p>' +
+  '<p class="mt-4 mb-0 text-[16px] leading-[1.6] text-[rgba(24,20,15,.65)] max-w-[48ch]">' + emptyP + '</p>' +
   '<div class="flex flex-wrap justify-center gap-[10px] mt-8">' +
     '<button onclick="resetBrowseFilters()" class="h-[50px] px-7 rounded-lg bg-[#EBD08A] border-0 text-[15px] font-semibold text-[#18140F] cursor-pointer hover:bg-[#E0BF6C] transition-colors">' + t('empty_reset') + resetHint + '</button>' +
     '<button onclick="(document.getElementById(\'browse-search\')||{}).focus&&document.getElementById(\'browse-search\').focus()" class="h-[50px] px-7 rounded-lg bg-transparent border border-[rgba(24,20,15,.28)] text-[15px] font-semibold text-[#18140F] cursor-pointer hover:border-[#18140F] transition-colors">' + t('empty_editq') + '</button>' +
@@ -8222,7 +8226,13 @@ async function init() {
   // Populate landing page grid with REAL jobs (fallback to mock if none)
   const landingGrid = document.getElementById('landing-grid');
   if (landingGrid) {
-    const displayJobs = ALL_JOBS.length > 0 ? sortPartnersFirst(ALL_JOBS).slice(0, 6) : MOCK_JOBS.slice(0, 6);
+    let displayJobs;
+    if (ALL_JOBS.length > 0) {
+      const landC = coreApi();
+      let landPool = sortPartnersFirst(ALL_JOBS.slice());
+      if (landC) landPool = landC.diversifyBySource(landPool, { window: 6, telegramSlots: [1, 4] });
+      displayJobs = landPool.slice(0, 6);
+    } else displayJobs = MOCK_JOBS.slice(0, 6);
     landingGrid.classList.add('v5');
     landingGrid.innerHTML = displayJobs.map(function(job) {
       var matched = withMatch(job);
@@ -8692,7 +8702,7 @@ var T = {
     cv_err_save:'Файл загружен, но запись не сохранилась. Напишите нам.',
     // Empty states
     empty_feed_t:'Ничего не нашлось', empty_feed_p:'Попробуйте другой фильтр или перейдите в «Все вакансии».',
-    empty_browse_t:'Пока пусто', empty_browse_p:'Измените поиск или снимите фильтры — доступных вакансий очень много.',
+    empty_browse_t:'Пока пусто', empty_browse_p:'Измените поиск или снимите фильтры — доступных вакансий очень много.', empty_srch_p:'По запросу «{q}» ничего не нашли. Попробуйте слово короче или другое написание, снимите фильтры или включите «{tg}».',
     // Rails
     rail_top_t:'Топ совпадения для тебя', rail_top_s:'Вакансии с высоким баллом совпадения',
     rail_fresh_t:'Новые на этой неделе', rail_fresh_s:'Свежие объявления из собранной ленты',
@@ -9020,7 +9030,7 @@ var T = {
     cv_err_upload:'Жүктеу қатесі. Қайта көріңіз.',
     cv_err_save:'Файл жүкделді, бірақ жазба сақталған жоқ. Бізге жазыңыз.',
     empty_feed_t:'Ештеңе табылмады', empty_feed_p:'Басқа сүзгіні көріп көріңіз немесе «Барлық жұмыстарға» өтіңіз.',
-    empty_browse_t:'Әзірге бос', empty_browse_p:'Іздеуді өзгертіңіз немесе сүзгілерді алып тастаңыз.',
+    empty_browse_t:'Әзірге бос', empty_browse_p:'Іздеуді өзгертіңіз немесе сүзгілерді алып тастаңыз.', empty_srch_p:'«{q}» сұранысы бойынша ештеңе табылмады. Қысқарақ сөз немесе басқаша жазылуын байқап көріңіз, сүзгілерді алып тастаңыз немесе «{tg}» таңдаңыз.',
     rail_top_t:'Саған ең сәйкес келетіндер', rail_top_s:'Сәйкестік балы жоғары вакансиялар',
     rail_fresh_t:'Осы аптада жаңа', rail_fresh_s:'Жиналған лентадағы жаңа хабарландырулар',
     rail_tg_t:'Telegram-арналарынан жаңалары', rail_tg_s:'Басқа сайттарда жоқ мансаптық арналардағы вакансиялар', rail_tg_link:'Telegram-нан барлығы →',
@@ -9345,7 +9355,7 @@ var T = {
     cv_err_upload:'Upload failed. Please try again.',
     cv_err_save:'File uploaded but record not saved. Please contact us.',
     empty_feed_t:'Nothing matches yet', empty_feed_p:'Try a different filter or browse all jobs.',
-    empty_browse_t:'No jobs here', empty_browse_p:'Try tweaking your search or clearing filters.',
+    empty_browse_t:'No jobs here', empty_browse_p:'Try tweaking your search or clearing filters.', empty_srch_p:'Nothing found for “{q}”. Try a shorter word or another spelling, clear the filters, or switch on “{tg}”.',
     rail_top_t:'Top matches for you', rail_top_s:'Highest match-score roles from your profile',
     rail_fresh_t:'New this week', rail_fresh_s:'Fresh listings from the collected board',
     rail_tg_t:'Fresh from Telegram channels', rail_tg_s:'Jobs from career channels that are not on the job boards', rail_tg_link:'All from Telegram →',
