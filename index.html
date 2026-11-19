@@ -3199,18 +3199,32 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
   .fl-sheet,.fl-gold{opacity:0}
   .fl-fill{width:40%;margin-left:30%}
 }
-/* Search: spinner in the input, dimmed list, loader + skeleton beat, stagger */
-.srch-spin{position:absolute;right:178px;top:50%;width:16px;height:16px;margin-top:-8px;border:2px solid var(--ink-20);border-top-color:var(--ink);border-radius:50%;opacity:0;pointer-events:none;transition:opacity .12s}
-.srch-busy .srch-spin{opacity:1;animation:srch-spin .7s linear infinite}
-@keyframes srch-spin{to{transform:rotate(360deg)}}
-/* same spinner, inside the top search bars (landing header, hero, app nav) */
-.hdr-spin{flex:none;width:14px;height:14px;border:2px solid var(--ink-20);border-top-color:var(--ink);border-radius:50%;opacity:0;pointer-events:none;transition:opacity .12s;display:none}
-.hdr-busy>.hdr-spin{display:block;opacity:1;animation:srch-spin .7s linear infinite}
-#v5-searchwrap .hdr-spin{position:absolute;right:208px;top:50%;margin-top:-8px;width:16px;height:16px}
-.nav-search .hdr-spin{position:absolute;right:12px;top:50%;margin-top:-7px}
-@media (max-width:640px){#v5-searchwrap .hdr-spin{right:22px;top:32px}}
-@media (prefers-reduced-motion:reduce){.hdr-busy>.hdr-spin{animation:none!important}}
-@media (max-width:620px){.srch-spin{right:64px}}
+/* Search: dimmed list, loader + skeleton beat, stagger */
+/* Search loader (progress-driven by searchProgressAt in core): folders fill one by one, bar + percent */
+.fl-search .fl-front,.fl-search .fl-sheet,.fl-search .fl-gold{animation:none;transition:transform .22s ease-out,opacity .22s ease-out}
+.fl-search .fl-f.is-active .fl-front{transform:perspective(70px) rotateX(-36deg)}
+.fl-search .fl-f.is-active .fl-sheet{opacity:1;transform:translateY(calc(var(--fl-h) * -.6))}
+.fl-search .fl-f.is-active .fl-gold{opacity:1}
+.fl-search .fl-f.is-done .fl-gold{opacity:.55}
+.fl-search .fl-f.is-done .fl-sheet{opacity:0}
+.fl-search .fl-f.is-work .fl-front{animation:fl-work 1.5s ease-in-out infinite}
+.fl-search .fl-f.is-work .fl-sheet{animation:fl-work-sheet 1.5s ease-in-out infinite}
+@keyframes fl-work{0%,100%{transform:perspective(70px) rotateX(-14deg)}50%{transform:perspective(70px) rotateX(-38deg)}}
+@keyframes fl-work-sheet{0%,100%{transform:translateY(calc(var(--fl-h) * -.25))}50%{transform:translateY(calc(var(--fl-h) * -.62))}}
+.fl-barrow{display:flex;align-items:center;gap:10px;width:min(300px,92%)}
+.fl-barrow .fl-bar{flex:1;width:auto}
+.fl-search .fl-fill{width:100%;animation:none;transform-origin:0 50%;transform:scaleX(0);transition:transform .08s linear}
+.fl-pct{min-width:38px;text-align:right;font:600 13px 'Golos Text',system-ui,sans-serif;font-variant-numeric:tabular-nums;color:var(--ink-80)}
+.fl-search .fl-text{min-height:20px}
+@media (prefers-reduced-motion:reduce){
+  .fl-search .fl-front,.fl-search .fl-sheet,.fl-search .fl-gold,.fl-search .fl-fill{animation:none!important;transition:none!important}
+  .fl-search .fl-f.is-work .fl-front{transform:perspective(70px) rotateX(-36deg)}
+  .fl-search .fl-f.is-work .fl-sheet{opacity:1;transform:translateY(calc(var(--fl-h) * -.6))}
+  .fl-search .fl-f.is-work .fl-gold{opacity:1}
+  .fl-search .fl-fill{width:100%!important;margin-left:0!important}
+}
+.nav-search button.nav-search-icon{pointer-events:auto;background:none;border:0;cursor:pointer;padding:6px;left:4px;line-height:1}
+#v5-search .hdr-go{flex:none;display:inline-flex;background:none;border:0;padding:2px;cursor:pointer}
 #browse-grid{transition:opacity .15s}
 #browse-grid.srch-dim{opacity:.6}
 .srch-loading{display:flex;flex-direction:column;gap:16px}
@@ -3222,7 +3236,7 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
 .srch-note{font-size:13px;color:var(--ink-65);border:1px dashed var(--ink-20);border-radius:10px;padding:8px 12px}
 .srch-in{animation:srch-in .28s ease-out both;animation-delay:calc(var(--i,0) * 40ms)}
 @keyframes srch-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.srch-spin{animation:none!important}.srch-in{animation:none}#browse-grid{transition:none}}
+@media (prefers-reduced-motion:reduce){.srch-in{animation:none}#browse-grid{transition:none}}
 </style>
 </head>
 <body>
@@ -3240,12 +3254,10 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
           <a href="#employers" class="v5-navlink2" data-i18n="nav_employers">Работодателям</a>
         </nav>
         <div id="v5-search">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(24,20,15,.5)" stroke-width="2.2" stroke-linecap="round" class="shrink-0" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-          <input id="v5-header-search" data-i18n-ph="nav_search_ph" placeholder="Найти вакансию…" aria-label="Search jobs"
-                 oninput="hdrSearchInput('v5-header-search')"
+          <button type="button" class="hdr-go" onclick="heroSearch('v5-header-search')" aria-label="Найти работу" data-i18n-aria="search_btn_long"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(24,20,15,.5)" stroke-width="2.2" stroke-linecap="round" class="shrink-0" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg></button>
+          <input id="v5-header-search" data-i18n-ph="nav_search_ph" placeholder="Найти вакансию…" aria-label="Search jobs" enterkeyhint="search"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();heroSearch('v5-header-search')}"
                  style="border:0;background:none;outline:none;font:500 13.5px 'Golos Text',sans-serif;color:#18140F;width:100%;min-width:0">
-          <span class="hdr-spin" aria-hidden="true"></span>
         </div>
         <div id="v5-actions">
           <a href="/#/browse" onclick="enterApp('browse');return false;" class="v5-appear" data-i18n="see_all">Все вакансии →</a>
@@ -3291,8 +3303,7 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
           <form id="v5-searchwrap" onsubmit="event.preventDefault();heroSearch()" role="search">
             <div class="relative">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18140F" stroke-width="2.1" stroke-linecap="round" style="position:absolute;left:26px;top:50%;transform:translateY(-50%)" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-              <input id="hero-search-input" type="search" data-i18n-ph="hero_search_ph_v5" placeholder="Аналитик, Алматы, без опыта…" aria-label="Search jobs" oninput="hdrSearchInput('hero-search-input')" autocomplete="off">
-              <span class="hdr-spin" aria-hidden="true"></span>
+              <input id="hero-search-input" type="search" data-i18n-ph="hero_search_ph_v5" placeholder="Аналитик, Алматы, без опыта…" aria-label="Search jobs" enterkeyhint="search" autocomplete="off">
               <button type="submit" id="v5-herobtn">
                 <span data-i18n="search_btn_long">Найти работу</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EBD08A" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>
@@ -3547,14 +3558,13 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
         <button class="app-nav-tab" data-view="saved" onclick="navigate('saved')">Сохранённые</button>
       </div>
       <div class="nav-search" role="search">
-        <span class="nav-search-icon" aria-hidden="true">⌕</span>
+        <button type="button" class="nav-search-icon" onclick="navSearch()" aria-label="Найти работу" data-i18n-aria="search_btn_long">⌕</button>
         <input class="nav-search-input" id="nav-search-input" type="search"
                data-i18n-ph="nav_search_ph"
                placeholder="Найти вакансию…"
                aria-label="Search jobs"
-               oninput="hdrSearchInput('nav-search-input')"
+               enterkeyhint="search"
                onkeydown="if(event.key==='Enter'){event.preventDefault();navSearch()}"/>
-        <span class="hdr-spin" aria-hidden="true"></span>
       </div>
       <div class="app-nav-right">
         <div class="lang-sw" id="lang-sw-app" role="group" aria-label="Language">
@@ -3651,10 +3661,10 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
 
           <div id="browse-search-wrap" class="relative mt-7">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#18140F" stroke-width="2.1" stroke-linecap="round" class="absolute left-[18px] top-1/2 -translate-y-1/2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-            <span class="srch-spin" aria-hidden="true"></span>
-            <input id="browse-search" class="w-full h-[58px] rounded-xl border border-[rgba(24,20,15,.14)] bg-[#FEFCF7] pl-[50px] pr-[164px] text-[16px] font-medium text-[#18140F] outline-none focus:border-[rgba(24,20,15,.4)] transition-colors"
-                   data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." aria-label="Search jobs" oninput="filterBrowseDebounced()">
-            <button onclick="filterBrowse()" class="browse-search-action absolute right-[8px] top-1/2 -translate-y-1/2 h-[42px] px-5 rounded-lg border-0 bg-[#18140F] text-[#FEFCF7] text-[14.5px] font-semibold cursor-pointer flex items-center gap-2 hover:opacity-[.86] transition-opacity" aria-label="Найти работу" data-i18n-aria="search_btn_long">
+            <input id="browse-search" type="search" enterkeyhint="search" autocomplete="off" class="w-full h-[58px] rounded-xl border border-[rgba(24,20,15,.14)] bg-[#FEFCF7] pl-[50px] pr-[164px] text-[16px] font-medium text-[#18140F] outline-none focus:border-[rgba(24,20,15,.4)] transition-colors"
+                   data-i18n-ph="search_ph" placeholder="Поиск по названию или компании..." aria-label="Search jobs"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();runBrowseSearch()}" onsearch="if(!this.value.trim())runBrowseSearch()">
+            <button type="button" onclick="runBrowseSearch()" class="browse-search-action absolute right-[8px] top-1/2 -translate-y-1/2 h-[42px] px-5 rounded-lg border-0 bg-[#18140F] text-[#FEFCF7] text-[14.5px] font-semibold cursor-pointer flex items-center gap-2 hover:opacity-[.86] transition-opacity" aria-label="Найти работу" data-i18n-aria="search_btn_long">
               <span data-i18n="search_btn_long">Найти работу</span>
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#EBD08A" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>
             </button>
@@ -4884,55 +4894,17 @@ function v5MatchBadgeRow(score) {
 }
 
 // ── Search helpers: hero + top-nav search inputs ─────────────────────────────
-// Typing in a top bar behaves like typing in #browse-search: after ~250 ms of
-// silence (and >= 2 chars) go to browse with the same text and run the same
-// debounced search + loader. Enter goes at once.
-var _hdrTimer = null, _hdrSrc = '', _hdrPrev = null;
-function hdrBusy(on) {
-  if (!on && _hdrTimer) return;                         // still debouncing: keep spinning
-  ['v5-header-search', 'hero-search-input', 'nav-search-input'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el && el.parentElement) el.parentElement.classList.toggle('hdr-busy', !!on && id === _hdrSrc);
-  });
-}
-function hdrSearchInput(inputId) {
-  var el = document.getElementById(inputId);
-  if (!el) return;
-  clearTimeout(_hdrTimer); _hdrTimer = null;
-  _hdrSrc = inputId;
-  var q = String(el.value || '').trim();
-  if (!q) {                                             // cleared: restore, no loader
-    hdrBusy(false);
-    var bs = document.getElementById('browse-search');
-    if (_hdrPrev !== null && currentView === 'browse') {
-      if (bs) bs.value = '';
-      srchCancel();
-      var prev = _hdrPrev; _hdrPrev = null;
-      _suppressHistory = true;
-      try { navigate(prev); } finally { _suppressHistory = false; }
-      try { el.focus(); } catch (_e) {}
-    } else if (currentView === 'browse' && bs && bs.value) {
-      bs.value = '';
-      srchCancel(); filterBrowse();
-    }
-    return;
-  }
-  if (q.length < 2) { hdrBusy(false); return; }
-  hdrBusy(true);
-  _hdrTimer = setTimeout(function() { _hdrTimer = null; hdrGo(inputId); }, 250);
-}
+// Typing only edits the text. The search runs on Enter or on the bar's search
+// button; it goes to browse with the same text and runs runBrowseSearch().
 function hdrGo(inputId) {
   var el = document.getElementById(inputId);
   var raw = el ? String(el.value || '') : '';
   var q = raw.trim();
-  clearTimeout(_hdrTimer); _hdrTimer = null;
-  _hdrSrc = inputId;
   var bs = document.getElementById('browse-search');
   if (bs) bs.value = raw;
   if (q) { _srchPending = true; }
-  if (currentView !== 'browse') _hdrPrev = currentView;
   navigate('browse');                                   // first hop pushes one entry; later calls add none
-  if (q) { hdrBusy(true); runBrowseSearch(); } else { hdrBusy(false); filterBrowse(); }
+  if (q) { runBrowseSearch(); } else { srchCancel(); filterBrowse(); }
   // keep the caret where the visitor is typing; a hidden landing bar hands it to browse-search
   var target = (el && el.offsetParent !== null) ? el : bs;
   if (target) {
@@ -5485,11 +5457,10 @@ function syncFilterUI() {
   }
 }
 
-// Typing in the search box: instant feedback (spinner + dimmed list), then
-// ~250 ms after the last keystroke the search runs (loader beat, optional
-// whole-database lookup). Every other caller (button, Enter, chips) still runs
-// filterBrowse() immediately.
-var _browseSearchTimer = null;
+// Search runs only on Enter or the search button (runBrowseSearch): loader beat,
+// optional whole-database lookup. Typing alone just edits the text. Chips and
+// selects still call filterBrowse() immediately.
+var _browseSearchTimer = null, _srchProg = null;
 var _srchGuard = null, _srchCtl = null, _srchPending = false, _srchAnimate = false;
 var _srchSeen = {}, _srchRemote = {}, _srchExtra = {}, _srchNoteKey = '';
 
@@ -5508,8 +5479,8 @@ function srchCancel() {
   var g = srchGetGuard(); if (g) g.cancel();
   if (_srchCtl) { try { _srchCtl.abort(); } catch (_e) {} _srchCtl = null; }
   _srchPending = false;
+  if (_srchProg) { _srchProg.stop(); _srchProg = null; }
   srchBusy(false);
-  hdrBusy(false);
 }
 // ALL_JOBS plus the whole-database rows already fetched for this exact query.
 function browseSearchPool(q) {
@@ -5519,26 +5490,17 @@ function browseSearchPool(q) {
   return C.mergeSearchResults(ALL_JOBS, extra);
 }
 
-function filterBrowseDebounced() {
-  clearTimeout(_browseSearchTimer);
-  _browseSearchTimer = null;
-  var C = coreApi();
-  if (!srchTrimmed()) { srchCancel(); filterBrowse(); return; }   // clearing restores the list at once
-  if (!C) { _browseSearchTimer = setTimeout(function() { _browseSearchTimer = null; filterBrowse(); }, 250); return; }
-  _srchPending = true;
-  srchBusy(true);
-  _browseSearchTimer = setTimeout(function() { _browseSearchTimer = null; runBrowseSearch(); }, 250);
-}
-
 function foldersLoaderHTML(o) {
   o = o || {};
   var f = '';
   for (var i = 0; i < 5; i++) f += '<span class="fl-f"><i class="fl-back"></i><i class="fl-sheet"></i><i class="fl-front"><i class="fl-gold"></i></i></span>';
-  return '<div class="folders-loader' + (o.compact ? ' fl-compact' : '') + '"' + (o.status ? ' role="status" aria-live="polite"' : '') + '>' +
+  var pr = !!o.progress;   // search loader: status lives on the text line, bar is a progressbar
+  return '<div class="folders-loader' + (o.compact ? ' fl-compact' : '') + (pr ? ' fl-search' : '') + '"' + (o.status && !pr ? ' role="status" aria-live="polite"' : '') + '>' +
     '<div class="fl-row" aria-hidden="true">' + f + '</div>' +
     (o.label ? '<div class="fl-label" aria-hidden="true"></div>' : '') +
-    (o.text ? '<div class="fl-text">' + escapeHtml(o.text) + '</div>' : '') +
-    (o.bar ? '<div class="fl-bar" aria-hidden="true"><i class="fl-fill"></i></div>' : '') +
+    (o.text ? '<div class="fl-text"' + (pr ? ' role="status" aria-live="polite"' : '') + '>' + escapeHtml(o.text) + '</div>' : '') +
+    (pr ? '<div class="fl-barrow"><div class="fl-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="' + escapeHtml(t('srch_pb')) + '"><i class="fl-fill"></i></div><span class="fl-pct" aria-hidden="true">0%</span></div>'
+      : o.bar ? '<div class="fl-bar" aria-hidden="true"><i class="fl-fill"></i></div>' : '') +
     '</div>';
 }
 // Put text on the lifted sheet (the optional label slot).
@@ -5575,15 +5537,54 @@ async function srchFetchRemote(q, qkey) {
   }
 }
 
-// How long the search loader stays up at minimum. The founder asked for a
-// pace that makes the search feel worked-for: longest on the first search of
-// a visit, shorter after, shortest for a repeat. Real work longer than this
-// is never padded further.
-var _srchFirstDone = false;
-function srchMinShowMs(repeated) {
-  var reduced = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  if (reduced || repeated) return 500;
-  return _srchFirstDone ? 900 : 1400;
+// Search loader driver. The loader stays up at least SEARCH_LOADER_MS (core);
+// longer when the real work (database fetch) takes longer. Percent, folders
+// and status stage come from the pure searchProgressAt(). Resolves true once
+// 100% has been shown (plus a short pause), false if it was stopped.
+function srchProgressRun(root, guard, token, fetching) {
+  var C = coreApi();
+  var total = C.SEARCH_LOADER_MS;
+  var folders = root.querySelectorAll('.fl-f');
+  var bar = root.querySelector('.fl-bar'), fill = root.querySelector('.fl-fill');
+  var pct = root.querySelector('.fl-pct'), txt = root.querySelector('.fl-text');
+  var t0 = performance.now(), workDone = false, stopped = false, timer = null, lastInt = -1, lastStage = -1, lastKey = '';
+  var ctl = { done: function() { workDone = true; } }, finish = null;
+  ctl.stop = function() { stopped = true; clearInterval(timer); if (finish) finish(false); };
+  ctl.promise = new Promise(function(resolve) {
+    finish = resolve;
+    function paint(r) {
+      var n = Math.floor(r.percent);
+      if (fill) fill.style.transform = 'scaleX(' + (r.percent / 100).toFixed(4) + ')';
+      if (n !== lastInt) {
+        lastInt = n;
+        if (pct) pct.textContent = n + '%';
+        if (bar) bar.setAttribute('aria-valuenow', String(n));
+      }
+      if (r.stage !== lastStage) {
+        lastStage = r.stage;
+        if (txt) txt.textContent = t(r.stage === 0 ? 'srch_stage1' : r.stage === 1 ? 'srch_stage2' : (fetching ? 'srch_all_db' : 'srch_stage3'));
+      }
+      var key = r.filled + ':' + r.active;
+      if (key !== lastKey) {
+        lastKey = key;
+        for (var i = 0; i < folders.length; i++) {
+          folders[i].classList.toggle('is-done', i < r.filled);
+          folders[i].classList.toggle('is-active', i === r.active);
+          folders[i].classList.toggle('is-work', i === r.active && i === 4);
+        }
+      }
+    }
+    function tick() {
+      if (stopped) return;
+      if (!root.isConnected || !guard.isCurrent(token)) { ctl.stop(); return; }
+      var r = C.searchProgressAt(performance.now() - t0, total, workDone);
+      paint(r);
+      if (r.percent >= 100) { stopped = true; clearInterval(timer); setTimeout(function() { resolve(true); }, 150); }
+    }
+    timer = setInterval(tick, 40);
+    tick();
+  });
+  return ctl;
 }
 
 async function runBrowseSearch() {
@@ -5593,41 +5594,38 @@ async function runBrowseSearch() {
   var guard = srchGetGuard();
   var token = guard.next();
   if (_srchCtl) { try { _srchCtl.abort(); } catch (_e) {} _srchCtl = null; }
+  if (_srchProg) { _srchProg.stop(); _srchProg = null; }
   var qkey = srchKey(q);
-  var stateKey = currentBrowseKey();
   var localCount = C.filterBrowseJobs(ALL_JOBS, browseStateFromUI(), alertHelpers()).length;
   var needDb = C.shouldSearchDatabase(q, localCount);
   var haveDb = !!_srchRemote[qkey];
 
-  var repeated = !!(_srchSeen[stateKey] && (!needDb || haveDb));   // repeated query: short loader
-
   var grid = document.getElementById('browse-grid');
   var fetching = needDb && !haveDb;
-  if (grid) {
-    var skel = '';
-    for (var i = 0; i < 4; i++) skel += '<div class="jc-skel sr-skel" aria-hidden="true"><div class="jc-skel-stripe"></div><div class="jc-skel-body"><div class="jc-skel-line"></div><div class="jc-skel-line short"></div><div class="jc-skel-line short"></div></div></div>';
-    grid.innerHTML = '<div class="srch-loading">' +
-      foldersLoaderHTML({ compact: true, status: true, bar: true, text: t(fetching ? 'srch_all_db' : 'srch_looking') }) + skel + '</div>';
-  }
+  if (!grid) { _srchPending = false; filterBrowse(); return; }
+  var skel = '';
+  for (var i = 0; i < 4; i++) skel += '<div class="jc-skel sr-skel" aria-hidden="true"><div class="jc-skel-stripe"></div><div class="jc-skel-body"><div class="jc-skel-line"></div><div class="jc-skel-line short"></div><div class="jc-skel-line short"></div></div></div>';
+  grid.innerHTML = '<div class="srch-loading">' +
+    foldersLoaderHTML({ compact: true, progress: true, text: t('srch_stage1') }) + skel + '</div>';
   srchBusy(false);
   _srchPending = true;
-  var t0 = performance.now();
+  var prog = srchProgressRun(grid.querySelector('.folders-loader'), guard, token, fetching);
+  _srchProg = prog;
   var res = fetching ? await srchFetchRemote(q, qkey) : { ok: true };
-  if (res.aborted || !guard.isCurrent(token)) return;
-  var wait = srchMinShowMs(repeated) - (performance.now() - t0);
-  if (wait > 0) await rpSleep(wait);
-  if (!guard.isCurrent(token)) return;
+  if (res.aborted || !guard.isCurrent(token)) { prog.stop(); return; }
+  prog.done();                                      // real work finished; the bar may now reach 100 once the minimum time has passed
+  var shown = await prog.promise;
+  if (!shown || !guard.isCurrent(token)) return;
+  if (_srchProg === prog) _srchProg = null;
   _srchCtl = null;
   _srchNoteKey = res.error ? qkey : '';
-  if (!res.error) _srchSeen[stateKey] = 1;
-  if (!repeated) _srchFirstDone = true;
   _srchPending = false; _srchAnimate = true;
   filterBrowse();
 }
 
 function filterBrowse() {
   if (_browseSearchTimer) { clearTimeout(_browseSearchTimer); _browseSearchTimer = null; _srchPending = false; }
-  if (!_srchPending) { srchBusy(false); hdrBusy(false); }
+  if (!_srchPending) srchBusy(false);
   var jobs = v5FilterJobs();
   var key = currentBrowseKey();
   var C = coreApi();
@@ -8658,6 +8656,7 @@ var T = {
     search_ph:'Поиск по названию или компании...', hero_search_ph:'Например: дизайнер, Алматы, маркетинг…', nav_search_ph:'Найти вакансию…', search_btn:'Найти',
     // saved
     saved_title:'Сохранённые', vac1:'вакансия', vac24:'вакансии', vac5:'вакансий',
+    srch_stage1:'Ищем по названиям и компаниям…', srch_stage2:'Проверяем вакансии из hh.kz, enbek и Telegram-каналов…', srch_stage3:'Отбираем подходящие для студентов…', srch_pb:'Ход поиска',
     srch_looking:'Ищем вакансии…', srch_all_db:'Ищем по всей базе…', srch_net:'Не удалось поискать по всей базе. Показаны вакансии из загруженных.',
     srch_found_0:'Нашли {n} вакансию по запросу «{q}»', srch_found_1:'Нашли {n} вакансии по запросу «{q}»', srch_found_2:'Нашли {n} вакансий по запросу «{q}»',
     saved_empty_t:'Пусто пока', saved_empty_p:'Нажмите ♡ на любой вакансии, чтобы сохранить её',
@@ -8995,6 +8994,7 @@ var T = {
     browse_title:'Барлық жұмыстар', found:'Табылды', vacancies:'жұмыс',
     search_ph:'Атауы немесе компания бойынша іздеу...', hero_search_ph:'Мысалы: дизайнер, Алматы, маркетинг…', nav_search_ph:'Жұмыс іздеу…', search_btn:'Іздеу',
     saved_title:'Сақталған', vac1:'жұмыс', vac24:'жұмыс', vac5:'жұмыс',
+    srch_stage1:'Атауы мен компаниясы бойынша іздеудеміз…', srch_stage2:'hh.kz, enbek және Telegram-арналарындағы жұмыстарды тексеріп жатырмыз…', srch_stage3:'Студенттерге сәйкестерін таңдап жатырмыз…', srch_pb:'Іздеу барысы',
     srch_looking:'Жұмыстарды іздеудеміз…', srch_all_db:'Бүкіл база бойынша іздеудеміз…', srch_net:'Бүкіл база бойынша іздеу сәтсіз болды. Жүктелген жұмыстар көрсетілді.',
     srch_found_0:'«{q}» сұрауы бойынша {n} жұмыс табылды', srch_found_1:'«{q}» сұрауы бойынша {n} жұмыс табылды', srch_found_2:'«{q}» сұрауы бойынша {n} жұмыс табылды',
     saved_empty_t:'Әзірге бос', saved_empty_p:'Сақтау үшін кез келген жұмыстағы ♡ белгісін басыңыз',
@@ -9320,6 +9320,7 @@ var T = {
     browse_title:'All Jobs', found:'Found', vacancies:'jobs',
     search_ph:'Search by title or company...', hero_search_ph:'Try: designer, Almaty, marketing…', nav_search_ph:'Search jobs…', search_btn:'Search',
     saved_title:'Saved Jobs', vac1:'job', vac24:'jobs', vac5:'jobs',
+    srch_stage1:'Searching titles and companies…', srch_stage2:'Checking jobs from hh.kz, enbek and Telegram channels…', srch_stage3:'Picking the ones that fit students…', srch_pb:'Search progress',
     srch_looking:'Searching jobs…', srch_all_db:'Searching the whole database…', srch_net:'Could not search the whole database. Showing jobs from the loaded list.',
     srch_found_0:'Found {n} job for “{q}”', srch_found_1:'Found {n} jobs for “{q}”', srch_found_2:'Found {n} jobs for “{q}”',
     saved_empty_t:'Nothing here yet', saved_empty_p:'Tap ♡ on any job to save it',

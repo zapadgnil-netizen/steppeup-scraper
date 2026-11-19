@@ -649,6 +649,47 @@
     return out;
   }
 
+  // ── Search loader progress ─────────────────────────────────────────────────
+  // The founder wants every search to feel worked-for: fast start, long drag.
+  // SEARCH_LOADER_MS is the minimum time the loader stays up (change it here).
+  // Pure and monotonic in elapsedMs. Fast phase (scaled down only for totals
+  // under 4 s): ~60% at 0.6 s, ~89% at 1.0 s; then a slow, irregular crawl
+  // from 89% toward 99% over the rest of the time. 100 only when the real work
+  // is done AND the minimum time has passed.
+  var SEARCH_LOADER_MS = 4000;
+  function searchProgressAt(elapsedMs, totalMs, done) {
+    var e = +elapsedMs; if (!(e > 0)) e = 0;
+    var total = +totalMs > 0 ? +totalMs : SEARCH_LOADER_MS;
+    var k = Math.min(1, total / 4000);
+    var t60 = 600 * k, t89 = 1000 * k;
+    var percent;
+    if (done && e >= total) {
+      percent = 100;
+    } else if (e <= t60) {
+      var x = e / t60;
+      percent = 60 * (1 - Math.pow(1 - x, 2));
+    } else if (e <= t89) {
+      var y = (e - t60) / (t89 - t60);
+      percent = 60 + 29 * (1 - Math.pow(1 - y, 2));
+    } else {
+      var span = Math.max(1, total - t89);
+      var z = Math.min(1, (e - t89) / span);
+      // stop-and-go: derivative of the warp stays positive (>= 0.1)
+      var w = z + 0.65 * Math.sin(6 * Math.PI * z) / (6 * Math.PI) + 0.25 * Math.sin(14 * Math.PI * z) / (14 * Math.PI);
+      percent = 89 + 10 * Math.min(1, Math.max(0, w));
+      if (e > total) percent = Math.min(99.9, percent + 0.9 * (1 - Math.exp(-(e - total) / 4000)));
+      if (percent >= 100) percent = 99.9;
+    }
+    var finished = percent >= 100;
+    var filled = finished ? 5 : e >= t89 ? 4 : e >= t60 ? 3 : Math.min(3, Math.floor(e / (t60 / 3)));
+    return {
+      percent: percent,
+      filled: filled,
+      active: finished ? -1 : filled,
+      stage: percent < 60 ? 0 : percent < 89 ? 1 : 2
+    };
+  }
+
   // Latest-wins token: a response is applied only if its token is still current.
   function createRequestGuard() {
     var current = 0;
@@ -1524,6 +1565,8 @@
     pluralIndex: pluralIndex,
     mergeSearchResults: mergeSearchResults,
     createRequestGuard: createRequestGuard,
+    SEARCH_LOADER_MS: SEARCH_LOADER_MS,
+    searchProgressAt: searchProgressAt,
     nbspMoney: nbspMoney,
     telegramListQuery: telegramListQuery,
     takeFeedWindow: takeFeedWindow,
