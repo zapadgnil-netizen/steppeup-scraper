@@ -3203,6 +3203,13 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
 .srch-spin{position:absolute;right:178px;top:50%;width:16px;height:16px;margin-top:-8px;border:2px solid var(--ink-20);border-top-color:var(--ink);border-radius:50%;opacity:0;pointer-events:none;transition:opacity .12s}
 .srch-busy .srch-spin{opacity:1;animation:srch-spin .7s linear infinite}
 @keyframes srch-spin{to{transform:rotate(360deg)}}
+/* same spinner, inside the top search bars (landing header, hero, app nav) */
+.hdr-spin{flex:none;width:14px;height:14px;border:2px solid var(--ink-20);border-top-color:var(--ink);border-radius:50%;opacity:0;pointer-events:none;transition:opacity .12s;display:none}
+.hdr-busy>.hdr-spin{display:block;opacity:1;animation:srch-spin .7s linear infinite}
+#v5-searchwrap .hdr-spin{position:absolute;right:208px;top:50%;margin-top:-8px;width:16px;height:16px}
+.nav-search .hdr-spin{position:absolute;right:12px;top:50%;margin-top:-7px}
+@media (max-width:640px){#v5-searchwrap .hdr-spin{right:22px;top:32px}}
+@media (prefers-reduced-motion:reduce){.hdr-busy>.hdr-spin{animation:none!important}}
 @media (max-width:620px){.srch-spin{right:64px}}
 #browse-grid{transition:opacity .15s}
 #browse-grid.srch-dim{opacity:.6}
@@ -3235,8 +3242,10 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
         <div id="v5-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(24,20,15,.5)" stroke-width="2.2" stroke-linecap="round" class="shrink-0" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
           <input id="v5-header-search" data-i18n-ph="nav_search_ph" placeholder="Найти вакансию…" aria-label="Search jobs"
-                 onkeydown="if(event.key==='Enter'){heroSearch('v5-header-search')}"
+                 oninput="hdrSearchInput('v5-header-search')"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();heroSearch('v5-header-search')}"
                  style="border:0;background:none;outline:none;font:500 13.5px 'Golos Text',sans-serif;color:#18140F;width:100%;min-width:0">
+          <span class="hdr-spin" aria-hidden="true"></span>
         </div>
         <div id="v5-actions">
           <a href="/#/browse" onclick="enterApp('browse');return false;" class="v5-appear" data-i18n="see_all">Все вакансии →</a>
@@ -3282,7 +3291,8 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
           <form id="v5-searchwrap" onsubmit="event.preventDefault();heroSearch()" role="search">
             <div class="relative">
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#18140F" stroke-width="2.1" stroke-linecap="round" style="position:absolute;left:26px;top:50%;transform:translateY(-50%)" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="M20 20l-3.5-3.5"></path></svg>
-              <input id="hero-search-input" type="search" data-i18n-ph="hero_search_ph_v5" placeholder="Аналитик, Алматы, без опыта…" aria-label="Search jobs">
+              <input id="hero-search-input" type="search" data-i18n-ph="hero_search_ph_v5" placeholder="Аналитик, Алматы, без опыта…" aria-label="Search jobs" oninput="hdrSearchInput('hero-search-input')" autocomplete="off">
+              <span class="hdr-spin" aria-hidden="true"></span>
               <button type="submit" id="v5-herobtn">
                 <span data-i18n="search_btn_long">Найти работу</span>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#EBD08A" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15"></path><path d="M13 6l6 6-6 6"></path></svg>
@@ -3542,7 +3552,9 @@ html.dark .folders-loader{--fl-paper:#1B1813;--fl-sheet:#EFE8D8}
                data-i18n-ph="nav_search_ph"
                placeholder="Найти вакансию…"
                aria-label="Search jobs"
-               onkeydown="if(event.key==='Enter'){navSearch()}"/>
+               oninput="hdrSearchInput('nav-search-input')"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();navSearch()}"/>
+        <span class="hdr-spin" aria-hidden="true"></span>
       </div>
       <div class="app-nav-right">
         <div class="lang-sw" id="lang-sw-app" role="group" aria-label="Language">
@@ -4872,22 +4884,67 @@ function v5MatchBadgeRow(score) {
 }
 
 // ── Search helpers: hero + top-nav search inputs ─────────────────────────────
-function heroSearch(inputId) {
-  var el = document.getElementById(inputId || 'hero-search-input');
-  var q = el ? String(el.value || '').trim() : '';
-  navigate('browse');
-  var bs = document.getElementById('browse-search');
-  if (bs) { bs.value = q; }
-  if (typeof filterBrowse === 'function') filterBrowse();
+// Typing in a top bar behaves like typing in #browse-search: after ~250 ms of
+// silence (and >= 2 chars) go to browse with the same text and run the same
+// debounced search + loader. Enter goes at once.
+var _hdrTimer = null, _hdrSrc = '', _hdrPrev = null;
+function hdrBusy(on) {
+  if (!on && _hdrTimer) return;                         // still debouncing: keep spinning
+  ['v5-header-search', 'hero-search-input', 'nav-search-input'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el && el.parentElement) el.parentElement.classList.toggle('hdr-busy', !!on && id === _hdrSrc);
+  });
 }
-function navSearch() {
-  var el = document.getElementById('nav-search-input');
-  var q = el ? String(el.value || '').trim() : '';
-  navigate('browse');
-  var bs = document.getElementById('browse-search');
-  if (bs) { bs.value = q; }
-  if (typeof filterBrowse === 'function') filterBrowse();
+function hdrSearchInput(inputId) {
+  var el = document.getElementById(inputId);
+  if (!el) return;
+  clearTimeout(_hdrTimer); _hdrTimer = null;
+  _hdrSrc = inputId;
+  var q = String(el.value || '').trim();
+  if (!q) {                                             // cleared: restore, no loader
+    hdrBusy(false);
+    var bs = document.getElementById('browse-search');
+    if (_hdrPrev !== null && currentView === 'browse') {
+      if (bs) bs.value = '';
+      srchCancel();
+      var prev = _hdrPrev; _hdrPrev = null;
+      _suppressHistory = true;
+      try { navigate(prev); } finally { _suppressHistory = false; }
+      try { el.focus(); } catch (_e) {}
+    } else if (currentView === 'browse' && bs && bs.value) {
+      bs.value = '';
+      srchCancel(); filterBrowse();
+    }
+    return;
+  }
+  if (q.length < 2) { hdrBusy(false); return; }
+  hdrBusy(true);
+  _hdrTimer = setTimeout(function() { _hdrTimer = null; hdrGo(inputId); }, 250);
 }
+function hdrGo(inputId) {
+  var el = document.getElementById(inputId);
+  var raw = el ? String(el.value || '') : '';
+  var q = raw.trim();
+  clearTimeout(_hdrTimer); _hdrTimer = null;
+  _hdrSrc = inputId;
+  var bs = document.getElementById('browse-search');
+  if (bs) bs.value = raw;
+  if (q) { _srchPending = true; }
+  if (currentView !== 'browse') _hdrPrev = currentView;
+  navigate('browse');                                   // first hop pushes one entry; later calls add none
+  if (q) { hdrBusy(true); runBrowseSearch(); } else { hdrBusy(false); filterBrowse(); }
+  // keep the caret where the visitor is typing; a hidden landing bar hands it to browse-search
+  var target = (el && el.offsetParent !== null) ? el : bs;
+  if (target) {
+    try {
+      var pos = target === el ? (el.selectionStart == null ? raw.length : el.selectionStart) : raw.length;
+      if (document.activeElement !== target) target.focus();
+      target.setSelectionRange(pos, pos);
+    } catch (_e) {}
+  }
+}
+function heroSearch(inputId) { hdrGo(inputId || 'hero-search-input'); }
+function navSearch() { hdrGo('nav-search-input'); }
 
 // ── Navigation ──────────────────────────────────────────────────────────────
 // Module-level flag: set by hash-driven routing so navigate() doesn't push a
@@ -5452,6 +5509,7 @@ function srchCancel() {
   if (_srchCtl) { try { _srchCtl.abort(); } catch (_e) {} _srchCtl = null; }
   _srchPending = false;
   srchBusy(false);
+  hdrBusy(false);
 }
 // ALL_JOBS plus the whole-database rows already fetched for this exact query.
 function browseSearchPool(q) {
@@ -5563,7 +5621,7 @@ async function runBrowseSearch() {
 
 function filterBrowse() {
   if (_browseSearchTimer) { clearTimeout(_browseSearchTimer); _browseSearchTimer = null; _srchPending = false; }
-  if (!_srchPending) srchBusy(false);
+  if (!_srchPending) { srchBusy(false); hdrBusy(false); }
   var jobs = v5FilterJobs();
   var key = currentBrowseKey();
   var C = coreApi();
